@@ -218,4 +218,5 @@ Regras:
 - `node --check app.js exporter.js sw.js`: 0 erros
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: exportacao de resultados em CSV e XLSX` → MINOR → **v0.2.0**.
-- **Pendência**: definir remote para ativar o push (`git remote add origin <url>`).
+- **Remote configurado**: `origin https://github.com/Jeffrog22/pb-tracker.git`;
+  `master` + tags `v0.1.0`/`v0.2.0` publicados (push ativo).
