@@ -1,3 +1,5 @@
+import { exportResults } from "./exporter.js";
+
 const state = {
   teamName: "",
   competitionDate: "",
@@ -39,6 +41,7 @@ const el = {
   goControlBtnBottom: document.getElementById("goControlBtnBottom"),
   controlContainer: document.getElementById("controlContainer"),
   backToFilterBtn: document.getElementById("backToFilterBtn"),
+  exportBtn: document.getElementById("exportBtn"),
   refreshAppBtn: document.getElementById("refreshAppBtn"),
   downloadLogBtn: document.getElementById("downloadLogBtn"),
   appBadge: document.getElementById("appBadge"),
@@ -116,6 +119,30 @@ function downloadActivityLog() {
   URL.revokeObjectURL(url);
 }
 
+async function handleExportResults() {
+  const result = await exportResults({
+    teamName: state.teamName,
+    competitionDate: state.competitionDate,
+    selectedProofs: state.selectedProofs,
+    groupedEvents: state.groupedEvents,
+    getSplitsForEvent,
+    activityLog: state.activityLog,
+  });
+
+  if (result.ok) {
+    const formatLabel = result.format === "xlsx" ? "Excel (XLSX)" : "CSV";
+    logAction(`Exportação ${formatLabel} dos resultados realizada.`);
+    alert(
+      result.fallback
+        ? "Sem internet: exportado em CSV (abre no Excel com acentos corretos)."
+        : "Exportação concluída."
+    );
+    return;
+  }
+
+  alert(result.reason || "Nada a exportar.");
+}
+
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
@@ -169,6 +196,9 @@ function bindEvents() {
   el.goControlBtnTop.addEventListener("click", goToControl);
   el.goControlBtnBottom.addEventListener("click", goToControl);
   el.backToFilterBtn.addEventListener("click", () => showScreen("filter"));
+  if (el.exportBtn) {
+    el.exportBtn.addEventListener("click", handleExportResults);
+  }
   el.refreshAppBtn.addEventListener("click", handleAppRefresh);
   if (el.downloadLogBtn) {
     el.downloadLogBtn.addEventListener("click", () => {

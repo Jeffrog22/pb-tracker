@@ -337,6 +337,12 @@ button:disabled {
   margin-bottom: 0.6rem;
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .event-block {
   border: 1px solid #c9d4e6;
   border-radius: 10px;
