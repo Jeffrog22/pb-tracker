@@ -1,0 +1,12 @@
+# Ignorar logs de ações e registros automáticos
+project-actions.log
+
+# Ignorar arquivos de log gerados pelo app ou testes futuros
+*.log
+
+# Ignorar cache local e arquivos temporários
+*.tmp
+.DS_Store
+
+anotacoes.md
+

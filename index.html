@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#03192f" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PBTracker" />
+  <title>PBTracker</title>
+  <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.svg" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+</head>
+<body>
+  <section id="desktopNotice" class="desktop-notice" aria-hidden="true">
+    <div class="desktop-card">
+      <h2>PBTracker em formato mobile/tablet</h2>
+      <p>Este sistema foi otimizado para operação rápida em celular ou tablet via navegador.</p>
+      <p>Reduza a largura da janela ou abra em um dispositivo móvel para continuar.</p>
+    </div>
+  </section>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>PBTracker</h1>
+        <p>Balizamento e controle de parciais para competição</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
+        <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
+        <span id="appBadge" class="badge">Pronto</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="screenImport" class="screen active">
+        <div class="panel">
+          <h2>Tela Inicial</h2>
+          <div class="grid-2">
+            <label>
+              Nome da Equipe
+              <input id="teamName" type="text" maxlength="80" placeholder="Ex.: Aquática Paulista" required />
+            </label>
+            <label>
+              Data da Competição
+              <input id="competitionDate" type="date" required />
+            </label>
+          </div>
+          <label class="file-upload">
+            Arquivo de Balizamento (PDF, JSON, CSV)
+            <input id="fileInput" type="file" accept=".pdf,.json,.csv,text/csv,application/pdf,application/json" />
+          </label>
+          <div id="importStatus" class="status neutral">Aguardando arquivo...</div>
+                    <div id="diagnostic-area" style="display:none; margin-top:8px; background:#f8f8f8; border:1px solid #ccc; border-radius:6px; padding:10px; font-size:13px; max-height:220px; overflow:auto;"></div>
+          <div class="actions-row">
+            <button id="processBtn" class="primary">Processar Arquivo</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screenFilter" class="screen">
+        <div class="panel">
+          <div class="filter-head">
+            <h2>Filtro das Provas</h2>
+            <button id="goControlBtnTop" class="go-icon-btn" type="button" aria-label="Ir para controle" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M8 5l8 7-8 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+          <p class="muted">Selecione as provas para ir ao controle operacional.</p>
+          <div id="proofList" class="proof-list"></div>
+          <div class="filter-foot">
+            <button id="goControlBtnBottom" class="go-icon-btn" type="button" aria-label="Ir para controle" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M8 5l8 7-8 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screenControl" class="screen">
+        <div class="panel">
+          <div class="section-head">
+            <h3>Controle</h3>
+            <button id="backToFilterBtn" class="ghost">Voltar ao filtro</button>
+          </div>
+          <div id="controlContainer"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="chronoDialog" class="chrono-dialog">
+    <div class="chrono-head">
+      <button id="startLapBtn" class="primary">Iniciar/Voltas</button>
+      <h3>Cronômetro</h3>
+      <button id="stopResetBtn" class="danger">Parar/Reiniciar</button>
+    </div>
+
+    <div id="chronoDisplay" class="chrono-display">00:00:00</div>
+    <div id="chronoTitle" class="chrono-title">Nenhuma série ativa</div>
+    <div id="nextCapture" class="next-capture">Próximo registro: -</div>
+
+    <div class="pending-wrap">
+      <h4>Registros pendentes</h4>
+      <div id="pendingList"></div>
+      <div class="actions-row">
+        <button id="registerBtn" class="primary">Registrar</button>
+        <button id="closeChronoBtn" class="ghost">Fechar</button>
+      </div>
+    </div>
+
+    <div class="panel mini">
+      <h4>Atletas da série</h4>
+      <div id="chronoAthletes" class="athlete-grid"></div>
+    </div>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+  <script>
+    function showDiagnostic() {
+      const diag = window.__PBSWIM_DIAGNOSTIC__;
+      const area = document.getElementById("diagnostic-area");
+      if (!area) return;
+      if (!diag || !Array.isArray(diag) || !diag.length) {
+        area.style.display = "none";
+        area.innerHTML = "";
+        return;
+      }
+      area.style.display = "block";
+      let html = '<b>Diagnóstico do parser PDF:</b><br><ul style="margin:6px 0 0 16px;padding:0;">';
+      diag.forEach((d, i) => {
+        html += `<li><b>Linha ${d.idx+1}:</b> <code>${(d.line||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code><br><span style="color:#b00">${d.reason||''}</span></li>`;
+      });
+      html += '</ul>';
+      area.innerHTML = html;
+    }
+    // Hook para status
+    const origSetStatus = window.setStatus;
+    window.setStatus = function(msg, type) {
+      if (typeof origSetStatus === 'function') origSetStatus(msg, type);
+      setTimeout(showDiagnostic, 100);
+    }
+    // Chamada inicial para garantir diagnóstico ao carregar
+    setTimeout(showDiagnostic, 200);
+  </script>
+</body>
+</html>
