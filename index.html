@@ -99,30 +99,56 @@
   </div>
 
   <dialog id="chronoDialog" class="chrono-dialog">
-    <div class="chrono-head">
-      <button id="startLapBtn" class="primary">Iniciar/Voltas</button>
-      <h3>Cronômetro</h3>
-      <button id="stopResetBtn" class="danger">Parar/Reiniciar</button>
-    </div>
+    <div class="timer-container">
+      <div class="timer-controls">
+        <button id="startLapBtn" class="btn-pill btn-start">Iniciar/Voltas</button>
+        <h3>Cronômetro</h3>
+        <button id="stopResetBtn" class="btn-pill btn-reset">Parar/Reiniciar</button>
+      </div>
 
-    <div id="chronoDisplay" class="chrono-display">00:00:00</div>
-    <div id="chronoTitle" class="chrono-title">Nenhuma série ativa</div>
-    <div id="nextCapture" class="next-capture">Próximo registro: -</div>
+      <div id="chronoDisplay" class="timer-display">00:00:00</div>
+      <div id="chronoTitle" class="chrono-title">Nenhuma série ativa</div>
+      <div id="nextCapture" class="next-capture">Próximo registro: -</div>
+    </div>
 
     <div class="pending-wrap">
       <h4>Registros pendentes</h4>
       <div id="pendingList"></div>
-      <div class="actions-row">
-        <button id="registerBtn" class="primary">Registrar</button>
-        <button id="closeChronoBtn" class="ghost">Fechar</button>
-      </div>
     </div>
 
-    <div class="panel mini">
+    <div class="athletes-card">
       <h4>Atletas da série</h4>
-      <div id="chronoAthletes" class="athlete-grid"></div>
+      <div id="chronoAthletes"></div>
+    </div>
+
+    <div class="action-footer">
+      <button id="registerBtn" class="btn-save">Registrar</button>
+      <button id="closeChronoBtn" class="btn-cancel">Fechar</button>
     </div>
   </dialog>
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <button class="nav-item" data-screen="import" type="button" aria-label="Início">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 11l8-8 8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+        <path d="M6 10v10h12V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <span>Início</span>
+    </button>
+    <button class="nav-item" data-screen="filter" type="button" aria-label="Provas">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      </svg>
+      <span>Provas</span>
+    </button>
+    <button class="nav-item" data-screen="control" type="button" aria-label="Controle">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.2"></circle>
+        <path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      </svg>
+      <span>Controle</span>
+    </button>
+  </nav>
 
   <script type="module" src="app.js"></script>
   <script>

@@ -18,6 +18,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.3.0] - 2026-08-03
+### Changed
+- **Redesign completo do front do cronômetro**: nova paleta de cores, header
+  escuro no dialog com dígitos ciano, botões `pill` (Iniciar/Voltas verde,
+  Parar/Reiniciar magenta, Registrar laranja, Fechar transparente).
+- **Bottom navigation fixa** com 3 abas (Início, Provas, Controle) substituindo
+  a navegação por botões isolados; `showScreen()` sincroniza a aba ativa.
+- **Cartões de atleta** reestruturados para `.athlete-row` dentro de
+  `.athletes-card`, com badges de baliza/balizado/categoria e grid de parciais
+  (`partials-grid`/`partial-input`) no lugar dos blocos compactos antigos.
+- Guarda na tela de Controle: mensagem "Selecione provas" quando acessada sem
+  seleção, com botão de atalho para o filtro.
+- Cache do service worker de `pbtracker-v3` para `pbtracker-v4`.
+
 ## [v0.2.0] - 2026-08-02
 ### Added
 - Exportação de resultados em **XLSX** (SheetJS via CDN, carregado sob demanda)

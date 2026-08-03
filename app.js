@@ -55,6 +55,7 @@ const el = {
   nextCapture: document.getElementById("nextCapture"),
   pendingList: document.getElementById("pendingList"),
   chronoAthletes: document.getElementById("chronoAthletes"),
+  navItems: document.querySelectorAll(".nav-item"),
 };
 
 const EVENT_SPLITS = {
@@ -211,6 +212,12 @@ function bindEvents() {
   el.stopResetBtn.addEventListener("click", handleChronoStopReset);
   el.closeChronoBtn.addEventListener("click", closeChrono);
   el.registerBtn.addEventListener("click", registerPendingTimes);
+
+  el.navItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      showScreen(item.dataset.screen);
+    });
+  });
 }
 
 async function handleAppRefresh() {
@@ -252,6 +259,10 @@ function showScreen(screen) {
   el.screenImport.classList.toggle("active", screen === "import");
   el.screenFilter.classList.toggle("active", screen === "filter");
   el.screenControl.classList.toggle("active", screen === "control");
+
+  el.navItems.forEach((item) => {
+    item.classList.toggle("active", item.dataset.screen === screen);
+  });
 }
 
 function setStatus(message, tone = "neutral") {
@@ -818,6 +829,17 @@ function renderControl() {
     .map((key) => state.groupedEvents.get(key))
     .filter(Boolean);
 
+  if (!selectedEvents.length) {
+    el.controlContainer.innerHTML = `
+      <div class="panel">
+        <p class="muted">Selecione provas no filtro para ir ao controle operacional.</p>
+        <button class="btn-pill btn-start" data-goto-filter type="button">Escolher provas</button>
+      </div>
+    `;
+    el.controlContainer.querySelector("[data-goto-filter]").addEventListener("click", () => showScreen("filter"));
+    return;
+  }
+
   selectedEvents.forEach((event) => {
     const eventBlock = document.createElement("article");
     eventBlock.className = "event-block";
@@ -835,17 +857,17 @@ function renderControl() {
         seriesBlock.innerHTML = `
           <div class="series-head">
             <h4>Série ${escapeHtml(seriesKey)}</h4>
-            <button class="primary">Abrir Cronômetro</button>
+            <button class="btn-pill btn-start">Abrir Cronômetro</button>
           </div>
-          <div class="athlete-grid"></div>
+          <div class="athletes-card"></div>
         `;
 
         const openBtn = seriesBlock.querySelector("button");
         openBtn.addEventListener("click", () => openChrono(event.eventName, seriesKey, sortedAthletes));
 
-        const grid = seriesBlock.querySelector(".athlete-grid");
+        const card = seriesBlock.querySelector(".athletes-card");
         sortedAthletes.forEach((athlete) => {
-          grid.appendChild(renderAthleteCard(event.eventName, seriesKey, athlete));
+          card.appendChild(renderAthleteCard(event.eventName, seriesKey, athlete));
         });
 
         eventBlock.appendChild(seriesBlock);
@@ -857,10 +879,10 @@ function renderControl() {
 
 function renderAthleteCard(eventName, seriesKey, athlete) {
   const card = document.createElement("article");
-  card.className = "athlete-card";
+  card.className = "athlete-row";
 
   const splits = getSplitsForEvent(eventName);
-  let historyLines = "";
+  let partialCells = "";
   for (let i = 0; i < splits.length; i += 2) {
     const splitA = splits[i];
     const splitB = splits[i + 1];
@@ -873,36 +895,30 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
       currB = athlete.current[splitB] || "00:00:00";
       diffB = buildDiffLabel(currB, athlete.history[splitB] || "00:00:00");
     }
-    historyLines += `
-      <div class="split-compact">
-        <div>
-          <div class="split-title">Histórico ${splitA}m</div>
-          <input class="time-input" data-role="history" data-split="${splitA}" value="${histA}" maxlength="8" />
-        </div>
-        ${splitB !== undefined ? `
-        <div>
-          <div class="split-title">Histórico ${splitB}m</div>
-          <input class="time-input" data-role="history" data-split="${splitB}" value="${histB}" maxlength="8" />
-        </div>` : ""}
+    partialCells += `
+      <div class="partial-cell">
+        <div class="split-title">Histórico ${splitA}m</div>
+        <input class="partial-input" data-role="history" data-split="${splitA}" value="${histA}" maxlength="8" />
       </div>
-      <div class="split-compact">
-        <div>
-          <div class="split-title">Prova ${splitA}m</div>
-          <div class="current-value">${currA}${diffA}</div>
-        </div>
-        ${splitB !== undefined ? `
-        <div>
-          <div class="split-title">Prova ${splitB}m</div>
-          <div class="current-value">${currB}${diffB}</div>
-        </div>` : ""}
+      <div class="partial-cell">
+        <div class="split-title">Prova ${splitA}m</div>
+        <div class="current-value">${currA}${diffA}</div>
       </div>
+      ${splitB !== undefined ? `
+      <div class="partial-cell">
+        <div class="split-title">Histórico ${splitB}m</div>
+        <input class="partial-input" data-role="history" data-split="${splitB}" value="${histB}" maxlength="8" />
+      </div>
+      <div class="partial-cell">
+        <div class="split-title">Prova ${splitB}m</div>
+        <div class="current-value">${currB}${diffB}</div>
+      </div>` : ""}
     `;
   }
 
   card.innerHTML = `
     <div class="athlete-main">
-      <div>
-        <div class="split-title">Nome</div>
+      <div class="athlete-head">
         <div class="athlete-name">${escapeHtml(athlete.nome)}</div>
         <div class="tagline">
           <span class="tag">Baliza ${escapeHtml(athlete.baliza)}</span>
@@ -910,16 +926,18 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
           ${athlete.categoria ? `<span class="tag">${escapeHtml(athlete.categoria)}</span>` : ""}
         </div>
       </div>
-      <div>
-        <div class="split-title">Equipe</div>
-        <strong>${escapeHtml(athlete.equipe)}</strong>
-      </div>
-      <div>
-        <div class="split-title">Série</div>
-        <strong>${escapeHtml(seriesKey)}</strong>
+      <div class="athlete-meta">
+        <div>
+          <div class="split-title">Equipe</div>
+          <strong>${escapeHtml(athlete.equipe)}</strong>
+        </div>
+        <div>
+          <div class="split-title">Série</div>
+          <strong>${escapeHtml(seriesKey)}</strong>
+        </div>
       </div>
     </div>
-    ${historyLines}
+    <div class="partials-grid">${partialCells}</div>
   `;
 
   card.querySelectorAll("input[data-role='history']").forEach((input) => {
@@ -1228,60 +1246,54 @@ function renderChronoAthletes() {
 
   ac.athletes.forEach((athlete) => {
     const card = document.createElement("article");
-    card.className = "athlete-card";
-    // Compacta splits no cronômetro também
+    card.className = "athlete-row";
+
     const splits = getSplitsForEvent(ac.eventKey);
-    let historyLines = "";
+    let partialCells = "";
     for (let i = 0; i < splits.length; i += 2) {
       const splitA = splits[i];
       const splitB = splits[i + 1];
-      historyLines += `
-        <div class="split-compact">
-          <div>
-            <div class="split-title">Histórico ${splitA}m</div>
-            <input class="time-input" data-role="history" data-split="${splitA}" value="${athlete.history[splitA] || "00:00:00"}" maxlength="8" />
-          </div>
-          ${splitB !== undefined ? `
-          <div>
-            <div class="split-title">Histórico ${splitB}m</div>
-            <input class="time-input" data-role="history" data-split="${splitB}" value="${athlete.history[splitB] || "00:00:00"}" maxlength="8" />
-          </div>` : ""}
+      partialCells += `
+        <div class="partial-cell">
+          <div class="split-title">Histórico ${splitA}m</div>
+          <input class="partial-input" data-role="history" data-split="${splitA}" value="${athlete.history[splitA] || "00:00:00"}" maxlength="8" />
         </div>
-      `;
-      historyLines += `
-        <div class="split-compact">
-          <div>
-            <div class="split-title">Prova ${splitA}m</div>
-            <div class="current-value">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
-          </div>
-          ${splitB !== undefined ? `
-          <div>
-            <div class="split-title">Prova ${splitB}m</div>
-            <div class="current-value">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
-          </div>` : ""}
+        <div class="partial-cell">
+          <div class="split-title">Prova ${splitA}m</div>
+          <div class="current-value">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
         </div>
+        ${splitB !== undefined ? `
+        <div class="partial-cell">
+          <div class="split-title">Histórico ${splitB}m</div>
+          <input class="partial-input" data-role="history" data-split="${splitB}" value="${athlete.history[splitB] || "00:00:00"}" maxlength="8" />
+        </div>
+        <div class="partial-cell">
+          <div class="split-title">Prova ${splitB}m</div>
+          <div class="current-value">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
+        </div>` : ""}
       `;
     }
     card.innerHTML = `
       <div class="athlete-main">
-        <div>
-          <div class="split-title">Nome</div>
+        <div class="athlete-head">
           <div class="athlete-name">${escapeHtml(athlete.nome)}</div>
           <div class="tagline">
             <span class="tag">Baliza ${escapeHtml(athlete.baliza)}</span>
             <span class="tag">Balizado ${escapeHtml(athlete.tempoBalizado)}</span>
           </div>
         </div>
-        <div>
-          <div class="split-title">Equipe</div>
-          <strong>${escapeHtml(athlete.equipe)}</strong>
-        </div>
-        <div>
-          <div class="split-title">Série</div>
-          <strong>${escapeHtml(ac.seriesKey)}</strong>
+        <div class="athlete-meta">
+          <div>
+            <div class="split-title">Equipe</div>
+            <strong>${escapeHtml(athlete.equipe)}</strong>
+          </div>
+          <div>
+            <div class="split-title">Série</div>
+            <strong>${escapeHtml(ac.seriesKey)}</strong>
+          </div>
         </div>
       </div>
-      ${historyLines}
+      <div class="partials-grid">${partialCells}</div>
     `;
     el.chronoAthletes.appendChild(card);
   });

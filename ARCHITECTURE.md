@@ -185,7 +185,7 @@ o plano correspondente.
 
 ### Service Worker (`sw.js`) — ciclo de vida
 
-1. **`install`**: abre o cache `pbtracker-v3` e pré-cacheia o *app shell*
+1. **`install`**: abre o cache `pbtracker-v4` e pré-cacheia o *app shell*
    (`index.html`, `styles.css`, `app.js`, `exporter.js`, manifest, ícones e
    screenshots). Chama `skipWaiting()`.
 2. **`activate`**: remove caches antigos e executa `clients.claim()`.
@@ -231,9 +231,13 @@ recarrega a página automaticamente.
 - **Mobile-first**: `@media`/breakpoints; bloqueio em larguras `> 1024px`
   (`applyDeviceGuard` ativa `.desktop-blocked` e o aviso `#desktopNotice`).
 - **Componentes principais**:
+  - `.bottom-nav` / `.nav-item` — navegação inferior fixa (Início, Provas, Controle).
   - `.proof-row` / `.proof-details` — lista de provas e tabela de detalhes.
   - `.event-block` / `.series-block` — seções da tela de controle.
-  - `.athlete-card` / `.split-compact` — cartão compacto com parciais lado a lado.
+  - `.athletes-card` / `.athlete-row` / `.partials-grid` / `.partial-input` —
+    cartão de atleta com badges e parciais lado a lado.
+  - `.timer-container` / `.timer-display` / `.btn-pill` — header escuro do dialog
+    do cronômetro com dígitos ciano e botões pill.
   - `.chrono-dialog` — dialog do cronômetro (visor, pendências, atletas).
 - **Segurança de renderização**: todo conteúdo vindo de arquivos passa por
   `escapeHtml` antes de ser injetado no DOM.

@@ -1,4 +1,4 @@
-<!-- última-sessão: 02/08/2026 — Fase A: exportação CSV/XLSX → v0.2.0 -->
+<!-- última-sessão: 03/08/2026 — Redesign do front (bottom-nav + novo visual do cronômetro) → v0.3.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.2.0
+- **Versão atual:** v0.3.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -86,7 +86,7 @@ Regras:
 - **UTF-8 garantido** em toda a cadeia para evitar problemas de acentuação.
 - **Dados de importação não persistem** entre sessões (só em memória); apenas o log de atividades fica em `localStorage["pbtracker_activity_log"]`.
 - **Diagnóstico do parser** exposto em `window.__PBSWIM_DIAGNOSTIC__` e renderizado em `#diagnostic-area`.
-- **Cache do service worker**: nome `pbtracker-v3` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
   lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
@@ -220,3 +220,40 @@ Regras:
 - Commit `feat: exportacao de resultados em CSV e XLSX` → MINOR → **v0.2.0**.
 - **Remote configurado**: `origin https://github.com/Jeffrog22/pb-tracker.git`;
   `master` + tags `v0.1.0`/`v0.2.0` publicados (push ativo).
+
+---
+
+## Sessão: 03/08/2026 — Redesign do front (bottom-nav + novo visual do cronômetro)
+
+### O que foi feito
+- **`styles.css` reescrito** no novo design system: paleta nova em `:root`
+  (`--bg-header-timer` escuro, `--timer-digits` ciano, `--btn-start` verde,
+  `--btn-reset` magenta, `--btn-save` laranja), botões `pill`, `body` com
+  `padding-bottom` para o bottom-nav. Mantidas as classes funcionais (device
+  guard, telas, status, tabelas, media queries, `pointer: coarse`).
+- **`index.html`**:
+  - Novo `<nav class="bottom-nav">` fixo com 3 abas (Início, Provas, Controle)
+    em SVG inline + `data-screen`.
+  - `#chronoDialog` reestruturado: `.timer-container` escuro (botões pill
+    Iniciar/Parar + `.timer-display`), pendências, `.athletes-card` dos atletas,
+    `.action-footer` com Registrar (`btn-save`) e Fechar (`btn-cancel`).
+- **`app.js`**: bind dos `.nav-item` → `showScreen()`; `showScreen` sincroniza a
+  aba ativa; cartões de atleta migrados para `.athlete-row`/`.partials-grid`/
+  `.partial-input`; guarda na tela de Controle ("Selecione provas primeiro").
+- **`sw.js`**: cache `pbtracker-v3` → **`pbtracker-v4`**.
+
+### Decisões (consultas do usuário)
+- Reestruturar **todo** o front para o design do CSS colado.
+- Cronômetro **mantido como dialog** (não vira header fixo); o header escuro do
+  dialog usa o `timer-container` do novo design.
+
+### Arquivos
+- `styles.css` (reescrito)
+- `index.html`, `app.js`, `sw.js` (alterados)
+- `ARCHITECTURE.md`, `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js`: 0 erros
+- Teste visual via `npx serve .` (device emulation): importar → filtro →
+  controle → cronômetro → registrar.
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
