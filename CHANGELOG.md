@@ -18,6 +18,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.3.4] - 2026-08-03
+### Fixed
+- **Dialog do cronômetro aparecia travado na tela inicial**: o `display: flex`
+  do v0.3.3 foi aplicado a `.chrono-dialog` sem escopar ao estado aberto; como
+  regra de autor vence a regra do navegador (`dialog:not([open]) { display:none }`),
+  o dialog ficava sempre visível cobrindo o app (cronômetro visível sem abrir,
+  sem fechar, e com a barra de navegação bloqueada). Agora o flex é escopado a
+  `.chrono-dialog[open]`; fechado, o dialog volta a ficar oculto.
+- **Fechamento por clique fora do dialog**: clique no `::backdrop` (fora do
+  retângulo) agora chama `closeChrono()` — rede de segurança para o botão Fechar.
+
+### Changed
+- Cache do service worker de `pbtracker-v4` para `pbtracker-v5` (força shell
+  novo e limpa caches antigos em dispositivos com a versão travada).
+
 ## [v0.3.3] - 2026-08-03
 ### Changed
 - **Dialog do cronômetro com cabeçalho fixo e lista rolável**: `chrono-dialog`

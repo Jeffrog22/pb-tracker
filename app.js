@@ -212,6 +212,15 @@ function bindEvents() {
   el.stopResetBtn.addEventListener("click", handleChronoStopReset);
   el.closeChronoBtn.addEventListener("click", closeChrono);
   el.registerBtn.addEventListener("click", registerPendingTimes);
+  el.chronoDialog.addEventListener("click", (event) => {
+    const rect = el.chronoDialog.getBoundingClientRect();
+    const isOutside =
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom;
+    if (isOutside) closeChrono();
+  });
 
   el.navItems.forEach((item) => {
     item.addEventListener("click", () => {

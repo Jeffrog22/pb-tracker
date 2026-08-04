@@ -1,4 +1,4 @@
-<!-- última-sessão: 03/08/2026 — Dialog do cronômetro com cabeçalho fixo e lista rolável → v0.3.3 -->
+<!-- última-sessão: 03/08/2026 — Dialog do cronômetro aparecia travado na tela inicial (display flex fora do estado aberto) → v0.3.4 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.3.3
+- **Versão atual:** v0.3.4
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -364,3 +364,40 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: dialog do cronometro com cabecalho fixo e lista rolavel`
   → PATCH → **v0.3.3** → push origin master + tag.
+
+---
+
+## Sessão: 03/08/2026 — Dialog do cronômetro aparecia travado na tela inicial
+
+### O que foi feito
+- **Bug**: `display: flex` aplicado a `.chrono-dialog` (v0.3.3) sem escopar ao
+  estado aberto. Regra de autor vence a regra do navegador
+  (`dialog:not([open]) { display:none }`), então o dialog ficava **sempre
+  visível**, cobrindo o app: cronômetro aparecia na tela inicial, não fechava e
+  a barra de navegação ficava bloqueada (sintomas idênticos em desktop e mobile).
+- **Correções**:
+  - `styles.css`: flex/altura movidos para `.chrono-dialog[open]`
+    (`display:flex; flex-direction:column; max-height:min(100dvh,100vh);
+    overflow-y:auto`). Fechado → `display:none` do navegador volta a valer;
+    aberto via `showModal()` → layout de cabeçalho fixo + lista rolável funciona.
+  - `app.js`: listener de `click` no `#chronoDialog` fecha ao clicar fora do
+    retângulo (backdrop) — rede de segurança ao botão Fechar.
+  - `sw.js`: cache `pbtracker-v4` → `pbtracker-v5` (garante shell novo e limpa
+    caches antigos com a versão travada).
+- **Docs**: `CHANGELOG.md` (v0.3.4), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Adicionar clique-fora-para-fechar + bump do cache SW para v5 (ambos recomendados).
+
+### Arquivos
+- `styles.css`, `app.js`, `sw.js` (alterados)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Teste visual via `npx serve .` (emulação): tela inicial sem o cronômetro;
+  abrir série → cronômetro aparece e fecha (botão Fechar e clique fora); nav
+  responde.
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: dialog do cronometro visivel mesmo quando fechado (display flex fora do estado aberto)`
+  → PATCH → **v0.3.4** → push origin master + tag.

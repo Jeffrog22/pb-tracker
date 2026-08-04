@@ -598,15 +598,18 @@ button:disabled {
 /* --- Dialog do Cronômetro --- */
 .chrono-dialog {
   width: min(960px, 96vw);
-  max-height: 100vh;
-  max-height: min(100dvh, 100vh);
   border: none;
   border-radius: var(--radius-card);
   padding: 0;
   background: var(--bg-card);
-  overflow: hidden;
+}
+
+.chrono-dialog[open] {
   display: flex;
   flex-direction: column;
+  max-height: 100vh;
+  max-height: min(100dvh, 100vh);
+  overflow-y: auto;
 }
 
 .chrono-dialog::backdrop {
