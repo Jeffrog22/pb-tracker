@@ -1,4 +1,4 @@
-<!-- última-sessão: 03/08/2026 — Correção dos inputs de PR parcial (histórico) + label → v0.3.1 -->
+<!-- última-sessão: 03/08/2026 — Máscara de PR parcial acumula dígitos (001923 → 00:19:23) → v0.3.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.3.1
+- **Versão atual:** v0.3.2
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -294,3 +294,39 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: corrige inputs de PR parcial e renomeia label Historico para PR Parcial`
   → PATCH → **v0.3.1** → push origin master + tag.
+
+---
+
+## Sessão: 03/08/2026 — Máscara de PR parcial acumula dígitos (001923 → 00:19:23)
+
+### O que foi feito
+- **Bug na máscara de tempo** (`attachTimeMask` em `app.js`): cada tecla era lida
+  do valor DOM já formatado (`input.value.replace(/\D/g,"")`), e como o campo
+  vinha pré-preenchido com `00:00:00`, os zeros ocupavam as 6 posições — digitar
+  "001923" resultava sempre em `00:00:00` (dígitos engolidos).
+- **Correção**: `attachTimeMask` reescrita para modelo de **buffer de dígitos
+  crus** em `input.dataset.digits`:
+  - `beforeinput` intercepta digitação (acumula até 6 dígitos), colagem e
+    backspace (`deleteContentBackward/Forward`), grava `input.value =
+    digitsToTimeMask(buffer)` e re-emite `input` (bubbles) para que os listeners
+    de persistência/diff existentes rodem.
+  - `focus` inicializa o buffer a partir do valor (tratando `00:00:00` como
+    vazio) e seleciona o texto.
+- **Resultado**: digitar `0 0 1 9 2 3` → `00:19:23`, na tela de controle e no
+  dialog do cronômetro (ambos usam `attachTimeMask`).
+- **Docs**: `CHANGELOG.md` (v0.3.2), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Modelo **simples**: digitar acumula dígitos e backspace remove o último
+  (sem edição avançada de cursor).
+
+### Arquivos
+- `app.js` (alterado)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js`: 0 erros
+- Simulação do buffer: `001923` → `00:19:23`
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: mascara de PR parcial acumula digitos (001923 -> 00:19:23)`
+  → PATCH → **v0.3.2** → push origin master + tag.

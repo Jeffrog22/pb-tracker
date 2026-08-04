@@ -1317,19 +1317,33 @@ function renderChronoAthletes() {
 
 function attachTimeMask(input) {
   input.addEventListener("beforeinput", (event) => {
-    if (event.data && /\D/.test(event.data)) {
+    const type = event.inputType;
+    if (type === "deleteContentBackward" || type === "deleteContentForward") {
       event.preventDefault();
+      const buffer = (input.dataset.digits || "").replace(/\D/g, "");
+      const next = type === "deleteContentBackward" ? buffer.slice(0, -1) : buffer.slice(1);
+      input.dataset.digits = next;
+      input.value = digitsToTimeMask(next);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
     }
-  });
 
-  input.addEventListener("input", () => {
-    const onlyDigits = input.value.replace(/\D/g, "").slice(0, 6);
-    input.value = digitsToTimeMask(onlyDigits);
+    if (!event.data) return;
+    event.preventDefault();
+    const digits = String(event.data).replace(/\D/g, "");
+    if (!digits.length) return;
+    const buffer = ((input.dataset.digits || "") + digits).slice(-6);
+    input.dataset.digits = buffer;
+    input.value = digitsToTimeMask(buffer);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
   input.addEventListener("focus", () => {
-    const digits = input.value.replace(/\D/g, "");
-    if (!digits) input.value = "00:00:00";
+    if (input.dataset.digits === undefined) {
+      const digits = input.value.replace(/\D/g, "");
+      input.dataset.digits = digits === "000000" ? "" : digits;
+    }
+    if (!input.value.replace(/\D/g, "")) input.value = "00:00:00";
     input.select();
   });
 }

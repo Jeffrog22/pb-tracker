@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.3.2] - 2026-08-03
+### Fixed
+- **Máscara de PR parcial engolia dígitos digitados**: antes cada tecla era lida
+  do valor já formatado (`00:00:00`) e os zeros pré-preenchidos ocupavam as 6
+  posições, então "001923" ficava sempre `00:00:00`. A máscara agora mantém um
+  buffer de dígitos crus (`data-digits`), acumula apenas os dígitos digitados
+  (colagem e backspace também tratados via `beforeinput`) e re-emite `input`
+  para persistência/atualização do diff. Digitar `001923` agora exibe
+  `00:19:23`.
+
 ## [v0.3.1] - 2026-08-03
 ### Fixed
 - **Inputs de PR parcial não recebiam valores**: inputs de histórico no dialog
