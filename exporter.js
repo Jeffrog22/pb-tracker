@@ -38,7 +38,7 @@ export function buildResultsRows(state, getSplitsForEvent) {
   const orderedSplits = [...splitSet].sort((a, b) => a - b);
   const headers = ["Prova", "Série", "Baliza", "Nome", "Equipe", "Sexo", "Tempo Balizado"];
   orderedSplits.forEach((split) => {
-    headers.push(`Hist ${split}m`, `Prova ${split}m`);
+    headers.push(`PR Parcial ${split}m`, `Prova ${split}m`);
   });
 
   const rows = [];

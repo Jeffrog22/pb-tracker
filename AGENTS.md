@@ -1,4 +1,4 @@
-<!-- última-sessão: 03/08/2026 — Redesign do front (bottom-nav + novo visual do cronômetro) → v0.3.0 -->
+<!-- última-sessão: 03/08/2026 — Correção dos inputs de PR parcial (histórico) + label → v0.3.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.3.0
+- **Versão atual:** v0.3.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -257,3 +257,40 @@ Regras:
 - Teste visual via `npx serve .` (device emulation): importar → filtro →
   controle → cronômetro → registrar.
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
+
+---
+
+## Sessão: 03/08/2026 — Correção dos inputs de PR parcial (histórico) + label
+
+### O que foi feito
+- **Inputs de histórico não recebiam valores** (2 causas):
+  - No dialog do cronômetro (`renderChronoAthletes`), os inputs `data-role="history"`
+    eram criados **sem nenhum listener** (nem máscara, nem persistência).
+  - Na tela de controle (`renderAthleteCard`), cada tecla chamava `renderControl()`,
+    re-renderizando a tela inteira e perdendo o foco após a 1ª tecla.
+- **Correções em `app.js`**:
+  - `attachTimeMask`: `input.select()` no foco → digitar substitui o `00:00:00`
+    pré-preenchido independente da posição do cursor.
+  - `renderAthleteCard`: persistência em `athlete.history[split]` + atualização
+    **pontual** do `.current-value` (com `data-split`) ao lado, sem re-render.
+  - `renderChronoAthletes`: anexados `attachTimeMask` + listener de input
+    (mesma lógica pontual), gravando em `athlete.history`.
+- **Label renomeada**: `Histórico Xm` → **`PR Parcial Xm`** nos 4 pontos
+  (tela de controle + dialog), mantendo a divisão via `getSplitsForEvent`
+  (mesma lógica do `Prova Xm`).
+- **`exporter.js`**: cabeçalho `Hist Xm` → `PR Parcial Xm` (Excel/CSV).
+- **Docs**: `CHANGELOG.md` (v0.3.1), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Renomear também o cabeçalho da coluna no exportador (`PR Parcial Xm`).
+- Commit classificado como `fix:` → PATCH → **v0.3.1**.
+
+### Arquivos
+- `app.js`, `exporter.js` (alterados)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js exporter.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: corrige inputs de PR parcial e renomeia label Historico para PR Parcial`
+  → PATCH → **v0.3.1** → push origin master + tag.

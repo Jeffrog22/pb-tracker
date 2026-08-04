@@ -18,6 +18,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.3.1] - 2026-08-03
+### Fixed
+- **Inputs de PR parcial não recebiam valores**: inputs de histórico no dialog
+  do cronômetro não tinham nenhum listener (máscara/persistência); na tela de
+  controle, cada tecla disparava um re-render total (`renderControl()`) perdendo
+  o foco. Agora a máscara de tempo seleciona o conteúdo no foco, os listeners
+  persistem em `athlete.history` e só o rótulo de diferença do split é atualizado
+  em tempo real (sem re-render da tela).
+
+### Changed
+- **Label "Histórico" renomeada para "PR Parcial"** nos cartões de atleta e no
+  dialog do cronômetro, mantendo a mesma divisão de parciais do "Prova Xm"
+  (`getSplitsForEvent`). Cabeçalho da coluna no exportador (Excel/CSV) também
+  renomeado de `Hist Xm` para `PR Parcial Xm`.
+
 ## [v0.3.0] - 2026-08-03
 ### Changed
 - **Redesign completo do front do cronômetro**: nova paleta de cores, header

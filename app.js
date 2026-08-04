@@ -897,21 +897,21 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
     }
     partialCells += `
       <div class="partial-cell">
-        <div class="split-title">Histórico ${splitA}m</div>
+        <div class="split-title">PR Parcial ${splitA}m</div>
         <input class="partial-input" data-role="history" data-split="${splitA}" value="${histA}" maxlength="8" />
       </div>
       <div class="partial-cell">
         <div class="split-title">Prova ${splitA}m</div>
-        <div class="current-value">${currA}${diffA}</div>
+        <div class="current-value" data-split="${splitA}">${currA}${diffA}</div>
       </div>
       ${splitB !== undefined ? `
       <div class="partial-cell">
-        <div class="split-title">Histórico ${splitB}m</div>
+        <div class="split-title">PR Parcial ${splitB}m</div>
         <input class="partial-input" data-role="history" data-split="${splitB}" value="${histB}" maxlength="8" />
       </div>
       <div class="partial-cell">
         <div class="split-title">Prova ${splitB}m</div>
-        <div class="current-value">${currB}${diffB}</div>
+        <div class="current-value" data-split="${splitB}">${currB}${diffB}</div>
       </div>` : ""}
     `;
   }
@@ -945,7 +945,11 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
     input.addEventListener("input", () => {
       const split = Number(input.dataset.split);
       athlete.history[split] = input.value;
-      renderControl();
+      const valueEl = card.querySelector(`.current-value[data-split="${split}"]`);
+      if (valueEl) {
+        valueEl.innerHTML =
+          `${athlete.current[split] || "00:00:00"}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
+      }
     });
   });
 
@@ -1255,21 +1259,21 @@ function renderChronoAthletes() {
       const splitB = splits[i + 1];
       partialCells += `
         <div class="partial-cell">
-          <div class="split-title">Histórico ${splitA}m</div>
+          <div class="split-title">PR Parcial ${splitA}m</div>
           <input class="partial-input" data-role="history" data-split="${splitA}" value="${athlete.history[splitA] || "00:00:00"}" maxlength="8" />
         </div>
         <div class="partial-cell">
           <div class="split-title">Prova ${splitA}m</div>
-          <div class="current-value">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
+          <div class="current-value" data-split="${splitA}">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
         </div>
         ${splitB !== undefined ? `
         <div class="partial-cell">
-          <div class="split-title">Histórico ${splitB}m</div>
+          <div class="split-title">PR Parcial ${splitB}m</div>
           <input class="partial-input" data-role="history" data-split="${splitB}" value="${athlete.history[splitB] || "00:00:00"}" maxlength="8" />
         </div>
         <div class="partial-cell">
           <div class="split-title">Prova ${splitB}m</div>
-          <div class="current-value">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
+          <div class="current-value" data-split="${splitB}">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
         </div>` : ""}
       `;
     }
@@ -1295,6 +1299,18 @@ function renderChronoAthletes() {
       </div>
       <div class="partials-grid">${partialCells}</div>
     `;
+    card.querySelectorAll("input[data-role='history']").forEach((input) => {
+      attachTimeMask(input);
+      input.addEventListener("input", () => {
+        const split = Number(input.dataset.split);
+        athlete.history[split] = input.value;
+        const valueEl = card.querySelector(`.current-value[data-split="${split}"]`);
+        if (valueEl) {
+          valueEl.innerHTML =
+            `${athlete.current[split] || "00:00:00"}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
+        }
+      });
+    });
     el.chronoAthletes.appendChild(card);
   });
 }
@@ -1314,6 +1330,7 @@ function attachTimeMask(input) {
   input.addEventListener("focus", () => {
     const digits = input.value.replace(/\D/g, "");
     if (!digits) input.value = "00:00:00";
+    input.select();
   });
 }
 
