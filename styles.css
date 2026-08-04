@@ -598,11 +598,15 @@ button:disabled {
 /* --- Dialog do Cronômetro --- */
 .chrono-dialog {
   width: min(960px, 96vw);
+  max-height: 100vh;
+  max-height: min(100dvh, 100vh);
   border: none;
   border-radius: var(--radius-card);
   padding: 0;
   background: var(--bg-card);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chrono-dialog::backdrop {
@@ -696,6 +700,13 @@ button:disabled {
 
 .chrono-dialog .athletes-card {
   margin: 14px 16px 0;
+}
+
+.chrono-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chrono-dialog .action-footer {

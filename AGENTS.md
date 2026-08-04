@@ -1,4 +1,4 @@
-<!-- última-sessão: 03/08/2026 — Máscara de PR parcial acumula dígitos (001923 → 00:19:23) → v0.3.2 -->
+<!-- última-sessão: 03/08/2026 — Dialog do cronômetro com cabeçalho fixo e lista rolável → v0.3.3 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.3.2
+- **Versão atual:** v0.3.3
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -330,3 +330,37 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: mascara de PR parcial acumula digitos (001923 -> 00:19:23)`
   → PATCH → **v0.3.2** → push origin master + tag.
+
+---
+
+## Sessão: 03/08/2026 — Dialog do cronômetro com cabeçalho fixo e lista rolável
+
+### O que foi feito
+- **Bug**: `.chrono-dialog` tinha `overflow: hidden` **sem `max-height`**; como o
+  `<dialog>` abre em posição fixa (modal), o conteúdo que passava da viewport era
+  cortado sem rolagem — a lista de atletas e os botões Registrar/Fechar ficavam
+  fora da tela ("falta diagramação").
+- **Correção (opção B: cabeçalho fixo + conteúdo rolável)**:
+  - `index.html`: pendências + atletas envolvidos num novo `.chrono-scroll`
+    (timer-container fica fora, acima; action-footer fora, abaixo).
+  - `styles.css `.chrono-dialog``: `display:flex; flex-direction:column;
+    max-height: 100vh; max-height: min(100dvh,100vh)`.
+  - `styles.css`: novo `.chrono-scroll { flex:1; min-height:0; overflow-y:auto;
+    -webkit-overflow-scrolling:touch }` → rola só pendências + atletas; cabeçalho
+    do cronômetro e botões ficam fixos.
+- **Docs**: `CHANGELOG.md` (v0.3.3), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Opção B (cabeçalho fixo e lista rolável) em vez de rolar o dialog inteiro.
+
+### Arquivos
+- `index.html`, `styles.css` (alterados)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js`: 0 erros
+- Teste visual via `npx serve .` (device emulation): abrir série grande e
+  conferir rolagem da lista com cronômetro e botões fixos.
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: dialog do cronometro com cabecalho fixo e lista rolavel`
+  → PATCH → **v0.3.3** → push origin master + tag.

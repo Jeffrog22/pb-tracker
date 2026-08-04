@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.3.3] - 2026-08-03
+### Changed
+- **Dialog do cronômetro com cabeçalho fixo e lista rolável**: `chrono-dialog`
+  vira flex column com `max-height: min(100dvh, 100vh)`; o bloco do cronômetro
+  (`.timer-container`) e os botões "Registrar/Fechar" (`.action-footer`) ficam
+  fixos, e pendências + atletas (`#pendingList` / `#chronoAthletes`) ficam num
+  novo contêiner `.chrono-scroll` (`flex:1; min-height:0; overflow-y:auto`).
+  Antes o dialog tinha `overflow: hidden` sem `max-height`, cortando a lista e
+  os botões em séries grandes, sem possibilidade de rolagem.
+
 ## [v0.3.2] - 2026-08-03
 ### Fixed
 - **Máscara de PR parcial engolia dígitos digitados**: antes cada tecla era lida
