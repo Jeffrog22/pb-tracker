@@ -800,7 +800,7 @@ function buildEventDetailsTable(event) {
         <th>Baliza</th>
         <th>Atleta</th>
         <th>Tempo balizado</th>
-        <th></th>
+        <th>ver</th>
         <th>Tempo da prova</th>
       </tr>
     </thead>
@@ -822,7 +822,7 @@ function buildEventDetailsTable(event) {
             <td>${escapeHtml(athlete.baliza)}</td>
             <td>${escapeHtml(athlete.nome)}</td>
             <td>${escapeHtml(athlete.tempoBalizado)}</td>
-            <td>
+            <td class="eye-cell" data-athlete-id="${escapeHtml(athlete.id)}">
               <button type="button" class="eye-btn" aria-label="Ver parciais de ${escapeHtml(athlete.nome)}">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -832,23 +832,31 @@ function buildEventDetailsTable(event) {
             </td>
             <td class="race-time">${escapeHtml(getFinalRaceTime(athlete, event.eventName))}</td>
           `;
-          tr.querySelector(".eye-btn").dataset.athleteId = athlete.id;
           tbody.appendChild(tr);
         });
     });
 
   tbody.addEventListener("click", (e) => {
-    const btn = e.target.closest(".eye-btn");
-    if (!btn) return;
-    const tr = btn.closest("tr");
-    if (!tr || tr.querySelector(".partials-expand-row")) return;
-    btn.style.display = "none";
-    const athlete = athleteById.get(btn.dataset.athleteId);
+    const cell = e.target.closest(".eye-cell");
+    if (!cell) return;
+    const athlete = athleteById.get(cell.dataset.athleteId);
     if (!athlete) return;
-    const expandTr = document.createElement("tr");
-    expandTr.className = "partials-expand-row";
-    expandTr.innerHTML = `<td colspan="6">${buildPartialsGrid(athlete, event.eventName)}</td>`;
-    tr.after(expandTr);
+    if (cell.querySelector(".eye-btn")) {
+      cell.innerHTML = `<span class="partials-inline" role="button" tabindex="0">${buildPartialsInline(athlete, event.eventName)}</span>`;
+    } else {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "eye-btn";
+      btn.setAttribute("aria-label", `Ver parciais de ${athlete.nome}`);
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      `;
+      cell.innerHTML = "";
+      cell.appendChild(btn);
+    }
   });
 
   return table;
@@ -860,42 +868,10 @@ function getFinalRaceTime(athlete, eventName) {
   return athlete.current?.[lastSplit] || "00:00:00";
 }
 
-function buildPartialsGrid(athlete, eventName) {
-  const splits = getSplitsForEvent(eventName);
-  let cells = "";
-  for (let i = 0; i < splits.length; i += 2) {
-    const splitA = splits[i];
-    const splitB = splits[i + 1];
-    const histA = athlete.history[splitA] || "00:00:00";
-    const currA = athlete.current[splitA] || "00:00:00";
-    const diffA = buildDiffLabel(currA, histA);
-    cells += `
-      <div class="partial-cell">
-        <div class="split-title">PR Parcial ${splitA}m</div>
-        <div class="current-value">${escapeHtml(histA)}</div>
-      </div>
-      <div class="partial-cell">
-        <div class="split-title">Prova ${splitA}m</div>
-        <div class="current-value">${escapeHtml(currA)}${diffA}</div>
-      </div>
-    `;
-    if (splitB !== undefined) {
-      const histB = athlete.history[splitB] || "00:00:00";
-      const currB = athlete.current[splitB] || "00:00:00";
-      const diffB = buildDiffLabel(currB, histB);
-      cells += `
-        <div class="partial-cell">
-          <div class="split-title">PR Parcial ${splitB}m</div>
-          <div class="current-value">${escapeHtml(histB)}</div>
-        </div>
-        <div class="partial-cell">
-          <div class="split-title">Prova ${splitB}m</div>
-          <div class="current-value">${escapeHtml(currB)}${diffB}</div>
-        </div>
-      `;
-    }
-  }
-  return `<div class="partials-grid">${cells}</div>`;
+function buildPartialsInline(athlete, eventName) {
+  return getSplitsForEvent(eventName)
+    .map((split) => escapeHtml(athlete.current?.[split] || "00:00:00"))
+    .join("/");
 }
 
 function goToControl() {

@@ -1,4 +1,4 @@
-<!-- última-sessão: 06/08/2026 — Colunas 'Tempo da prova' + botão olho com parciais na tabela de detalhes do filtro → v0.4.0 -->
+<!-- última-sessão: 06/08/2026 — Parciais inline (toggle) na coluna do olho da tabela de detalhes do filtro → v0.4.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.4.0
+- **Versão atual:** v0.4.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -411,8 +411,7 @@ Regras:
   - Nova coluna **Tempo da prova** mostra o tempo final registrado da prova
     (último parcial salvo no cronômetro via `athlete.current`, ex.: 100m → `current[100]`).
   - Nova coluna de **botão olho por atleta** entre **Tempo balizado** e **Tempo da prova**:
-    ao clicar, o botão desaparece (`display:none`) e revela abaixo da linha um grid
-    compacto das parciais (`PR Parcial Xm` / `Prova Xm` com diff), read-only.
+    ao clicar, revela as parciais da prova na própria coluna.
   - Helpers novos: `getFinalRaceTime(athlete, eventName)` e
     `buildPartialsGrid(athlete, eventName)` (reuso de `getSplitsForEvent` +
     `buildDiffLabel`).
@@ -434,3 +433,38 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: coluna tempo da prova e botao olho com parciais na tabela de detalhes do filtro`
   → MINOR → **v0.4.0** → push origin master + tag.
+
+---
+
+## Sessão: 06/08/2026 — Parciais inline (toggle) na coluna do olho do filtro
+
+### O que foi feito
+- **Ajuste do v0.4.0** (`buildEventDetailsTable` em `app.js`): o clique no olho
+  não abre mais card abaixo da linha. O próprio ícone é substituído pelas
+  parciais da prova na mesma coluna (`eye-cell`), entre **Tempo balizado** e
+  **Tempo da prova** — ex. 50m → `00:23:70/00:26:07` (só `athlete.current`, sem
+  PR/diff), juntadas por `/`.
+- **Toggle**: clicar novamente nas parciais (`role="button"`) restaura o ícone
+  do olho, ocultando as parciais.
+- Cabeçalho da coluna do olho passou a exibir **ver**.
+- **`buildPartialsGrid` removido** (não usado); novo helper
+  `buildPartialsInline(athlete, eventName)`. `getFinalRaceTime` mantido.
+- **`styles.css`**: removidos `.partials-expand-row td` e
+  `.partials-expand-row .partials-grid`; adicionado `.partials-inline`
+  (monospace, `cursor:pointer`, `white-space:nowrap`); mantido `overflow-x: auto`
+  em `.proof-details.open`.
+- **Docs**: `CHANGELOG.md` (v0.4.1), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Não trazer card completo; só as parciais da prova, inline na coluna do olho.
+- Toggle no próprio texto das parciais para restaurar o ícone.
+
+### Arquivos
+- `app.js`, `styles.css` (alterados)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: parciais inline (toggle) na coluna do olho da tabela de detalhes do filtro`
+  → PATCH → **v0.4.1** → push origin master + tag.

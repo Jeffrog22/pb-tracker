@@ -18,14 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.4.1] - 2026-08-06
+### Changed
+- **Parciais do filtro reveladas inline na coluna do olho**: o clique no ícone
+  ver não abre mais um card abaixo da linha; em vez disso, o próprio ícone é
+  substituído pelas parciais da prova (só `current`, juntadas por `/`, ex. 50m →
+  `00:23:70/00:26:07`) na mesma coluna, entre **Tempo balizado** e **Tempo da
+  prova**. Clicar novamente nas parciais restaura o ícone (toggle).
+- Cabeçalho da coluna do olho passa a exibir **ver**.
+
 ## [v0.4.0] - 2026-08-06
 ### Added
 - **Tabela "Ver séries e atletas" do filtro com 'Tempo da prova' e parciais**:
   - Nova coluna **Tempo da prova** mostra o tempo final registrado da prova
     (último parcial registrado no cronômetro, via `athlete.current`).
   - Entre **Tempo balizado** e **Tempo da prova**, um **botão ícone de olho por
-    atleta** que, ao ser clicado, desaparece e revela, logo abaixo da linha, um
-    grid compacto das parciais do atleta (`PR Parcial Xm` / `Prova Xm` com diff).
+    atleta** que, ao ser clicado, revela as parciais da prova na própria coluna.
 
 ## [v0.3.4] - 2026-08-03
 ### Fixed

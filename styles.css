@@ -431,14 +431,14 @@ button:disabled {
   height: 18px;
 }
 
-.partials-expand-row td {
-  background: #f6f7f9;
-  border-bottom: 1px solid var(--border-light);
-  padding: 0.55rem 0.4rem;
-}
-
-.partials-expand-row .partials-grid {
-  margin-top: 0;
+.partials-inline {
+  display: inline-block;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .proof-details.open {
