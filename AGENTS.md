@@ -1,4 +1,4 @@
-<!-- última-sessão: 03/08/2026 — Dialog do cronômetro aparecia travado na tela inicial (display flex fora do estado aberto) → v0.3.4 -->
+<!-- última-sessão: 06/08/2026 — Colunas 'Tempo da prova' + botão olho com parciais na tabela de detalhes do filtro → v0.4.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.3.4
+- **Versão atual:** v0.4.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -401,3 +401,36 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: dialog do cronometro visivel mesmo quando fechado (display flex fora do estado aberto)`
   → PATCH → **v0.3.4** → push origin master + tag.
+
+---
+
+## Sessão: 06/08/2026 — Tabela de detalhes do filtro com 'Tempo da prova' e botão olho das parciais
+
+### O que foi feito
+- **`buildEventDetailsTable` (`app.js`)** da tela Filtro ("Ver séries e atletas"):
+  - Nova coluna **Tempo da prova** mostra o tempo final registrado da prova
+    (último parcial salvo no cronômetro via `athlete.current`, ex.: 100m → `current[100]`).
+  - Nova coluna de **botão olho por atleta** entre **Tempo balizado** e **Tempo da prova**:
+    ao clicar, o botão desaparece (`display:none`) e revela abaixo da linha um grid
+    compacto das parciais (`PR Parcial Xm` / `Prova Xm` com diff), read-only.
+  - Helpers novos: `getFinalRaceTime(athlete, eventName)` e
+    `buildPartialsGrid(athlete, eventName)` (reuso de `getSplitsForEvent` +
+    `buildDiffLabel`).
+- **`styles.css`**: `.eye-btn` (botão ícone circular), `.partials-expand-row td`
+  (fundo + padding), `.partials-expand-row .partials-grid` e `overflow-x: auto`
+  em `.proof-details.open` (tabela de 6 colunas em telas estreitas).
+- **Docs**: `CHANGELOG.md` (v0.4.0), `AGENTS.md` (esta sessão).
+
+### Decisões (consultas do usuário)
+- Botão olho **por linha de atleta** (não único no cabeçalho).
+- Coluna **Tempo da prova** entre o olho e as parciais reveladas.
+
+### Arquivos
+- `app.js`, `styles.css` (alterados)
+- `CHANGELOG.md`, `AGENTS.md` (alterados)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: coluna tempo da prova e botao olho com parciais na tabela de detalhes do filtro`
+  → MINOR → **v0.4.0** → push origin master + tag.

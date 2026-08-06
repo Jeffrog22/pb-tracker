@@ -412,6 +412,39 @@ button:disabled {
   text-align: left;
 }
 
+.eye-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  background: #f4f7fd;
+  color: var(--btn-start);
+  border-color: var(--border-light);
+}
+
+.eye-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.partials-expand-row td {
+  background: #f6f7f9;
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.55rem 0.4rem;
+}
+
+.partials-expand-row .partials-grid {
+  margin-top: 0;
+}
+
+.proof-details.open {
+  overflow-x: auto;
+}
+
 /* --- Controle --- */
 .section-head {
   display: flex;

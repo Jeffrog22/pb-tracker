@@ -18,6 +18,15 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.4.0] - 2026-08-06
+### Added
+- **Tabela "Ver séries e atletas" do filtro com 'Tempo da prova' e parciais**:
+  - Nova coluna **Tempo da prova** mostra o tempo final registrado da prova
+    (último parcial registrado no cronômetro, via `athlete.current`).
+  - Entre **Tempo balizado** e **Tempo da prova**, um **botão ícone de olho por
+    atleta** que, ao ser clicado, desaparece e revela, logo abaixo da linha, um
+    grid compacto das parciais do atleta (`PR Parcial Xm` / `Prova Xm` com diff).
+
 ## [v0.3.4] - 2026-08-03
 ### Fixed
 - **Dialog do cronômetro aparecia travado na tela inicial**: o `display: flex`
