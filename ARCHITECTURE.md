@@ -188,7 +188,7 @@ o plano correspondente.
 
 ### Service Worker (`sw.js`) — ciclo de vida
 
-1. **`install`**: abre o cache `pbtracker-v8` e pré-cacheia o *app shell*
+1. **`install`**: abre o cache `pbtracker-v9` e pré-cacheia o *app shell*
    (`index.html`, `styles.css`, `app.js`, `exporter.js`, manifest, ícones e
    screenshots). Chama `skipWaiting()`.
 2. **`activate`**: remove caches antigos e executa `clients.claim()`.
@@ -207,16 +207,19 @@ recarrega a página automaticamente.
 
 ## 9. Exportação de Resultados (`exporter.js`)
 
-- `buildResultsRows(state, getSplitsForEvent)` — itera as provas selecionadas em
-  `state.selectedProofs`, ordena por série/baliza e monta colunas: prova, série,
-  baliza, nome, equipe, sexo, tempo balizado e uma coluna por parcial
-  (`Hist Xm` e `Prova Xm`, `00:00:00` quando vazio).
+- `buildResultsRows(state, getSplitsForEvent)` — itera **todas** as provas de
+  `state.groupedEvents` (ordem do filtro), ordena por série/baliza e monta
+  colunas: prova, série, baliza, nome, equipe, sexo, tempo balizado e uma coluna
+  por parcial (`PR Parcial Xm` e `Prova Xm`, `00:00:00` quando vazio). A seleção
+  de provas (`selectedProofs`) **não** restringe a exportação.
 - `buildActivityLogRows(activityLog)` — abas com timestamp + mensagem.
 - `exportResults(...)` — fluxo:
   1. **Online** → `loadSheetJs()` injeta o SheetJS do CDN **sob demanda** (primeiro
      clique) e gera **XLSX** com abas **Resultados** e **Log de Atividades**.
   2. **Offline ou falha** → `exportCsv` com **BOM UTF-8** e separador `;` (Excel
      pt-BR), com escape correto de células.
+- O botão **Exportar Excel** (`#exportBtn`) fica no **topbar** (entre "Trocar
+  usuário" e a engrenagem), disponível em todas as telas.
 - O SheetJS, uma vez carregado, é cacheado em runtime pela estratégia
   **cache-first** do service worker (GET cross-origin).
 

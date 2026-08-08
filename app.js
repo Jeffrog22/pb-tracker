@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.8.0";
 
 const state = {
   teamName: "",
@@ -288,7 +288,6 @@ async function handleExportResults() {
   const result = await exportResults({
     teamName: state.teamName,
     competitionDate: state.competitionDate,
-    selectedProofs: state.selectedProofs,
     groupedEvents: state.groupedEvents,
     getSplitsForEvent,
     activityLog: state.activityLog,

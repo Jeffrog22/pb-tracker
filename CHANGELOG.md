@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.8.0] - 2026-08-08
+### Changed
+- **Exportação passa a incluir TODAS as provas importadas (filtro)**, e não apenas
+  as provas selecionadas no controle. `buildResultsRows` itera `groupedEvents`
+  (mesma ordem do filtro); guarda atualizada para "Nenhum resultado disponível
+  para exportar".
+- Botão **Exportar Excel** movido da tela de Controle para o **topbar**, entre
+  "Trocar usuário" e a engrenagem de configurações.
+- Cache do service worker de `pbtracker-v8` para `pbtracker-v9`.
+
 ## [v0.7.0] - 2026-08-08
 ### Added
 - **Engrenagem de configurações no topbar**: o chip "Pronto" foi substituído por

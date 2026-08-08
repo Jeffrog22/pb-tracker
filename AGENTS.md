@@ -1,4 +1,4 @@
-<!-- última-sessão: 08/08/2026 — Engrenagem de configurações (dialog) no topbar → v0.7.0 -->
+<!-- última-sessão: 08/08/2026 — Exportação de todos os resultados do filtro (botão no topbar) → v0.8.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.7.0
+- **Versão atual:** v0.8.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -95,6 +95,11 @@ Regras:
   (`#settingsBtn`) que abre o dialog `#settingsDialog` — dentro dele ficam o
   status (`#appBadge`), `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn`
   (Exportar log). `#profileSwitchBtn` permanece no topbar.
+- **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
+  lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
+  separador `;`). SheetJS é cacheado em runtime pelo service worker. O botão
+  `#exportBtn` fica no **topbar** e exporta **todas** as provas importadas
+  (`groupedEvents`), independente de `selectedProofs`.
 - **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
@@ -586,3 +591,36 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: engrenagem de configuracoes no topbar com atualizar app e exportar log no dialog`
   → MINOR → **v0.7.0** → push origin master + tag.
+
+---
+
+## Sessão: 08/08/2026 — Exportação de todos os resultados do filtro (botão no topbar)
+
+### O que foi feito
+- **Exportar tudo**: `buildResultsRows` (`exporter.js`) passou a iterar **todas**
+  as provas de `state.groupedEvents` (mesma ordem do filtro) em vez de
+  `selectedProofs`; `exportResults` não recebe mais `selectedProofs`; guarda
+  "Nenhum resultado disponível para exportar.".
+- **Botão no topbar**: `#exportBtn` saiu da tela de Controle e foi para o
+  **topbar**, entre `#profileSwitchBtn` e `#settingsBtn` (id/binding mantidos).
+  `#backToFilterBtn` permanece na tela de Controle.
+- **`styles.css`**: regra `.topbar-actions #exportBtn` (tamanho compacto como os
+  demais botões do topo).
+- **`sw.js`**: cache `pbtracker-v8` → **`pbtracker-v9`**.
+
+### Decisões (consultas do usuário)
+- Exportar **todas** as provas importadas, independente da seleção no filtro.
+- Botão de exportar posicionado no topbar **entre "Trocar usuário" e a engrenagem**.
+- Colunas do Excel/CSV **mantidas** (Prova, Série, Baliza, Nome, Equipe, Sexo,
+  Tempo Balizado, PR Parcial Xm, Prova Xm).
+
+### Arquivos
+- `exporter.js`, `app.js`, `index.html`, `styles.css`, `sw.js` (alterados)
+- `PDR.md` (RF-23, fluxo 5.6, cache SW v9), `ARCHITECTURE.md` (seção 9, cache v9),
+  `CHANGELOG.md` (v0.8.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: exportacao de todos os resultados do filtro com botao no topbar`
+  → MINOR → **v0.8.0** → push origin master + tag.

@@ -22,9 +22,7 @@ function slugify(value) {
 }
 
 export function buildResultsRows(state, getSplitsForEvent) {
-  const events = [...state.selectedProofs]
-    .map((key) => state.groupedEvents.get(key))
-    .filter(Boolean);
+  const events = [...state.groupedEvents.values()];
 
   const splitSet = new Set();
   events.forEach((event) => {
@@ -121,16 +119,15 @@ function exportXlsx(XLSX, sheets, filename) {
 export async function exportResults({
   teamName,
   competitionDate,
-  selectedProofs,
   groupedEvents,
   getSplitsForEvent,
   activityLog,
 }) {
-  const state = { selectedProofs, groupedEvents };
+  const state = { groupedEvents };
   const results = buildResultsRows(state, getSplitsForEvent);
 
   if (!results.rows.length) {
-    return { ok: false, reason: "Nenhuma prova selecionada para exportar." };
+    return { ok: false, reason: "Nenhum resultado disponível para exportar." };
   }
 
   const logData = buildActivityLogRows(activityLog);

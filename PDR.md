@@ -13,7 +13,7 @@
 | Repositório/pasta | `PBSwimTrack` |
 | Tipo | Aplicação web (PWA) para mobile/tablet |
 | Idioma da interface | Português (pt-BR) |
-| Versão atual (cache SW) | `pbtracker-v8` |
+| Versão atual (cache SW) | `pbtracker-v9` |
 
 ## 2. Visão Geral e Problema
 
@@ -78,12 +78,14 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 2. O usuário pode **exportar o log** em arquivo `.txt`.
 
 ### 5.6 Exportação de Resultados
-1. Na tela de **Controle**, o usuário clica em **Exportar Excel**.
+1. No **topbar**, o usuário clica em **Exportar Excel** (entre "Trocar usuário"
+   e a engrenagem de configurações).
 2. Com rede disponível, o app carrega o **SheetJS** (CDN, sob demanda) e gera um
    arquivo **XLSX** com as abas **Resultados** e **Log de Atividades**.
 3. Sem internet (ou falha de carga), o app faz **fallback automático para CSV**
    com BOM UTF-8 e separador `;` (abre corretamente no Excel pt-BR).
-4. A exportação inclui as **provas selecionadas** e os **parciais de histórico e prova**.
+4. A exportação inclui **todas as provas importadas** (disponíveis no filtro),
+   com os parciais de histórico e prova de cada atleta.
 
 ## 6. Requisitos Funcionais (RF)
 
@@ -140,8 +142,9 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 - **RF-20** — **Exportar log** para arquivo `.txt`.
 - **RF-21** — Funcionar como **PWA**: manifest, ícones, service worker e cache offline.
 - **RF-22** — Detectar **nova versão** do app e permitir aplicar atualização.
-- **RF-23** — **Exportar resultados** das provas selecionadas em **CSV e XLSX**
-  (SheetJS via CDN sob demanda, com fallback automático para CSV quando offline).
+- **RF-23** — **Exportar resultados** de **todas as provas importadas** (não apenas
+  as selecionadas) em **CSV e XLSX** (SheetJS via CDN sob demanda, com fallback
+  automático para CSV quando offline); botão disponível no **topbar**.
 
 ## 7. Requisitos Não-Funcionais (RNF)
 
