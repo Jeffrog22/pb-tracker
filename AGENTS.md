@@ -1,4 +1,4 @@
-<!-- última-sessão: 08/08/2026 — Exportação de todos os resultados do filtro (botão no topbar) → v0.8.0 -->
+<!-- última-sessão: 08/08/2026 — Remoção de colunas Equipe e PR Parcial do export (v0.8.1) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.8.0
+- **Versão atual:** v0.8.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -99,7 +99,9 @@ Regras:
   lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
   separador `;`). SheetJS é cacheado em runtime pelo service worker. O botão
   `#exportBtn` fica no **topbar** e exporta **todas** as provas importadas
-  (`groupedEvents`), independente de `selectedProofs`.
+  (`groupedEvents`), independente de `selectedProofs`. Colunas atuais:
+  `Prova | Série | Baliza | Nome | Sexo | Tempo Balizado | Prova Xm...`
+  (sem Equipe e sem PR Parcial).
 - **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
@@ -624,3 +626,30 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: exportacao de todos os resultados do filtro com botao no topbar`
   → MINOR → **v0.8.0** → push origin master + tag.
+
+---
+
+## Sessão: 08/08/2026 — Remoção de colunas Equipe e PR Parcial do export (v0.8.1)
+
+### O que foi feito
+- **Export (Excel/CSV) enxuto**: `buildResultsRows` (`exporter.js`) removeu a
+  coluna **Equipe** e as colunas **PR Parcial Xm** (histórico); o export passa a
+  ter `Prova | Série | Baliza | Nome | Sexo | Tempo Balizado | Prova Xm...`
+  (apenas os tempos das parciais de prova, via `athlete.current`).
+- Mudança **somente no arquivo exportado** — telas (controle/filtro) inalteradas.
+- **`sw.js`**: cache `pbtracker-v9` → **`pbtracker-v10`**.
+
+### Decisões (consultas do usuário)
+- Remover Equipe e PR Parcial **apenas no export** (não na UI).
+- Coluna **Sexo mantida**.
+
+### Arquivos
+- `exporter.js`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.8.1), `ARCHITECTURE.md` (seção 9, cache v10), `PDR.md`
+  (fluxo 5.6, cache v10), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: remove colunas equipe e PR parcial do export mantendo apenas parciais de prova`
+  → PATCH → **v0.8.1** → push origin master + tag.

@@ -34,9 +34,9 @@ export function buildResultsRows(state, getSplitsForEvent) {
   });
 
   const orderedSplits = [...splitSet].sort((a, b) => a - b);
-  const headers = ["Prova", "Série", "Baliza", "Nome", "Equipe", "Sexo", "Tempo Balizado"];
+  const headers = ["Prova", "Série", "Baliza", "Nome", "Sexo", "Tempo Balizado"];
   orderedSplits.forEach((split) => {
-    headers.push(`PR Parcial ${split}m`, `Prova ${split}m`);
+    headers.push(`Prova ${split}m`);
   });
 
   const rows = [];
@@ -51,12 +51,10 @@ export function buildResultsRows(state, getSplitsForEvent) {
             seriesKey,
             athlete.baliza,
             athlete.nome,
-            athlete.equipe,
             athlete.sexo || "",
             athlete.tempoBalizado || "00:00:00",
           ];
           orderedSplits.forEach((split) => {
-            row.push(athlete.history?.[split] || "00:00:00");
             row.push(athlete.current?.[split] || "00:00:00");
           });
           rows.push(row);

@@ -13,7 +13,7 @@
 | Repositório/pasta | `PBSwimTrack` |
 | Tipo | Aplicação web (PWA) para mobile/tablet |
 | Idioma da interface | Português (pt-BR) |
-| Versão atual (cache SW) | `pbtracker-v9` |
+| Versão atual (cache SW) | `pbtracker-v10` |
 
 ## 2. Visão Geral e Problema
 
@@ -85,7 +85,8 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 3. Sem internet (ou falha de carga), o app faz **fallback automático para CSV**
    com BOM UTF-8 e separador `;` (abre corretamente no Excel pt-BR).
 4. A exportação inclui **todas as provas importadas** (disponíveis no filtro),
-   com os parciais de histórico e prova de cada atleta.
+   com os **tempos das parciais de prova** de cada atleta (sem histórico/PR
+   parcial e sem a coluna Equipe).
 
 ## 6. Requisitos Funcionais (RF)
 

@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.8.1] - 2026-08-08
+### Removed
+- **Colunas do arquivo exportado (Excel/CSV)**: removidas a coluna **Equipe** e
+  as colunas **PR Parcial Xm**. O export passa a conter apenas:
+  `Prova | Série | Baliza | Nome | Sexo | Tempo Balizado | Prova Xm...`
+  (somente os tempos das parciais de prova). As telas (controle/filtro) não são
+  alteradas.
+
+### Changed
+- Cache do service worker de `pbtracker-v9` para `pbtracker-v10`.
+
 ## [v0.8.0] - 2026-08-08
 ### Changed
 - **Exportação passa a incluir TODAS as provas importadas (filtro)**, e não apenas
