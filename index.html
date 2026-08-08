@@ -30,9 +30,12 @@
       </div>
       <div class="topbar-actions">
         <button id="profileSwitchBtn" class="ghost" type="button" hidden>Trocar usuário</button>
-        <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
-        <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
-        <span id="appBadge" class="badge">Pronto</span>
+        <button id="settingsBtn" class="ghost icon-btn" type="button" aria-label="Configurações" title="Configurações">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -147,6 +150,22 @@
     <div class="action-footer">
       <button id="registerBtn" class="btn-save">Registrar</button>
       <button id="closeChronoBtn" class="btn-cancel">Fechar</button>
+    </div>
+  </dialog>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="settings-head">
+      <h3>Configurações</h3>
+      <button id="closeSettingsBtn" class="ghost" type="button">Fechar</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-row">
+        <span id="appBadge" class="badge">Pronto</span>
+      </div>
+      <div class="actions-row">
+        <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
+        <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
+      </div>
     </div>
   </dialog>
 

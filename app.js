@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.7.0";
 
 const state = {
   teamName: "",
@@ -55,6 +55,9 @@ const el = {
   refreshAppBtn: document.getElementById("refreshAppBtn"),
   downloadLogBtn: document.getElementById("downloadLogBtn"),
   appBadge: document.getElementById("appBadge"),
+  settingsBtn: document.getElementById("settingsBtn"),
+  settingsDialog: document.getElementById("settingsDialog"),
+  closeSettingsBtn: document.getElementById("closeSettingsBtn"),
   chronoDialog: document.getElementById("chronoDialog"),
   startLapBtn: document.getElementById("startLapBtn"),
   stopResetBtn: document.getElementById("stopResetBtn"),
@@ -368,6 +371,17 @@ function bindEvents() {
     showScreen("import");
   });
   el.profileSwitchBtn.addEventListener("click", switchProfile);
+  el.settingsBtn.addEventListener("click", () => el.settingsDialog.showModal());
+  el.closeSettingsBtn.addEventListener("click", () => el.settingsDialog.close());
+  el.settingsDialog.addEventListener("click", (event) => {
+    const rect = el.settingsDialog.getBoundingClientRect();
+    const isOutside =
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom;
+    if (isOutside) el.settingsDialog.close();
+  });
   el.goControlBtnTop.addEventListener("click", goToControl);
   el.goControlBtnBottom.addEventListener("click", goToControl);
   el.backToFilterBtn.addEventListener("click", () => showScreen("filter"));

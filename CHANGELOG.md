@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.7.0] - 2026-08-08
+### Added
+- **Engrenagem de configurações no topbar**: o chip "Pronto" foi substituído por
+  um botão de engrenagem que abre um **dialog modal de Configurações**.
+- No dialog ficam a **linha de status** (Pronto / Nova versão), o botão
+  **Atualizar app** e o botão **Exportar log** (realocados do topbar).
+
+### Changed
+- Botão "Trocar usuário" permanece no topbar.
+- Cache do service worker de `pbtracker-v7` para `pbtracker-v8`.
+
 ## [v0.6.0] - 2026-08-08
 ### Added
 - **Excluir perfil individualmente** na tela de perfil: cada perfil da lista

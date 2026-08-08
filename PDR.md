@@ -13,7 +13,7 @@
 | Repositório/pasta | `PBSwimTrack` |
 | Tipo | Aplicação web (PWA) para mobile/tablet |
 | Idioma da interface | Português (pt-BR) |
-| Versão atual (cache SW) | `pbtracker-v7` |
+| Versão atual (cache SW) | `pbtracker-v8` |
 
 ## 2. Visão Geral e Problema
 
@@ -110,6 +110,9 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
   com confirmação; o perfil ativo é removido se excluído.
 - **RF-29** — Exibir a **versão do app** (constante `APP_VERSION` do `app.js`,
   ex.: `v0.5.0`) no rodapé das telas de **perfil, filtro e controle**.
+- **RF-30** — Expor as **configurações** (status do app, "Atualizar app" e
+  "Exportar log") num **dialog modal** aberto por uma **engrenagem no topbar**,
+  no lugar do antigo chip de status.
 
 ### Organização
 - **RF-07** — Agrupar atletas em **provas** (por prova + sexo) e **séries**.

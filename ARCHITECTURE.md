@@ -188,7 +188,7 @@ o plano correspondente.
 
 ### Service Worker (`sw.js`) — ciclo de vida
 
-1. **`install`**: abre o cache `pbtracker-v7` e pré-cacheia o *app shell*
+1. **`install`**: abre o cache `pbtracker-v8` e pré-cacheia o *app shell*
    (`index.html`, `styles.css`, `app.js`, `exporter.js`, manifest, ícones e
    screenshots). Chama `skipWaiting()`.
 2. **`activate`**: remove caches antigos e executa `clients.claim()`.
@@ -249,6 +249,10 @@ recarrega a página automaticamente.
   (`applyDeviceGuard` ativa `.desktop-blocked` e o aviso `#desktopNotice`).
 - **Componentes principais**:
   - `.bottom-nav` / `.nav-item` — navegação inferior fixa (Início, Provas, Controle).
+  - `.topbar-actions` — ações do topo: `#profileSwitchBtn` (Trocar usuário) e
+    `#settingsBtn` (engrenagem que abre o dialog `#settingsDialog`).
+  - `#settingsDialog` — dialog modal de Configurações com `#appBadge` (status),
+    `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn` (Exportar log).
   - `.proof-row` / `.proof-details` — lista de provas e tabela de detalhes.
   - `.event-block` / `.series-block` — seções da tela de controle.
   - `.athletes-card` / `.athlete-row` / `.partials-grid` / `.partial-input` —

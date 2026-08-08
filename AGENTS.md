@@ -1,4 +1,4 @@
-<!-- última-sessão: 08/08/2026 — Exclusão individual de perfil + tag de versão (APP_VERSION) → v0.6.0 -->
+<!-- última-sessão: 08/08/2026 — Engrenagem de configurações (dialog) no topbar → v0.7.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.6.0
+- **Versão atual:** v0.7.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -91,6 +91,10 @@ Regras:
   da tag SemVer (app é estático; não lê a tag git).
 - **Exclusão de perfil**: botão `×` em cada `.profile-item` chama `deleteProfile`
   (confirmação via `confirm`); perfil ativo excluído é desativado.
+- **Configurações no topbar**: o chip "Pronto" virou a **engrenagem**
+  (`#settingsBtn`) que abre o dialog `#settingsDialog` — dentro dele ficam o
+  status (`#appBadge`), `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn`
+  (Exportar log). `#profileSwitchBtn` permanece no topbar.
 - **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
@@ -547,3 +551,38 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: botao excluir perfil individual e tag de versao nas telas de login, filtro e controle`
   → MINOR → **v0.6.0** → push origin master + tag.
+
+---
+
+## Sessão: 08/08/2026 — Engrenagem de configurações (dialog) no topbar
+
+### O que foi feito
+- **Engrenagem no topbar**: o chip `#appBadge` ("Pronto") foi substituído pelo
+  botão `#settingsBtn` (`.icon-btn`, SVG de engrenagem) que abre o dialog modal
+  `#settingsDialog` de Configurações.
+- **Dialog de Configurações** (`#settingsDialog`): cabeçalho com título +
+  `#closeSettingsBtn` (Fechar); corpo com a **linha de status** (`#appBadge`,
+  "Pronto"/"Nova versão"), `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn`
+  (Exportar log). Os IDs foram mantidos, então a lógica de `markUpdateAvailable`
+  e `handleAppRefresh` continuou sem mudanças — só realocou o DOM.
+- **`app.js`**: refs `settingsBtn/settingsDialog/closeSettingsBtn`; abertura via
+  `showModal()`, fechamento por botão e clique no backdrop (padrão do cronômetro).
+- **`#profileSwitchBtn`** (Trocar usuário) permanece no topbar.
+- **`styles.css`**: `.icon-btn` (botão circular) e `.settings-dialog`/
+  `.settings-head`/`.settings-body`/`.settings-row`.
+- **`sw.js`**: cache `pbtracker-v7` → **`pbtracker-v8`**.
+
+### Decisões (consultas do usuário)
+- Configurações como **dialog modal** (não tela na bottom-nav).
+- Botão **Trocar usuário permanece no topbar**.
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `PDR.md` (RF-30, cache SW v8), `ARCHITECTURE.md` (topbar/dialog de configurações,
+  cache v8), `CHANGELOG.md` (v0.7.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: engrenagem de configuracoes no topbar com atualizar app e exportar log no dialog`
+  → MINOR → **v0.7.0** → push origin master + tag.
