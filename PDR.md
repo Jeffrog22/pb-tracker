@@ -13,7 +13,7 @@
 | Repositório/pasta | `PBSwimTrack` |
 | Tipo | Aplicação web (PWA) para mobile/tablet |
 | Idioma da interface | Português (pt-BR) |
-| Versão atual (cache SW) | `pbtracker-v6` |
+| Versão atual (cache SW) | `pbtracker-v7` |
 
 ## 2. Visão Geral e Problema
 
@@ -106,6 +106,10 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 - **RF-26** — Permitir **trocar de perfil** ("Trocar usuário") a qualquer momento.
 - **RF-27** — A importação **não exige data**: a data da competição é definida
   automaticamente (data atual) e usada apenas no nome do arquivo exportado.
+- **RF-28** — Permitir **excluir um perfil individualmente** na tela de perfil,
+  com confirmação; o perfil ativo é removido se excluído.
+- **RF-29** — Exibir a **versão do app** (constante `APP_VERSION` do `app.js`,
+  ex.: `v0.5.0`) no rodapé das telas de **perfil, filtro e controle**.
 
 ### Organização
 - **RF-07** — Agrupar atletas em **provas** (por prova + sexo) e **séries**.
@@ -165,6 +169,7 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 | UC-09 | Exportar resultados em CSV/XLSX | Cronometrista/Técnico |
 | UC-10 | Cadastrar/selecionar perfil de professor e equipe | Cronometrista/Técnico |
 | UC-11 | Trocar de perfil de professor/equipe | Cronometrista/Técnico |
+| UC-12 | Excluir um perfil de professor/equipe | Cronometrista/Técnico |
 
 ## 9. Critérios de Aceite
 

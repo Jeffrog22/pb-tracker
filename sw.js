@@ -1,4 +1,4 @@
-const CACHE_NAME = "pbtracker-v6";
+const CACHE_NAME = "pbtracker-v7";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -1,5 +1,7 @@
 import { exportResults } from "./exporter.js";
 
+const APP_VERSION = "0.6.0";
+
 const state = {
   teamName: "",
   competitionDate: "",
@@ -86,6 +88,7 @@ function init() {
   applyDeviceGuard();
   loadActivityLog();
   loadProfiles();
+  renderVersionTags();
   logAction("App iniciado");
   const active = getActiveProfile();
   if (active) {
@@ -171,18 +174,52 @@ function renderProfileList() {
     return;
   }
   state.profiles.forEach((profile) => {
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement("div");
     item.className = "profile-item";
-    item.innerHTML = `
+
+    const main = document.createElement("button");
+    main.type = "button";
+    main.className = "profile-item-main";
+    main.innerHTML = `
       <span class="profile-item-name">${escapeHtml(profile.professor)}</span>
       <span class="profile-item-team">${escapeHtml(profile.equipe)}</span>
     `;
-    item.addEventListener("click", () => {
+    main.addEventListener("click", () => {
       activateProfile(profile.id);
       showScreen("import");
     });
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "profile-item-delete";
+    del.setAttribute("aria-label", `Excluir perfil de ${profile.professor}`);
+    del.title = "Excluir perfil";
+    del.textContent = "×";
+    del.addEventListener("click", () => deleteProfile(profile.id));
+
+    item.appendChild(main);
+    item.appendChild(del);
     el.profileList.appendChild(item);
+  });
+}
+
+function deleteProfile(id) {
+  const profile = state.profiles.find((p) => p.id === id);
+  if (!profile) return;
+  if (!window.confirm(`Excluir o perfil de ${profile.professor} (${profile.equipe})?`)) return;
+  state.profiles = state.profiles.filter((p) => p.id !== id);
+  saveProfiles();
+  if (state.activeProfile?.id === id) {
+    state.activeProfile = null;
+    setActiveProfileId(null);
+  }
+  renderProfileList();
+  logAction(`Perfil excluído: ${profile.professor} (${profile.equipe}).`);
+}
+
+function renderVersionTags() {
+  document.querySelectorAll(".version-tag").forEach((elTag) => {
+    elTag.textContent = `v${APP_VERSION}`;
   });
 }
 

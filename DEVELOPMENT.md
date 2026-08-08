@@ -99,9 +99,12 @@ data e hora.
 Ao final de cada etapa, milestone ou entrega de uma sub-tarefa acordada:
 1. Verificar as alterações realizadas.
 2. **Atualizar obrigatoriamente** `CHANGELOG.md` e `AGENTS.md` com as mudanças da sessão.
-3. Formular uma mensagem de commit seguindo Conventional Commits.
-4. Solicitar aprovação explícita do usuário.
-5. Executar `git add`, `git commit` e `git push` quando aprovado, utilizando o fluxo de versionamento.
+3. **Atualizar a constante `APP_VERSION`** em `app.js` para a nova versão
+   (o app estático não lê a tag git; ela é exibida no rodapé das telas de
+   perfil/filtro/controle). Fazer junto do CHANGELOG e antes do commit.
+4. Formular uma mensagem de commit seguindo Conventional Commits.
+5. Solicitar aprovação explícita do usuário.
+6. Executar `git add`, `git commit` e `git push` quando aprovado, utilizando o fluxo de versionamento.
 
 ## 4. Fluxo de Versionamento e Tags no Git
 
@@ -160,6 +163,7 @@ Antes de finalizar qualquer tarefa, o assistente deve verificar:
 - [ ] Os commits seguem o padrão do `DEVELOPMENT.md`?
 - [ ] O `AGENTS.md` foi atualizado com a nova sessão?
 - [ ] O `CHANGELOG.md` registra a nova versão?
+- [ ] A constante `APP_VERSION` em `app.js` foi atualizada para a nova versão?
 - [ ] A ação foi registrada com `node project-action-log.js "..."`?
 - [ ] A validação estática passou? (`node --check app.js sw.js project-action-log.js`)
 

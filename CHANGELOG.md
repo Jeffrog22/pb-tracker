@@ -18,6 +18,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.6.0] - 2026-08-08
+### Added
+- **Excluir perfil individualmente** na tela de perfil: cada perfil da lista
+  ganha um botão `×` que remove o perfil (com confirmação); se for o perfil
+  ativo, ele é desativado.
+- **Tag de versão no rodapé** das telas de **perfil, filtro e controle**,
+  preenchida pela constante `APP_VERSION` (`app.js`), ex.: `v0.6.0`.
+
+### Changed
+- Labels do cadastro de perfil simplificados: "Professor" e "Equipe" (sem
+  placeholders).
+- Cache do service worker de `pbtracker-v6` para `pbtracker-v7`.
+
 ## [v0.5.0] - 2026-08-07
 ### Added
 - **Tela de perfil (login/cadastro local)**: cadastro de professor + equipe

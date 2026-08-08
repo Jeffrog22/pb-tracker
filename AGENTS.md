@@ -1,4 +1,4 @@
-<!-- última-sessão: 07/08/2026 — Perfil de professor/equipe (tela de login/cadastro local) → v0.5.0 -->
+<!-- última-sessão: 08/08/2026 — Exclusão individual de perfil + tag de versão (APP_VERSION) → v0.6.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.5.0
+- **Versão atual:** v0.6.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -86,6 +86,11 @@ Regras:
 - **UTF-8 garantido** em toda a cadeia para evitar problemas de acentuação.
 - **Dados de importação não persistem** entre sessões (só em memória); apenas o log de atividades fica em `localStorage["pbtracker_activity_log"]`.
 - **Diagnóstico do parser** exposto em `window.__PBSWIM_DIAGNOSTIC__` e renderizado em `#diagnostic-area`.
+- **Tag de versão no rodapé** (perfil/filtro/controle) usa a constante
+  `APP_VERSION` do `app.js` — **atualizar a cada release** junto do CHANGELOG e
+  da tag SemVer (app é estático; não lê a tag git).
+- **Exclusão de perfil**: botão `×` em cada `.profile-item` chama `deleteProfile`
+  (confirmação via `confirm`); perfil ativo excluído é desativado.
 - **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
@@ -506,3 +511,39 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: perfil de professor e equipe (login/cadastro local) e remocao do campo de data da importacao`
   → MINOR → **v0.5.0** → push origin master + tag.
+
+---
+
+## Sessão: 08/08/2026 — Exclusão individual de perfil + tag de versão (APP_VERSION)
+
+### O que foi feito
+- **Excluir perfil individual**: cada item da lista de perfis virou
+  `<div class="profile-item">` com botão principal (ativa o perfil) + botão `×`
+  (`.profile-item-delete`) que chama `deleteProfile(id)` — confirma via `confirm`,
+  remove do `state.profiles`, `saveProfiles()`, desativa o perfil se for o ativo,
+  re-renderiza a lista e registra a ação no log.
+- **Tag de versão**: nova constante `const APP_VERSION = "0.6.0"` no `app.js`;
+  `renderVersionTags()` preenche os `<div class="version-tag">` (rodapé dos
+  painéis de **perfil, filtro e controle**) com `v${APP_VERSION}`. Chamado no `init()`.
+- **Labels do cadastro** simplificados (Professor/Equipe, sem placeholders) — ajuste feito pelo usuário.
+- **`styles.css`**: `.profile-item` vira flex; novos `.profile-item-main`/
+  `.profile-item-delete`/`.version-tag`.
+- **`sw.js`**: cache `pbtracker-v6` → **`pbtracker-v7`**.
+
+### Decisões (consultas do usuário)
+- Clean button = **excluir perfil individual** (não apagar tudo nem limpar form).
+- Tag de versão no **rodapé das 3 telas** (login/filtro/controle).
+- `APP_VERSION` é a fonte da versão no app estático (não lê tag git) — **atualizar
+  a cada release** junto do CHANGELOG e da tag SemVer.
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `PDR.md` (RF-28/29, UC-12, cache SW v7), `ARCHITECTURE.md` (exclusão de perfil,
+  seção "Versão do app", cache v7), `CHANGELOG.md` (v0.6.0), `AGENTS.md` (esta
+  sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: botao excluir perfil individual e tag de versao nas telas de login, filtro e controle`
+  → MINOR → **v0.6.0** → push origin master + tag.
