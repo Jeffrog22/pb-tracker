@@ -61,7 +61,8 @@ Três `<section>` com classe `.screen` controladas por `showScreen()`:
 
 | Seção | ID | Função |
 |---|---|---|
-| Importação | `#screenImport` | Formulário (equipe, data, arquivo) e status |
+| Perfil | `#screenLogin` | Cadastro/seleção de professor + equipe (perfil local) |
+| Importação | `#screenImport` | Formulário (equipe preenchida do perfil, arquivo) e status |
 | Filtro | `#screenFilter` | Lista de provas com checkboxes e detalhes |
 | Controle | `#screenControl` | Cartões de atleta e botões de abrir cronômetro |
 
@@ -74,13 +75,15 @@ Um único objeto `state` centraliza os dados em `app.js`:
 
 ```js
 const state = {
-  teamName,               // Equipe informada na importação
-  competitionDate,        // Data da competição
+  teamName,               // Equipe preenchida (perfil ativo ou editada)
+  competitionDate,        // Data da competição (hoje, automática)
   importedAt,             // Timestamp da importação
   importedRows,           // Linhas normalizadas (atletas)
   groupedEvents,          // Map<eventKey, { eventName, series: Map<seriesKey, athletes[]> }>
   selectedProofs,         // Set<eventKey> provas escolhidas
   activityLog,            // Array de { timestamp, message }
+  profiles,               // Array de { id, professor, equipe, createdAt } (localStorage)
+  activeProfile,          // Perfil ativo ({ id, professor, equipe, createdAt } | null)
   activeChrono,           // Estado do cronômetro (ver §7)
 };
 ```
@@ -185,7 +188,7 @@ o plano correspondente.
 
 ### Service Worker (`sw.js`) — ciclo de vida
 
-1. **`install`**: abre o cache `pbtracker-v4` e pré-cacheia o *app shell*
+1. **`install`**: abre o cache `pbtracker-v6` e pré-cacheia o *app shell*
    (`index.html`, `styles.css`, `app.js`, `exporter.js`, manifest, ícones e
    screenshots). Chama `skipWaiting()`.
 2. **`activate`**: remove caches antigos e executa `clients.claim()`.
@@ -224,6 +227,12 @@ recarrega a página automaticamente.
 - `downloadActivityLog` gera e baixa um `.txt` com todas as entradas.
 - Ações logadas: início do app, importações (sucesso/falha), cliques do cronômetro,
   exportações de log e de resultados.
+- **Perfis de professor/equipe** são persistidos em
+  `localStorage["pbtracker_profiles"]` (array de `{ id, professor, equipe,
+  createdAt }`); o perfil ativo fica em `localStorage["pbtracker_active_profile"]`
+  (id). No carregamento, se houver perfil ativo, o app vai direto à importação
+  com a equipe pré-preenchida; caso contrário, exibe a tela de perfil
+  (`#screenLogin`).
 
 ## 11. Camada de UI e Estilos
 

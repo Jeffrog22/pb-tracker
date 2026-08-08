@@ -1,4 +1,4 @@
-<!-- última-sessão: 06/08/2026 — Parciais inline (toggle) na coluna do olho da tabela de detalhes do filtro → v0.4.1 -->
+<!-- última-sessão: 07/08/2026 — Perfil de professor/equipe (tela de login/cadastro local) → v0.5.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.4.1
+- **Versão atual:** v0.5.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -468,3 +468,41 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: parciais inline (toggle) na coluna do olho da tabela de detalhes do filtro`
   → PATCH → **v0.4.1** → push origin master + tag.
+
+---
+
+## Sessão: 07/08/2026 — Perfil de professor/equipe (tela de login/cadastro local) + remoção da data
+
+### O que foi feito
+- **Tela de perfil** (`#screenLogin`) criada: **cadastro** (nome do professor +
+  nome da equipe) e **login** (seleção de perfis salvos). Acesso via nav "Início"
+  quando não há perfil ativo; botão **"Trocar usuário"** no topbar.
+- **Persistência local**: `localStorage["pbtracker_profiles"]` (array de
+  `{ id, professor, equipe, createdAt }`) e `localStorage["pbtracker_active_profile"]`
+  (id ativo). No carregamento, perfil ativo → vai direto à importação com a
+  equipe pré-preenchida; senão → tela de perfil.
+- **Campo "Data da Competição" removido** da importação (`handleImport` agora
+  exige só equipe + arquivo; `state.competitionDate = todayISO()`). A data é
+  usada apenas no nome do arquivo exportado (exporter.js já tinha fallback).
+- `showScreen` ganhou o modo `login`; o nav "Início" roteia para o perfil quando
+  não há perfil ativo. Chip `#activeProfileChip` exibe "Prof. X · Equipe Y".
+- **`styles.css`**: seção de estilos `.profile-list/.profile-item/.profile-form/
+  .profile-divider/.profile-chip`.
+- **`sw.js`**: cache `pbtracker-v5` → **`pbtracker-v6`**.
+
+### Decisões (consultas do usuário)
+- Perfil **local sem senha** (app offline, sem backend).
+- **Uma equipe por perfil**; equipe continua editável na importação (variações do PDF).
+- Campo de data **removido** da importação (data atual automática no export).
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `PDR.md` (RF-24 a RF-27, UC-10/11, fluxo 5.1, cache SW v6), `ARCHITECTURE.md`
+  (telas, estado, persistência de perfis, cache v6), `CHANGELOG.md` (v0.5.0),
+  `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: perfil de professor e equipe (login/cadastro local) e remocao do campo de data da importacao`
+  → MINOR → **v0.5.0** → push origin master + tag.

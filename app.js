@@ -8,6 +8,8 @@ const state = {
   groupedEvents: new Map(),
   selectedProofs: new Set(),
   activityLog: [],
+  profiles: [],
+  activeProfile: null,
   activeChrono: {
     eventKey: null,
     seriesKey: null,
@@ -28,12 +30,18 @@ let swRegistration = null;
 let swUpdateAvailable = false;
 
 const el = {
+  screenLogin: document.getElementById("screenLogin"),
   screenImport: document.getElementById("screenImport"),
   screenFilter: document.getElementById("screenFilter"),
   screenControl: document.getElementById("screenControl"),
   fileInput: document.getElementById("fileInput"),
   teamName: document.getElementById("teamName"),
-  competitionDate: document.getElementById("competitionDate"),
+  profileSwitchBtn: document.getElementById("profileSwitchBtn"),
+  activeProfileChip: document.getElementById("activeProfileChip"),
+  profileList: document.getElementById("profileList"),
+  profileForm: document.getElementById("profileForm"),
+  profileCoachName: document.getElementById("profileCoachName"),
+  profileTeamName: document.getElementById("profileTeamName"),
   processBtn: document.getElementById("processBtn"),
   importStatus: document.getElementById("importStatus"),
   proofList: document.getElementById("proofList"),
@@ -77,8 +85,124 @@ function init() {
   bindDeviceGuard();
   applyDeviceGuard();
   loadActivityLog();
+  loadProfiles();
   logAction("App iniciado");
-  showScreen("import");
+  const active = getActiveProfile();
+  if (active) {
+    activateProfile(active.id, { skipLog: true });
+    showScreen("import");
+  } else {
+    renderProfileList();
+    showScreen("login");
+  }
+}
+
+function loadProfiles() {
+  try {
+    const stored = window.localStorage.getItem("pbtracker_profiles");
+    state.profiles = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(state.profiles)) state.profiles = [];
+  } catch (e) {
+    state.profiles = [];
+  }
+}
+
+function saveProfiles() {
+  try {
+    window.localStorage.setItem("pbtracker_profiles", JSON.stringify(state.profiles));
+  } catch (e) {
+    // ignore storage failures
+  }
+}
+
+function getActiveProfile() {
+  try {
+    const id = window.localStorage.getItem("pbtracker_active_profile");
+    return state.profiles.find((p) => p.id === id) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setActiveProfileId(id) {
+  try {
+    if (id) window.localStorage.setItem("pbtracker_active_profile", id);
+    else window.localStorage.removeItem("pbtracker_active_profile");
+  } catch (e) {
+    // ignore storage failures
+  }
+}
+
+function activateProfile(id, options = {}) {
+  const profile = state.profiles.find((p) => p.id === id);
+  if (!profile) return;
+  state.activeProfile = profile;
+  setActiveProfileId(profile.id);
+  el.teamName.value = profile.equipe || "";
+  renderProfileChip();
+  if (!options.skipLog) logAction(`Perfil ativado: ${profile.professor} (${profile.equipe}).`);
+}
+
+function createProfile(professor, equipe) {
+  const profile = {
+    id: `profile-${Date.now()}`,
+    professor: professor.trim(),
+    equipe: equipe.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  state.profiles.push(profile);
+  saveProfiles();
+  activateProfile(profile.id);
+  logAction(`Perfil cadastrado: ${profile.professor} (${profile.equipe}).`);
+  return profile;
+}
+
+function switchProfile() {
+  state.activeProfile = null;
+  setActiveProfileId(null);
+  renderProfileList();
+  showScreen("login");
+}
+
+function renderProfileList() {
+  el.profileList.innerHTML = "";
+  if (!state.profiles.length) {
+    el.profileList.innerHTML = '<p class="muted">Nenhum perfil cadastrado ainda.</p>';
+    return;
+  }
+  state.profiles.forEach((profile) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "profile-item";
+    item.innerHTML = `
+      <span class="profile-item-name">${escapeHtml(profile.professor)}</span>
+      <span class="profile-item-team">${escapeHtml(profile.equipe)}</span>
+    `;
+    item.addEventListener("click", () => {
+      activateProfile(profile.id);
+      showScreen("import");
+    });
+    el.profileList.appendChild(item);
+  });
+}
+
+function renderProfileChip() {
+  const profile = state.activeProfile;
+  if (!profile) {
+    el.activeProfileChip.hidden = true;
+    el.profileSwitchBtn.hidden = true;
+    return;
+  }
+  el.activeProfileChip.hidden = false;
+  el.activeProfileChip.textContent = `${profile.professor} · ${profile.equipe}`;
+  el.profileSwitchBtn.hidden = false;
+}
+
+function todayISO() {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${mm}-${dd}`;
 }
 
 function loadActivityLog() {
@@ -194,6 +318,19 @@ function markUpdateAvailable() {
 
 function bindEvents() {
   el.processBtn.addEventListener("click", handleImport);
+  el.profileForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const professor = el.profileCoachName.value.trim();
+    const equipe = el.profileTeamName.value.trim();
+    if (!professor || !equipe) {
+      alert("Preencha o nome do professor e o nome da equipe.");
+      return;
+    }
+    createProfile(professor, equipe);
+    el.profileForm.reset();
+    showScreen("import");
+  });
+  el.profileSwitchBtn.addEventListener("click", switchProfile);
   el.goControlBtnTop.addEventListener("click", goToControl);
   el.goControlBtnBottom.addEventListener("click", goToControl);
   el.backToFilterBtn.addEventListener("click", () => showScreen("filter"));
@@ -224,7 +361,12 @@ function bindEvents() {
 
   el.navItems.forEach((item) => {
     item.addEventListener("click", () => {
-      showScreen(item.dataset.screen);
+      const screen = item.dataset.screen;
+      if (screen === "import" && !state.activeProfile) {
+        showScreen("login");
+        return;
+      }
+      showScreen(screen);
     });
   });
 }
@@ -265,6 +407,7 @@ function applyDeviceGuard() {
 }
 
 function showScreen(screen) {
+  el.screenLogin.classList.toggle("active", screen === "login");
   el.screenImport.classList.toggle("active", screen === "import");
   el.screenFilter.classList.toggle("active", screen === "filter");
   el.screenControl.classList.toggle("active", screen === "control");
@@ -300,16 +443,15 @@ function setStatus(message, tone = "neutral") {
 
 async function handleImport() {
   const teamName = el.teamName.value.trim();
-  const competitionDate = el.competitionDate.value;
   const file = el.fileInput.files?.[0];
 
-  if (!teamName || !competitionDate || !file) {
-    setStatus("Preencha equipe, data e arquivo antes de processar.", "error");
+  if (!teamName || !file) {
+    setStatus("Preencha a equipe e selecione um arquivo antes de processar.", "error");
     return;
   }
 
   state.teamName = teamName;
-  state.competitionDate = competitionDate;
+  state.competitionDate = todayISO();
 
   try {
     setStatus("Processando arquivo...", "neutral");

@@ -29,6 +29,7 @@
         <p>Balizamento e controle de parciais para competição</p>
       </div>
       <div class="topbar-actions">
+        <button id="profileSwitchBtn" class="ghost" type="button" hidden>Trocar usuário</button>
         <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
         <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
         <span id="appBadge" class="badge">Pronto</span>
@@ -36,19 +37,36 @@
     </header>
 
     <main>
-      <section id="screenImport" class="screen active">
+      <section id="screenLogin" class="screen active">
         <div class="panel">
-          <h2>Tela Inicial</h2>
-          <div class="grid-2">
+          <h2>Perfil</h2>
+          <p class="muted">Selecione um professor para começar ou cadastre um novo perfil.</p>
+          <div id="profileList" class="profile-list"></div>
+          <div class="profile-divider"><span>ou cadastre um novo perfil</span></div>
+          <form id="profileForm" class="profile-form">
+            <label>
+              Nome do Professor
+              <input id="profileCoachName" type="text" maxlength="80" placeholder="Ex.: Prof. Carlos" required />
+            </label>
             <label>
               Nome da Equipe
-              <input id="teamName" type="text" maxlength="80" placeholder="Ex.: Aquática Paulista" required />
+              <input id="profileTeamName" type="text" maxlength="80" placeholder="Ex.: Aquática Paulista" required />
             </label>
-            <label>
-              Data da Competição
-              <input id="competitionDate" type="date" required />
-            </label>
-          </div>
+            <div class="actions-row">
+              <button type="submit" class="primary">Cadastrar e entrar</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="screenImport" class="screen">
+        <div class="panel">
+          <h2>Tela Inicial</h2>
+          <div id="activeProfileChip" class="profile-chip" hidden></div>
+          <label>
+            Nome da Equipe (busca)
+            <input id="teamName" type="text" maxlength="80" placeholder="Ex.: Aquática Paulista" required />
+          </label>
           <label class="file-upload">
             Arquivo de Balizamento (PDF, JSON, CSV)
             <input id="fileInput" type="file" accept=".pdf,.json,.csv,text/csv,application/pdf,application/json" />

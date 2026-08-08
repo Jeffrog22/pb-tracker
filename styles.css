@@ -319,6 +319,72 @@ button:disabled {
   color: var(--success-ink);
 }
 
+/* --- Perfil (login/cadastro) --- */
+.profile-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+}
+
+.profile-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  background: #f4f7fd;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 0.6rem 0.75rem;
+}
+
+.profile-item-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.profile-item-team {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.profile-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.4rem 0 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.profile-divider::before,
+.profile-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+.profile-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+  background: var(--badge-bg);
+  border: 1px solid #d5d0e8;
+  color: #554f68;
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 /* --- Filtro de Provas --- */
 .proof-list {
   display: grid;

@@ -13,7 +13,7 @@
 | Repositório/pasta | `PBSwimTrack` |
 | Tipo | Aplicação web (PWA) para mobile/tablet |
 | Idioma da interface | Português (pt-BR) |
-| Versão atual (cache SW) | `pbtracker-v2` |
+| Versão atual (cache SW) | `pbtracker-v6` |
 
 ## 2. Visão Geral e Problema
 
@@ -47,11 +47,13 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 ## 5. Fluxos de Uso Principais
 
 ### 5.1 Importação do balizamento
-1. Usuário informa **Nome da Equipe** e **Data da Competição**.
-2. Seleciona um arquivo de balizamento (PDF, JSON ou CSV).
-3. O sistema processa e extrai os atletas **da equipe informada**.
-4. Se o parser falhar, é exibido um **diagnóstico em tela** com as linhas rejeitadas.
-5. Em caso de sucesso, avança para o **Filtro das Provas**.
+1. Usuário acessa a tela de **perfil**: seleciona um perfil cadastrado (professor
+   + equipe) ou cadastra um novo.
+2. Na importação, o **Nome da Equipe já vem preenchido** pelo perfil ativo.
+3. Seleciona um arquivo de balizamento (PDF, JSON ou CSV).
+4. O sistema processa e extrai os atletas **da equipe informada**.
+5. Se o parser falhar, é exibido um **diagnóstico em tela** com as linhas rejeitadas.
+6. Em caso de sucesso, avança para o **Filtro das Provas**.
 
 ### 5.2 Filtro das Provas
 1. As provas são agrupadas por prova + sexo e listadas com a quantidade de séries.
@@ -95,6 +97,15 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 - **RF-05** — Exibir **diagnóstico visual** em tela quando o parser falhar,
   indicando a linha e o motivo da rejeição.
 - **RF-06** — Normalizar todas as linhas importadas para um modelo padrão de atleta.
+
+### Perfil
+- **RF-24** — Permitir **cadastro local de perfil** (professor + equipe),
+  persistido no dispositivo (`localStorage`).
+- **RF-25** — Ao abrir o app, **selecionar perfil salvo** ou cadastrar um novo;
+  o perfil ativo **pré-preenche a equipe** na importação.
+- **RF-26** — Permitir **trocar de perfil** ("Trocar usuário") a qualquer momento.
+- **RF-27** — A importação **não exige data**: a data da competição é definida
+  automaticamente (data atual) e usada apenas no nome do arquivo exportado.
 
 ### Organização
 - **RF-07** — Agrupar atletas em **provas** (por prova + sexo) e **séries**.
@@ -152,6 +163,8 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 | UC-07 | Exportar log de atividades | Cronometrista/Técnico |
 | UC-08 | Aplicar atualização de versão | Desenvolvedor/Usuário |
 | UC-09 | Exportar resultados em CSV/XLSX | Cronometrista/Técnico |
+| UC-10 | Cadastrar/selecionar perfil de professor e equipe | Cronometrista/Técnico |
+| UC-11 | Trocar de perfil de professor/equipe | Cronometrista/Técnico |
 
 ## 9. Critérios de Aceite
 

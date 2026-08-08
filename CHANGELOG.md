@@ -18,6 +18,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.5.0] - 2026-08-07
+### Added
+- **Tela de perfil (login/cadastro local)**: cadastro de professor + equipe
+  salvo em `localStorage` (`pbtracker_profiles` + `pbtracker_active_profile`).
+  Ao abrir o app, seleciona o perfil salvo (ou uma lista de perfis); a equipe da
+  importação já vem preenchida. Botão "Trocar usuário" no topo.
+- Persistência dos perfis de professor/equipe no dispositivo.
+
+### Removed
+- **Campo "Data da Competição"** da tela de importação: a data agora é definida
+  automaticamente para a data atual (`todayISO`) e usada apenas no nome do
+  arquivo exportado.
+
+### Changed
+- `handleImport` não exige mais data; exige apenas equipe + arquivo.
+- Cache do service worker de `pbtracker-v5` para `pbtracker-v6`.
+
 ## [v0.4.1] - 2026-08-06
 ### Changed
 - **Parciais do filtro reveladas inline na coluna do olho**: o clique no ícone
