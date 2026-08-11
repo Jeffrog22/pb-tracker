@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Layout mobile: cronômetro compacto, parciais uniformes (v0.9.2) -->
+<!-- última-sessão: 11/08/2026 — Moldura nos dígitos do cronômetro + inputs de parcial reduzidos (v0.9.3) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.9.2
+- **Versão atual:** v0.9.3
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -757,3 +757,35 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: melhorias de layout do cronometro e das parciais no mobile`
   → PATCH → **v0.9.2** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Moldura nos dígitos do cronômetro + inputs de parcial reduzidos (v0.9.3)
+
+### O que foi feito
+- **`styles.css` (cronômetro)**: a moldura ciano que envolvia o container inteiro
+  foi **removida** do `.timer-container`; o quadro agora contorna somente os
+  dígitos no `.timer-display` (`border: 1px solid var(--timer-digits)`,
+  `border-radius: 8px`, `padding: 4px 8px`) — retângulo ao redor de `00:00:00`,
+  preenchendo o espaço entre os botões.
+- **`styles.css` (parciais)**: no `@media (pointer: coarse)`, o
+  `.partials-grid .partial-input` ganhou `min-height: 0` (libera o 42px global de
+  `input`); o `.partials-grid .current-value` perdeu o `min-height: 42px` (mantém
+  o flex de centralização). Input de PR Parcial e box de Voltas/Tempo Final com a
+  **mesma altura compacta (igualar ao menor)**, no Controle e no cronômetro.
+- **`app.js`**: `APP_VERSION` → **`0.9.3`**.
+- **`sw.js`**: cache `pbtracker-v13` → **`pbtracker-v14`**.
+
+### Decisões (consultas do usuário)
+- Moldura **somente nos números** do cronômetro (a do container removida).
+- Inputs de parcial **iguais ao menor** (altura reduzida), não ao maior.
+
+### Arquivos
+- `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.9.3), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: moldura ciano ao redor dos digitos do cronometro e inputs de parcial com altura reduzida`
+  → PATCH → **v0.9.3** → push origin master + tag.

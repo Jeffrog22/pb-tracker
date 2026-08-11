@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.9.3] - 2026-08-11
+### Changed
+- **Moldura ao redor dos dígitos do cronômetro**: o quadro ciano agora contorna
+  somente os números `00:00:00` (`.timer-display`, retângulo com cantos
+  arredondados), removida a borda que envolvia o container escuro do timer.
+- **Inputs de PR Parcial com altura reduzida**: no touch (`pointer: coarse`), o
+  input de PR Parcial perde o `min-height` de 42px e fica com a mesma altura
+  compacta do valor de Voltas/Tempo Final, no Controle e no cronômetro
+  (igualar ao menor).
+- Cache do service worker de `pbtracker-v13` para `pbtracker-v14`.
+
 ## [v0.9.2] - 2026-08-11
 ### Changed
 - **Cronômetro mais compacto no mobile**: removido o label "Cronômetro"; o
