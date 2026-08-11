@@ -839,3 +839,51 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: drag-and-drop de balizas para os registros pendentes do cronometro`
   → MINOR → **v0.10.0** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Paleta de balizas com dropzone por linha no cronômetro (v0.10.1)
+
+### O que foi feito
+- **Redesenho do DnD** (`renderPending` em `app.js`): o board de dropzones +
+  bandeja de toggles virou uma **paleta de balizas** (`.lane-palette`, sticky no
+  topo à direita da lista) com **um toggle por valor de baliza** da série
+  (`buildLanePalette`/`buildBalizaToggle`).
+- **Dropzone por linha**: a célula Baliza da tabela virou um botão
+  `.lane-dropzone` (com `data-split`/`data-order`/`data-lane`); `buildPendingTable`
+  preenche com o valor atribuído ou `—`.
+- **Arraste por cópia**: `handleLanePointerDown` agora inicia em `.baliza-toggle`
+  (bloqueado quando `.used`) e guarda `laneDrag.baliza`; `spawnLaneGhost` clona o
+  toggle (o original permanece na paleta); `highlightLaneDropzone` mira
+  `.lane-dropzone`; `finishLaneDrag` derruba a baliza na ordem da linha alvo.
+- **Bloqueio de toggle em uso**: `getUsedBalizasForSplit(ac, split)` calcula as
+  balizas já atribuídas na parcial atual (`split = splitPlan[currentSplitIndex]`);
+  toggles usados ficam esmaecidos (`.used`) e não iniciam arraste → colisão
+  entre ordens fica impossível (guard `getOrderForBaliza` mantido como rede).
+- **Toque limpa**: `handleLaneCellClick` + `clearLaneAssignment(order)` removem
+  `laneAssignments[order]` e o `lane` das capturas da ordem (retroativo).
+- **Auto-fill N=2**: `autoFillTwoAthletes` — com 2 atletas, após o primeiro drop
+  a ordem restante da parcial recebe a baliza livre.
+- **`styles.css`**: `.lane-palette` (sticky, flex-end, blur), `.baliza-toggle`
+  (círculo + `used` tracejado/esmaecido), `.lane-dropzone` (pill tracejado,
+  `filled` sólido com `cursor:pointer`, `drop-active` dourado); removidos
+  `.lane-board`, `.lane-dropzones`, `.dropzone`, `.lane-dropzone-label`,
+  `.lane-tray`, `.lane-toggle` e o CSS de `select` da tabela.
+- Removidos `buildLaneBoard` e `buildLaneToggle` (sem uso).
+- **`app.js`**: `APP_VERSION` → **`0.10.1`**.
+- **`sw.js`**: cache `pbtracker-v15` → **`pbtracker-v16`**.
+
+### Decisões (consultas do usuário)
+- Corrigir atribuição: **toque na célula limpa** (re-arrastar também substitui).
+- Toggle em uso na parcial atual: **bloqueado** (sem arrastar) até a parcial
+  terminar (Iniciar/Voltas).
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: paleta de balizas com dropzone por linha no cronometro (drag por copia, auto-fill N=2, tap limpa)`
+  → PATCH → **v0.10.1** → push origin master + tag.

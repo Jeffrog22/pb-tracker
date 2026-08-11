@@ -18,6 +18,30 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.1] - 2026-08-11
+### Changed
+- **Redesenho do drag-and-drop de balizas** (registros pendentes do cronômetro):
+  - A bandeja de toggles por ordem e o board de dropzones foram substituídos por
+    uma **paleta de balizas** (`.lane-palette`) fixa no topo à direita da lista,
+    com um **toggle por valor de baliza** da série.
+  - A célula **Baliza da tabela virou o dropzone** (`.lane-dropzone` por linha,
+    com `data-split`/`data-order`): arrastar um valor da paleta solta direto na
+    linha do registro.
+  - **Arraste por cópia**: o ghost clona o toggle e o original permanece na
+    paleta (como ctrl+c/v); soltar sobre a linha atribui
+    `laneAssignments[ordem]` retroativamente às capturas daquela ordem.
+  - **Toggle em uso bloqueado**: enquanto uma baliza está atribuída a uma ordem
+    na parcial atual, o toggle correspondente fica esmaecido (`.used`) e não
+    inicia arraste; sem colisão entre ordens.
+  - **Toque na célula limpa**: tocar numa baliza já atribuída na linha remove o
+    mapeamento da ordem (re-arrastar também substitui); o toggle volta a
+    desbloquear.
+  - **Auto-preenchimento com 2 atletas**: após o primeiro drop, a ordem restante
+    da parcial recebe automaticamente a baliza livre.
+  - Removidos `buildLaneBoard`, `buildLaneToggle`, `.lane-board`,
+    `.lane-dropzones`, `.dropzone`, `.lane-tray` e o CSS de `select` da tabela.
+- Cache do service worker de `pbtracker-v15` para `pbtracker-v16`.
+
 ## [v0.10.0] - 2026-08-11
 ### Added
 - **Drag-and-drop para atribuir balizas aos registros pendentes do cronômetro**:

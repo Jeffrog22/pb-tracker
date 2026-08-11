@@ -854,12 +854,6 @@ button:disabled {
   text-align: left;
 }
 
-.pending-list-table select {
-  border-radius: var(--radius-pill);
-  padding: 0.3rem 0.5rem;
-  font-size: 0.8rem;
-}
-
 .pending-list-table .lane-cell {
   text-align: center;
   font-weight: 700;
@@ -869,58 +863,24 @@ button:disabled {
   background: #fff2f2;
 }
 
-/* --- Drag-and-drop de balizas (registros pendentes) --- */
-.lane-board {
-  margin: 10px 0 12px;
-}
-
-.lane-dropzones {
+/* --- Paleta de balizas + drag-and-drop (registros pendentes) --- */
+.lane-palette {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.dropzone {
-  position: relative;
-  flex: 0 0 68px;
-  height: 68px;
-  border: 1.5px dashed var(--border-light);
+  margin: 8px 0 10px;
+  padding: 8px;
   border-radius: 12px;
-  background: #fafbfd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(4px);
 }
 
-.dropzone .dropzone-label {
-  position: absolute;
-  top: 4px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.dropzone.drop-active {
-  border-color: #ffd700;
-  border-style: solid;
-  background: #fffdf2;
-  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
-}
-
-.lane-tray {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-  min-height: 34px;
-}
-
-.lane-toggle {
+.baliza-toggle {
   width: 34px;
   height: 34px;
   min-height: 34px;
@@ -941,11 +901,17 @@ button:disabled {
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
-.lane-toggle.dragging {
+.baliza-toggle.used {
+  opacity: 0.4;
+  cursor: default;
+  border-style: dashed;
+}
+
+.baliza-toggle.dragging {
   opacity: 0.35;
 }
 
-.lane-toggle.ghost {
+.baliza-toggle.ghost {
   position: fixed;
   z-index: 2000;
   width: 40px;
@@ -958,8 +924,41 @@ button:disabled {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
-.lane-toggle.ghost.snapping {
+.baliza-toggle.ghost.snapping {
   transition: left 0.18s ease, top 0.18s ease;
+}
+
+.lane-dropzone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1.5px dashed var(--border-light);
+  background: #fafbfd;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.lane-dropzone.filled {
+  border-style: solid;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+
+.lane-dropzone.drop-active {
+  border-color: #ffd700;
+  border-style: solid;
+  background: #fffdf2;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
 }
 
 .chrono-dialog .athletes-card {
