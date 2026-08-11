@@ -18,6 +18,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.9.1] - 2026-08-10
+### Changed
+- **Cabeçalhos das parciais no export XLSX** agora acompanham os labels da tela:
+  `Prova Xm` → `Volta Xm` (demais parciais) e a última parcial → `Tempo Final Xm`.
+  Somente no Excel — o fallback CSV mantém `Prova Xm`.
+- Cache do service worker de `pbtracker-v11` para `pbtracker-v12`.
+
 ## [v0.9.0] - 2026-08-10
 ### Changed
 - **Exportação Excel sem a coluna Sexo**: o arquivo XLSX deixa de incluir a

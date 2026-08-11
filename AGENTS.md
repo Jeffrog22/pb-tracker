@@ -1,4 +1,4 @@
-<!-- última-sessão: 10/08/2026 — Label Volta/Tempo Final no controle + export XLSX sem Sexo (v0.9.0) -->
+<!-- última-sessão: 10/08/2026 — Cabeçalhos do export XLSX com Volta/Tempo Final (v0.9.1) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.9.0
+- **Versão atual:** v0.9.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -689,3 +689,31 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: label Volta e Tempo Final no controle e cronometro e remocao da coluna Sexo no export XLSX`
   → MINOR → **v0.9.0** → push origin master + tag.
+
+---
+
+## Sessão: 10/08/2026 — Cabeçalhos do export XLSX com Volta/Tempo Final (v0.9.1)
+
+### O que foi feito
+- **Cabeçalhos das parciais no XLSX**: `buildResultsRows` (`exporter.js`) ganhou o
+  parâmetro `splitLabels = false`. Quando `true`, os headers das parciais passam a
+  espelhar o `splitLabel` do `app.js`: última parcial (`orderedSplits[...length-1]`)
+  → `Tempo Final Xm`, demais → `Volta Xm`. A ramificação **XLSX** usa
+  `buildResultsRows(state, getSplitsForEvent, false, true)` (Volta/Tempo Final,
+  sem Sexo); o **CSV de fallback mantém `Prova Xm`** (com Sexo).
+- **`app.js`**: `APP_VERSION` → **`0.9.1`**.
+- **`sw.js`**: cache `pbtracker-v11` → **`pbtracker-v12`**.
+
+### Decisões (consultas do usuário)
+- Cabeçalhos novos **somente no XLSX** (mesmo escopo da remoção do Sexo);
+  CSV inalterado.
+
+### Arquivos
+- `exporter.js`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.9.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: cabecalhos das parciais no export XLSX acompanham labels Volta/Tempo Final`
+  → PATCH → **v0.9.1** → push origin master + tag.

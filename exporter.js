@@ -21,7 +21,7 @@ function slugify(value) {
     .replace(/^$/, "equipe");
 }
 
-export function buildResultsRows(state, getSplitsForEvent, includeSexo = true) {
+export function buildResultsRows(state, getSplitsForEvent, includeSexo = true, splitLabels = false) {
   const events = [...state.groupedEvents.values()];
 
   const splitSet = new Set();
@@ -38,7 +38,13 @@ export function buildResultsRows(state, getSplitsForEvent, includeSexo = true) {
   if (includeSexo) headers.push("Sexo");
   headers.push("Tempo Balizado");
   orderedSplits.forEach((split) => {
-    headers.push(`Prova ${split}m`);
+    if (splitLabels && split === orderedSplits[orderedSplits.length - 1]) {
+      headers.push(`Tempo Final ${split}m`);
+    } else if (splitLabels) {
+      headers.push(`Volta ${split}m`);
+    } else {
+      headers.push(`Prova ${split}m`);
+    }
   });
 
   const rows = [];
@@ -142,7 +148,7 @@ export async function exportResults({
   }
 
   if (XLSX) {
-    const xlsxResults = buildResultsRows(state, getSplitsForEvent, false);
+    const xlsxResults = buildResultsRows(state, getSplitsForEvent, false, true);
     exportXlsx(
       XLSX,
       [
