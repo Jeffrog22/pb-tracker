@@ -18,6 +18,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.9.2] - 2026-08-11
+### Changed
+- **Cronômetro mais compacto no mobile**: removido o label "Cronômetro"; o
+  display do timer foi movido para o espaço do label (entre os botões
+  Iniciar/Voltas e Parar/Reiniciar) com fonte reduzida. O container do timer
+  ganhou borda ciano contornando todo o timer.
+- **Descrição da prova e próximo registro** (`#chronoTitle` e `#nextCapture`)
+  em fonte menor, mais discreta e alinhadas à esquerda.
+- **Botões Registrar/Fechar** menores e alinhados à direita; moldura top/down do
+  dialog reduzida (paddings/margens) para dar mais espaço à lista de registros.
+- **Parciais**: `.current-value` (Voltas Xm / Tempo Final Xm) com a mesma altura
+  do input de PR Parcial no touch (`pointer: coarse`), no Controle e no cronômetro.
+- Cache do service worker de `pbtracker-v12` para `pbtracker-v13`.
+
 ## [v0.9.1] - 2026-08-10
 ### Changed
 - **Cabeçalhos das parciais no export XLSX** agora acompanham os labels da tela:

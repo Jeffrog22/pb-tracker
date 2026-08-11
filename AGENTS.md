@@ -1,4 +1,4 @@
-<!-- última-sessão: 10/08/2026 — Cabeçalhos do export XLSX com Volta/Tempo Final (v0.9.1) -->
+<!-- última-sessão: 11/08/2026 — Layout mobile: cronômetro compacto, parciais uniformes (v0.9.2) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.9.1
+- **Versão atual:** v0.9.2
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -717,3 +717,43 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: cabecalhos das parciais no export XLSX acompanham labels Volta/Tempo Final`
   → PATCH → **v0.9.1** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Layout mobile: cronômetro compacto, parciais uniformes (v0.9.2)
+
+### O que foi feito
+- **`index.html`**: removido o label `Cronômetro` (h3) e `#chronoDisplay` movido
+  para dentro de `.timer-controls`, no espaço do label — entre Iniciar/Voltas e
+  Parar/Reiniciar.
+- **`styles.css` (cronômetro)**:
+  - `.timer-container` com **borda ciano** (`var(--timer-digits)`) contornando
+    todo o timer + `border-radius` superior; padding reduzido (moldura top menor).
+  - `.timer-display` menor (`clamp(1.4rem,6vw,2.2rem)`), `flex:1`, `nowrap`.
+  - `#chronoTitle` e `#nextCapture`: `text-align:left`, `font-size:0.75rem`,
+    `font-weight:500`, `opacity:0.75` (somente esses dois — tabela de pendentes
+    mantém o estilo).
+  - `.action-footer` com `justify-content:flex-end`; `.btn-save`/`.btn-cancel`
+    menores (`padding:6px 16px`, `font-size:0.8rem`).
+  - Moldura top/down reduzida: margens de `.action-footer`, `.pending-wrap` e
+    `.chrono-dialog .athletes-card` menores → mais espaço vertical para a lista
+    de registros.
+- **`styles.css` (parciais)**: no `@media (pointer: coarse)`,
+  `.partials-grid .current-value` ganha `min-height:42px` + flex centralizado —
+  mesmo tamanho do `.partial-input` (PR Parcial), no Controle e no cronômetro.
+- **`app.js`**: `APP_VERSION` → **`0.9.2`**.
+- **`sw.js`**: cache `pbtracker-v12` → **`pbtracker-v13`**.
+
+### Decisões (consultas do usuário)
+- Borda do timer na cor **ciano** (mesma dos dígitos).
+- Fonte menor/esquerda apenas em `#chronoTitle` e `#nextCapture` (pendentes sem mudança).
+
+### Arquivos
+- `index.html`, `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.9.2), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: melhorias de layout do cronometro e das parciais no mobile`
+  → PATCH → **v0.9.2** → push origin master + tag.

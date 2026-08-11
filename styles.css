@@ -776,10 +776,12 @@ button:disabled {
 .timer-container {
   background-color: var(--bg-header-timer);
   color: #ffffff;
-  padding: 14px 16px;
+  padding: 8px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  border: 1px solid var(--timer-digits);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
 .timer-controls {
@@ -798,21 +800,24 @@ button:disabled {
 
 .timer-display {
   font-family: "Courier New", Courier, monospace;
-  font-size: clamp(2rem, 10vw, 3rem);
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
   font-weight: bold;
   color: var(--timer-digits);
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   line-height: 1;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .chrono-title,
 .next-capture {
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.9rem;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.75rem;
   color: #ffffff;
-  opacity: 0.92;
+  opacity: 0.75;
 }
 
 .timer-container .next-capture.warning-note {
@@ -832,7 +837,7 @@ button:disabled {
 }
 
 .pending-wrap {
-  margin: 14px 16px 0;
+  margin: 10px 12px 0;
 }
 
 .pending-list-table {
@@ -859,7 +864,7 @@ button:disabled {
 }
 
 .chrono-dialog .athletes-card {
-  margin: 14px 16px 0;
+  margin: 10px 12px 0;
 }
 
 .chrono-scroll {
@@ -870,7 +875,17 @@ button:disabled {
 }
 
 .chrono-dialog .action-footer {
-  margin: 18px 16px 20px;
+  margin: 8px 12px 10px;
+}
+
+.chrono-dialog .action-footer .btn-save {
+  padding: 6px 16px;
+  font-size: 0.8rem;
+}
+
+.chrono-dialog .action-footer .btn-cancel {
+  padding: 6px 16px;
+  font-size: 0.8rem;
 }
 
 /* --- Dialog de Configurações --- */
@@ -922,7 +937,7 @@ button:disabled {
 /* --- Footer de Ações --- */
 .action-footer {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 12px;
 }
 
@@ -1000,6 +1015,13 @@ button:disabled {
   select,
   button {
     min-height: 42px;
+  }
+
+  .partials-grid .current-value {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .nav-item {
