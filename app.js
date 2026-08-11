@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.9.3";
+const APP_VERSION = "0.10.0";
 
 const state = {
   teamName: "",
@@ -399,6 +399,7 @@ function bindEvents() {
   el.stopResetBtn.addEventListener("click", handleChronoStopReset);
   el.closeChronoBtn.addEventListener("click", closeChrono);
   el.registerBtn.addEventListener("click", registerPendingTimes);
+  el.pendingList.addEventListener("pointerdown", handleLanePointerDown);
   el.chronoDialog.addEventListener("click", (event) => {
     const rect = el.chronoDialog.getBoundingClientRect();
     const isOutside =
@@ -1261,6 +1262,7 @@ function openChrono(eventKey, seriesKey, athletes) {
     elapsedMs: 0,
     timerId: null,
     pendingCaptures: [],
+    laneAssignments: {},
     currentSplitIndex: 0,
     clickInSplit: 0,
   };
@@ -1339,7 +1341,7 @@ function captureLap(isStop = false) {
     split,
     order: ac.clickInSplit,
     ms: ac.elapsedMs,
-    lane: "",
+    lane: ac.laneAssignments[String(ac.clickInSplit)] || "",
     isStopCapture: isStop,
   });
 
@@ -1393,8 +1395,67 @@ function renderPending() {
     return;
   }
 
-  const grouped = groupPendingBySplit(ac.pendingCaptures);
+  el.pendingList.innerHTML = "";
+  el.pendingList.appendChild(buildLaneBoard(ac));
+  el.pendingList.appendChild(buildPendingTable(ac));
+}
 
+function getSeriesBalizas(ac) {
+  return [...new Set(ac.athletes.map((a) => String(a.baliza)).filter(Boolean))].sort(
+    (a, b) => Number(a) - Number(b)
+  );
+}
+
+function buildLaneBoard(ac) {
+  const board = document.createElement("div");
+  board.className = "lane-board";
+
+  const dropzones = document.createElement("div");
+  dropzones.className = "lane-dropzones";
+  getSeriesBalizas(ac).forEach((baliza) => {
+    const order = getOrderForBaliza(ac, baliza);
+    const dz = document.createElement("div");
+    dz.className = "dropzone" + (order ? " occupied" : "");
+    dz.dataset.baliza = baliza;
+    dz.innerHTML = `<span class="dropzone-label">Baliza ${baliza}</span>`;
+    if (order) dz.appendChild(buildLaneToggle(order, baliza));
+    dropzones.appendChild(dz);
+  });
+  board.appendChild(dropzones);
+
+  const unassigned = [];
+  for (let i = 1; i <= ac.athletes.length; i += 1) {
+    if (!ac.laneAssignments[String(i)]) unassigned.push(String(i));
+  }
+  if (unassigned.length) {
+    const tray = document.createElement("div");
+    tray.className = "lane-tray";
+    unassigned.forEach((order) => tray.appendChild(buildLaneToggle(order, "")));
+    board.appendChild(tray);
+  }
+
+  return board;
+}
+
+function buildLaneToggle(order, baliza) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "lane-toggle";
+  btn.dataset.order = String(order);
+  btn.dataset.baliza = baliza ? String(baliza) : "";
+  btn.textContent = String(order);
+  btn.title = baliza ? `Ordem ${order} — Baliza ${baliza}` : `Ordem ${order}`;
+  return btn;
+}
+
+function getOrderForBaliza(ac, baliza) {
+  for (const [order, lane] of Object.entries(ac.laneAssignments)) {
+    if (String(lane) === String(baliza)) return order;
+  }
+  return null;
+}
+
+function buildPendingTable(ac) {
   const table = document.createElement("table");
   table.className = "pending-list-table";
   table.innerHTML = `
@@ -1410,60 +1471,192 @@ function renderPending() {
   `;
 
   const tbody = table.querySelector("tbody");
-
   ac.pendingCaptures.forEach((capture) => {
     const tr = document.createElement("tr");
-    if (capture.isStopCapture) {
-      tr.className = "stop-capture-row";
-    }
-    const options = buildLaneOptionsForCapture(ac.athletes, grouped, capture);
-
+    if (capture.isStopCapture) tr.className = "stop-capture-row";
     tr.innerHTML = `
       <td>${capture.split}m</td>
       <td>${capture.order}</td>
       <td>${msToDisplay(capture.ms)}</td>
-      <td>
-        <select data-capture-id="${capture.id}">
-          <option value="">Selecionar...</option>
-          ${options
-            .map((lane) => `<option value="${lane}" ${capture.lane === lane ? "selected" : ""}>${lane}</option>`)
-            .join("")}
-        </select>
-      </td>
+      <td class="lane-cell">${escapeHtml(capture.lane || "—")}</td>
     `;
-
-    const select = tr.querySelector("select");
-    select.addEventListener("change", () => {
-      capture.lane = select.value;
-      renderPending();
-    });
-
     tbody.appendChild(tr);
   });
 
-  el.pendingList.innerHTML = "";
-  el.pendingList.appendChild(table);
+  return table;
 }
 
-function buildLaneOptionsForCapture(athletes, grouped, capture) {
-  const allLanes = athletes.map((a) => a.baliza).filter(Boolean);
-  const usedLanes = new Set(
-    (grouped.get(capture.split) || [])
-      .filter((item) => item.id !== capture.id)
-      .map((item) => item.lane)
-      .filter(Boolean)
-  );
+const laneDrag = {
+  active: false,
+  pointerId: null,
+  order: null,
+  ghost: null,
+  originRect: null,
+  startX: 0,
+  startY: 0,
+  dropZone: null,
+};
 
-  return allLanes.filter((lane) => !usedLanes.has(lane) || lane === capture.lane);
+function handleLanePointerDown(event) {
+  const toggle = event.target.closest(".lane-toggle");
+  if (!toggle) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+
+  event.preventDefault();
+  laneDrag.pointerId = event.pointerId;
+  laneDrag.order = toggle.dataset.order;
+  laneDrag.startX = event.clientX;
+  laneDrag.startY = event.clientY;
+  laneDrag.active = false;
+  laneDrag.originRect = toggle.getBoundingClientRect();
+
+  document.addEventListener("pointermove", handleLanePointerMove);
+  document.addEventListener("pointerup", handleLanePointerUp);
+  document.addEventListener("pointercancel", handleLanePointerCancel);
 }
 
-function groupPendingBySplit(pending) {
-  const map = new Map();
-  pending.forEach((item) => {
-    if (!map.has(item.split)) map.set(item.split, []);
-    map.get(item.split).push(item);
+function handleLanePointerMove(event) {
+  if (event.pointerId !== laneDrag.pointerId) return;
+
+  if (!laneDrag.active) {
+    const moved = Math.hypot(event.clientX - laneDrag.startX, event.clientY - laneDrag.startY);
+    if (moved < 6) return;
+    spawnLaneGhost(event.clientX, event.clientY);
+  }
+
+  laneDrag.ghost.style.left = `${event.clientX}px`;
+  laneDrag.ghost.style.top = `${event.clientY}px`;
+  highlightLaneDropzone(event.clientX, event.clientY);
+}
+
+function spawnLaneGhost(x, y) {
+  const source = el.pendingList.querySelector(`.lane-toggle[data-order="${laneDrag.order}"]`);
+  if (!source) return;
+  const ghost = source.cloneNode(true);
+  ghost.classList.add("ghost");
+  ghost.style.left = `${x}px`;
+  ghost.style.top = `${y}px`;
+  el.chronoDialog.appendChild(ghost);
+  laneDrag.ghost = ghost;
+  laneDrag.active = true;
+  source.classList.add("dragging");
+}
+
+function highlightLaneDropzone(x, y) {
+  const target = document.elementFromPoint(x, y);
+  const dz = target ? target.closest(".dropzone") : null;
+  if (dz === laneDrag.dropZone) return;
+  if (laneDrag.dropZone) laneDrag.dropZone.classList.remove("drop-active");
+  laneDrag.dropZone = dz || null;
+  if (laneDrag.dropZone) laneDrag.dropZone.classList.add("drop-active");
+}
+
+function handleLanePointerUp(event) {
+  if (event.pointerId !== laneDrag.pointerId) return;
+  finishLaneDrag();
+}
+
+function handleLanePointerCancel(event) {
+  if (event.pointerId !== laneDrag.pointerId) return;
+  document.removeEventListener("pointermove", handleLanePointerMove);
+  document.removeEventListener("pointerup", handleLanePointerUp);
+  document.removeEventListener("pointercancel", handleLanePointerCancel);
+  cleanupLaneDrag();
+  renderPending();
+}
+
+function finishLaneDrag() {
+  document.removeEventListener("pointermove", handleLanePointerMove);
+  document.removeEventListener("pointerup", handleLanePointerUp);
+  document.removeEventListener("pointercancel", handleLanePointerCancel);
+
+  if (!laneDrag.active) {
+    cleanupLaneDrag();
+    return;
+  }
+
+  const target = laneDrag.dropZone;
+  if (target) target.classList.remove("drop-active");
+
+  const ac = state.activeChrono;
+  const baliza = target ? String(target.dataset.baliza) : "";
+  const occupant = baliza ? getOrderForBaliza(ac, baliza) : null;
+
+  if (baliza && (!occupant || occupant === laneDrag.order)) {
+    animateLaneGhostToDrop(target, () => {
+      assignLaneToOrder(laneDrag.order, baliza);
+      cleanupLaneDrag();
+      renderPending();
+    });
+    return;
+  }
+
+  animateLaneGhostToOrigin(() => {
+    cleanupLaneDrag();
+    renderPending();
   });
-  return map;
+}
+
+function animateLaneGhostToDrop(dropzone, onDone) {
+  const rect = dropzone.getBoundingClientRect();
+  animateLaneGhostTo(rect.left + rect.width / 2, rect.top + rect.height / 2, onDone);
+}
+
+function animateLaneGhostToOrigin(onDone) {
+  const rect = laneDrag.originRect;
+  animateLaneGhostTo(rect.left + rect.width / 2, rect.top + rect.height / 2, onDone);
+}
+
+function animateLaneGhostTo(targetX, targetY, onDone) {
+  const ghost = laneDrag.ghost;
+  if (!ghost) {
+    onDone();
+    return;
+  }
+  let finished = false;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    ghost.removeEventListener("transitionend", done);
+    onDone();
+  };
+  ghost.classList.add("snapping");
+  requestAnimationFrame(() => {
+    ghost.style.left = `${targetX}px`;
+    ghost.style.top = `${targetY}px`;
+  });
+  ghost.addEventListener("transitionend", done);
+  window.setTimeout(done, 240);
+}
+
+function assignLaneToOrder(order, baliza) {
+  const ac = state.activeChrono;
+  ac.laneAssignments[String(order)] = String(baliza);
+  ac.pendingCaptures.forEach((capture) => {
+    if (String(capture.order) === String(order)) capture.lane = String(baliza);
+  });
+}
+
+function cleanupLaneDrag() {
+  if (laneDrag.ghost) {
+    laneDrag.ghost.remove();
+    laneDrag.ghost = null;
+  }
+  if (laneDrag.order) {
+    const source = el.pendingList.querySelector(`.lane-toggle[data-order="${laneDrag.order}"]`);
+    if (source) source.classList.remove("dragging");
+  }
+  if (laneDrag.dropZone) laneDrag.dropZone.classList.remove("drop-active");
+  Object.assign(laneDrag, {
+    active: false,
+    pointerId: null,
+    order: null,
+    ghost: null,
+    originRect: null,
+    startX: 0,
+    startY: 0,
+    dropZone: null,
+  });
 }
 
 function registerPendingTimes() {
@@ -1475,7 +1668,7 @@ function registerPendingTimes() {
 
   const hasMissingLane = ac.pendingCaptures.some((c) => !c.lane);
   if (hasMissingLane) {
-    alert("Atribua a baliza em todos os registros pendentes antes de registrar.");
+    alert("Atribua todos os toggles de baliza antes de registrar.");
     return;
   }
 

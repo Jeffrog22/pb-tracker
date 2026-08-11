@@ -860,8 +860,106 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+.pending-list-table .lane-cell {
+  text-align: center;
+  font-weight: 700;
+}
+
 .stop-capture-row {
   background: #fff2f2;
+}
+
+/* --- Drag-and-drop de balizas (registros pendentes) --- */
+.lane-board {
+  margin: 10px 0 12px;
+}
+
+.lane-dropzones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dropzone {
+  position: relative;
+  flex: 0 0 68px;
+  height: 68px;
+  border: 1.5px dashed var(--border-light);
+  border-radius: 12px;
+  background: #fafbfd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.dropzone .dropzone-label {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.dropzone.drop-active {
+  border-color: #ffd700;
+  border-style: solid;
+  background: #fffdf2;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
+}
+
+.lane-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  min-height: 34px;
+}
+
+.lane-toggle {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-dark);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.lane-toggle.dragging {
+  opacity: 0.35;
+}
+
+.lane-toggle.ghost {
+  position: fixed;
+  z-index: 2000;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  transform: translate(-50%, -50%) scale(1.15);
+  pointer-events: none;
+  border-color: var(--btn-start);
+  background: #eef6f1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.lane-toggle.ghost.snapping {
+  transition: left 0.18s ease, top 0.18s ease;
 }
 
 .chrono-dialog .athletes-card {

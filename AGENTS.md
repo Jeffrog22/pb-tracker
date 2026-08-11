@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Moldura nos dígitos do cronômetro + inputs de parcial reduzidos (v0.9.3) -->
+<!-- última-sessão: 11/08/2026 — Drag-and-drop de balizas nos registros pendentes (v0.10.0) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.9.3
+- **Versão atual:** v0.10.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -789,3 +789,53 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: moldura ciano ao redor dos digitos do cronometro e inputs de parcial com altura reduzida`
   → PATCH → **v0.9.3** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Drag-and-drop de balizas nos registros pendentes (v0.10.0)
+
+### O que foi feito
+- **Substituição dos selects de baliza** na tabela de registros pendentes do
+  cronômetro por **drag-and-drop** (`renderPending` em `app.js`):
+  - `buildLaneBoard` cria os **dropzones** (balizas reais da série via
+    `getSeriesBalizas`) e os **toggles** arrastáveis (um por ordem, 1..N atletas);
+    toggles não atribuídos ficam na `.lane-tray`.
+  - `buildPendingTable` mantém `Parcial | Ordem | Tempo | Baliza` com a baliza
+    como **texto somente leitura**.
+- **Drag com Pointer Events** (mouse + touch): `handleLanePointerDown/Move/Up/
+  Cancel` com limiar de 6px antes de armar; `spawnLaneGhost` clona o toggle para
+  dentro do dialog (`el.chronoDialog`, pois o top-layer do dialog cobre o body)
+  com `position: fixed` seguindo o ponteiro; `highlightLaneDropzone` usa
+  `elementFromPoint` para borda dourada (`.drop-active`) no hover.
+- **Snap/Bounce**: `animateLaneGhostTo*` move o ghost ao centro do dropzone (snap
+  com `transitionend` + fallback 240ms) ou de volta à origem; `assignLaneToOrder`
+  grava em `ac.laneAssignments` e atualiza `capture.lane` de **todas** as capturas
+  daquele `order` (retroativo entre parciais).
+- **Colisão**: `getOrderForBaliza` detecta dropzone ocupado por outro toggle →
+  drop recusado (volta à origem). `registerPendingTimes` segue exigindo `lane` em
+  todas as capturas (toggles não atribuídos bloqueiam o registro).
+- **Persistência**: `ac.laneAssignments = {}` em `openChrono`; `captureLap` já
+  nasce com `lane = laneAssignments[order] || ""` → o mapeamento persiste entre
+  as parciais da série.
+- Removidos `buildLaneOptionsForCapture` e `groupPendingBySplit` (sem uso).
+- **`styles.css`**: `.lane-board`, `.lane-dropzones` (flex wrap), `.dropzone`
+  (tracejado, `drop-active` dourado), `.lane-toggle` (círculo, `touch-action:
+  none`, `dragging` com opacity, `ghost` fixo com scale/sombra, `snapping` com
+  transição), `.lane-tray`, `.lane-cell`.
+- **`app.js`**: `APP_VERSION` → **`0.10.0`**.
+- **`sw.js`**: cache `pbtracker-v14` → **`pbtracker-v15`**.
+
+### Decisões (consultas do usuário)
+- Toggles começam **na bandeja, sem atribuição** (usuário arrasta cada um).
+- Coluna Baliza **mantida como leitura** na tabela.
+- Colisão: **recusar e voltar** (sem swap).
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: drag-and-drop de balizas para os registros pendentes do cronometro`
+  → MINOR → **v0.10.0** → push origin master + tag.

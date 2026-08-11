@@ -18,6 +18,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.0] - 2026-08-11
+### Added
+- **Drag-and-drop para atribuir balizas aos registros pendentes do cronômetro**:
+  - Os selects numéricos de baliza foram substituídos por **toggles arrastáveis**
+    (um por ordem/atleta da série) e **dropzones** (as balizas reais da série).
+  - O usuário arrasta cada toggle com o dedo ou mouse e solta na baliza
+    correspondente à ordem (1 = Baliza 1, 2 = Baliza 5...).
+  - Toggle segue o ponteiro (ghost), dropzones destacam em dourado no hover,
+    toggle cresce/ganha sombra durante o arraste e há animação de snap no drop.
+  - Dois toggles não podem ocupar a mesma baliza (drop recusado volta à origem).
+  - O mapeamento `ordem → baliza` é guardado em `laneAssignments` e **persiste
+    entre as parciais** da mesma série (capturas novas já nascem atribuídas).
+  - Toggles começam na bandeja, sem atribuição; a coluna Baliza da tabela vira
+    texto somente leitura.
+
+### Changed
+- Cache do service worker de `pbtracker-v14` para `pbtracker-v15`.
+
 ## [v0.9.3] - 2026-08-11
 ### Changed
 - **Moldura ao redor dos dígitos do cronômetro**: o quadro ciano agora contorna
