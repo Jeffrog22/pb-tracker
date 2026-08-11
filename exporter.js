@@ -21,7 +21,7 @@ function slugify(value) {
     .replace(/^$/, "equipe");
 }
 
-export function buildResultsRows(state, getSplitsForEvent) {
+export function buildResultsRows(state, getSplitsForEvent, includeSexo = true) {
   const events = [...state.groupedEvents.values()];
 
   const splitSet = new Set();
@@ -34,7 +34,9 @@ export function buildResultsRows(state, getSplitsForEvent) {
   });
 
   const orderedSplits = [...splitSet].sort((a, b) => a - b);
-  const headers = ["Prova", "Série", "Baliza", "Nome", "Sexo", "Tempo Balizado"];
+  const headers = ["Prova", "Série", "Baliza", "Nome"];
+  if (includeSexo) headers.push("Sexo");
+  headers.push("Tempo Balizado");
   orderedSplits.forEach((split) => {
     headers.push(`Prova ${split}m`);
   });
@@ -51,9 +53,9 @@ export function buildResultsRows(state, getSplitsForEvent) {
             seriesKey,
             athlete.baliza,
             athlete.nome,
-            athlete.sexo || "",
-            athlete.tempoBalizado || "00:00:00",
           ];
+          if (includeSexo) row.push(athlete.sexo || "");
+          row.push(athlete.tempoBalizado || "00:00:00");
           orderedSplits.forEach((split) => {
             row.push(athlete.current?.[split] || "00:00:00");
           });
@@ -140,10 +142,11 @@ export async function exportResults({
   }
 
   if (XLSX) {
+    const xlsxResults = buildResultsRows(state, getSplitsForEvent, false);
     exportXlsx(
       XLSX,
       [
-        { name: "Resultados", headers: results.headers, rows: results.rows },
+        { name: "Resultados", headers: xlsxResults.headers, rows: xlsxResults.rows },
         { name: "Log de Atividades", headers: logData.headers, rows: logData.rows },
       ],
       `${base}-${datePart}.xlsx`

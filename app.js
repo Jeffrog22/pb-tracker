@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.8.1";
+const APP_VERSION = "0.9.0";
 
 const state = {
   teamName: "",
@@ -1150,7 +1150,7 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
         <input class="partial-input" data-role="history" data-split="${splitA}" value="${histA}" maxlength="8" />
       </div>
       <div class="partial-cell">
-        <div class="split-title">Prova ${splitA}m</div>
+        <div class="split-title">${splitLabel(splitA, splits)}</div>
         <div class="current-value" data-split="${splitA}">${currA}${diffA}</div>
       </div>
       ${splitB !== undefined ? `
@@ -1159,7 +1159,7 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
         <input class="partial-input" data-role="history" data-split="${splitB}" value="${histB}" maxlength="8" />
       </div>
       <div class="partial-cell">
-        <div class="split-title">Prova ${splitB}m</div>
+        <div class="split-title">${splitLabel(splitB, splits)}</div>
         <div class="current-value" data-split="${splitB}">${currB}${diffB}</div>
       </div>` : ""}
     `;
@@ -1224,6 +1224,13 @@ function buildDiffLabel(current, history) {
     return ` <span class="worse">(${sign}${diffStr})</span>`;
   }
   return ' <span class="neutral-diff">(+00:00:00)</span>';
+}
+
+function splitLabel(split, splits) {
+  if (split === splits[splits.length - 1]) {
+    return `Tempo Final ${split}m`;
+  }
+  return `Volta ${split}m`;
 }
 
 function getSplitsForEvent(eventName) {
@@ -1512,7 +1519,7 @@ function renderChronoAthletes() {
           <input class="partial-input" data-role="history" data-split="${splitA}" value="${athlete.history[splitA] || "00:00:00"}" maxlength="8" />
         </div>
         <div class="partial-cell">
-          <div class="split-title">Prova ${splitA}m</div>
+          <div class="split-title">${splitLabel(splitA, splits)}</div>
           <div class="current-value" data-split="${splitA}">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
         </div>
         ${splitB !== undefined ? `
@@ -1521,7 +1528,7 @@ function renderChronoAthletes() {
           <input class="partial-input" data-role="history" data-split="${splitB}" value="${athlete.history[splitB] || "00:00:00"}" maxlength="8" />
         </div>
         <div class="partial-cell">
-          <div class="split-title">Prova ${splitB}m</div>
+          <div class="split-title">${splitLabel(splitB, splits)}</div>
           <div class="current-value" data-split="${splitB}">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
         </div>` : ""}
       `;

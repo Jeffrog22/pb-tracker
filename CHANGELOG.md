@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.9.0] - 2026-08-10
+### Changed
+- **Exportação Excel sem a coluna Sexo**: o arquivo XLSX deixa de incluir a
+  coluna **Sexo** (somente no Excel). O fallback CSV mantém a coluna Sexo.
+  Resultado no XLSX: `Prova | Série | Baliza | Nome | Tempo Balizado | Prova Xm...`.
+- **Labels das parciais no Controle e no cronômetro**: os títulos `Prova Xm`
+  passam a `Volta Xm`; na última parcial (ex.: 200m numa prova de 200), o label
+  vira `Tempo Final Xm`. Mudança apenas de texto — chaves `current[split]` e
+  históricos inalterados.
+- Cache do service worker de `pbtracker-v10` para `pbtracker-v11`.
+
 ## [v0.8.1] - 2026-08-08
 ### Removed
 - **Colunas do arquivo exportado (Excel/CSV)**: removidas a coluna **Equipe** e

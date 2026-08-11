@@ -1,4 +1,4 @@
-<!-- última-sessão: 08/08/2026 — Remoção de colunas Equipe e PR Parcial do export (v0.8.1) -->
+<!-- última-sessão: 10/08/2026 — Label Volta/Tempo Final no controle + export XLSX sem Sexo (v0.9.0) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.8.1
+- **Versão atual:** v0.9.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -653,3 +653,39 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: remove colunas equipe e PR parcial do export mantendo apenas parciais de prova`
   → PATCH → **v0.8.1** → push origin master + tag.
+
+---
+
+## Sessão: 10/08/2026 — Label Volta/Tempo Final no controle + export XLSX sem Sexo (v0.9.0)
+
+### O que foi feito
+- **Export XLSX sem a coluna Sexo**: `buildResultsRows` (`exporter.js`) ganhou o
+  parâmetro `includeSexo = true` — quando `false`, omitem o header `Sexo` e a
+  célula correspondente. Em `exportResults`, a ramificação **XLSX** regenera os
+  dados com `includeSexo: false` (`Prova | Série | Baliza | Nome | Tempo
+  Balizado | Prova Xm...`); o **fallback CSV mantém a coluna Sexo**.
+- **Labels das parciais no Controle + cronômetro**: novo helper `splitLabel(split,
+  splits)` em `app.js` — retorna `Tempo Final Xm` para a última parcial
+  (`splits[splits.length - 1]`, ex.: 200m numa prova de 200) e `Volta Xm` para as
+  demais. Aplicado nos 4 pontos de label `Prova Xm`:
+  `renderAthleteCard` (tela de Controle) e `renderChronoAthletes` (dialog do
+  cronômetro). Somente o texto muda — `PR Parcial`, chaves `current[split]` e
+  históricos intactos.
+- **`app.js`**: `APP_VERSION` → **`0.9.0`**.
+- **`sw.js`**: cache `pbtracker-v10` → **`pbtracker-v11`**.
+
+### Decisões (consultas do usuário)
+- Aplicar a troca de labels **no Controle e no cronômetro** (consistência visual).
+- Última parcial com **distância no label**: `Tempo Final 200m` (mesmo padrão de
+  `Volta 50m`, só trocando o prefixo).
+- Remover Sexo **somente no XLSX** (CSV mantém).
+
+### Arquivos
+- `exporter.js`, `app.js` (APP_VERSION + splitLabel + labels), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.9.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: label Volta e Tempo Final no controle e cronometro e remocao da coluna Sexo no export XLSX`
+  → MINOR → **v0.9.0** → push origin master + tag.
