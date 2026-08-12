@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.4] - 2026-08-11
+### Removed
+- **Workflow do GitHub Pages** (`.github/workflows/deploy.yml`) removido — o
+  deploy do app estático migrou para o **Vercel** (`*.vercel.app`), publicado
+  automaticamente via git (push em `master`, Framework `Other`, sem build).
+
+### Changed
+- Sem mudanças de código do app: `APP_VERSION` e cache do `sw.js`
+  (`pbtracker-v18`) permanecem os mesmos; a versão v0.10.4 é apenas o bump do
+  hook SemVer para o commit de infraestrutura.
+
 ## [v0.10.3] - 2026-08-11
 ### Changed
 - **Tag de versão reposicionada para o topbar**: a versão (`v0.10.3`) agora

@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Tag de versão no topbar ao lado do nome do app (v0.10.3) -->
+<!-- última-sessão: 11/08/2026 — Migração do deploy do GitHub Pages para o Vercel (v0.10.4) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,9 +40,11 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.10.3
+- **Versão atual:** v0.10.4
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
-- **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
+- **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
+  (push em `master` publica automaticamente, sem build; Output Directory na
+  raiz). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
 
 ---
@@ -967,3 +969,35 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `chore: move tag de versao para o topbar ao lado do nome do app`
   → PATCH → **v0.10.3** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Migração do deploy do GitHub Pages para o Vercel (v0.10.4)
+
+### O que foi feito
+- **Deploy migrado para o Vercel**: o app estático (`*.vercel.app`) agora é
+  publicado via integração git — push em `master` dispara deploy automático,
+  Framework **Other**, Build Command e Output Directory **vazios** (raiz servida
+  direto). Configuração feita na conta Vercel (Fase 1 manual).
+- **Removido o GitHub Pages**: apagado `.github/workflows/deploy.yml` (pasta
+  `.github/` inteira). O usuário desativa `Settings → Pages` no GitHub.
+- **`AGENTS.md` (Identidade)**: linha de Deploy atualizada — cita **Vercel**
+  como integração atual (antes: "qualquer host estático; ex.: GitHub Pages...").
+- **Sem mudança de código do app**: `APP_VERSION` e cache do `sw.js`
+  (`pbtracker-v18`) **inalterados**; o bump é apenas o do hook SemVer.
+
+### Decisões (consultas do usuário)
+- Host gratuito: **Vercel** (`*.vercel.app`), subdomínio do host (sem domínio
+  customizado).
+- Deploy **automático via git** (push em `master`).
+- Workflow do GitHub Pages: **removido** (sem fallback).
+
+### Arquivos
+- `.github/workflows/deploy.yml` (removido)
+- `AGENTS.md` (Identidade: linha de Deploy; esta sessão)
+
+### Verificações
+- Site verificado no Vercel (import → filtro → controle → cronômetro; PWA/offline).
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `chore: remove deploy do github pages (migrado para vercel)`
+  → PATCH → **v0.10.4** → push origin master + tag.
