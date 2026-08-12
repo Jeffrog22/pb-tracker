@@ -18,6 +18,33 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.2] - 2026-08-11
+### Fixed
+- **Baliza vira propriedade da linha** (registros pendentes do cronômetro): a
+  atribuição deixou de ser global por **ordem** (`laneAssignments[ordem]`,
+  retroativa a todas as passagens) e passou a ser **por parcial + ordem**
+  (`capture.lane` é a fonte única).
+  - Tocar numa baliza para limpar agora remove **somente aquela linha** — antes
+    apagava todas as linhas "extrapoladas" da mesma ordem em todos os parciais.
+  - Arrastar uma baliza sobre uma linha altera **apenas essa linha**, sem
+    contaminar as parciais anteriores ou posteriores.
+- **Pré-preenchimento por cópia** (`draftLaneForOrder`): nova captura herda a
+  baliza da captura mais recente da mesma ordem (parcial anterior); se a baliza
+  já estiver usada na parcial atual, a linha nasce em branco (evita colisão).
+- **Swap ao soltar sobre linha ocupada** (`dropLaneOnRow`): arrastar a baliza A
+  sobre uma linha que tem B troca A↔B dentro da mesma parcial — corrige
+  permutações (ex.: 75m/100m invertidos) em um único gesto. Toggles em uso
+  (`.used`) agora podem ser arrastados como origem do swap.
+- **Indicador do parceiro do swap**: ao arrastar uma baliza já usada, a linha que
+  ela ocupa na parcial atual ganha anel ciano (`.drop-pair`).
+- **`registerPendingTimes`** continua exigindo baliza em todas as capturas, mas
+  agora o atleta é resolvido por linha (`a.baliza === capture.lane`), atribuindo
+  cada parcial ao corredor correto.
+
+### Changed
+- `app.js`: `APP_VERSION` → `0.10.2`.
+- `sw.js`: cache `pbtracker-v16` → `pbtracker-v17`.
+
 ## [v0.10.1] - 2026-08-11
 ### Changed
 - **Redesenho do drag-and-drop de balizas** (registros pendentes do cronômetro):

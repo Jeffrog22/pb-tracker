@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Drag-and-drop de balizas nos registros pendentes (v0.10.0) -->
+<!-- última-sessão: 11/08/2026 — Baliza por linha no cronômetro: limpeza pontual, prefill e swap (v0.10.2) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.10.0
+- **Versão atual:** v0.10.2
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -887,3 +887,52 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: paleta de balizas com dropzone por linha no cronometro (drag por copia, auto-fill N=2, tap limpa)`
   → PATCH → **v0.10.1** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Baliza por linha: limpeza pontual, prefill e swap (v0.10.2)
+
+### O que foi feito
+- **Bug corrigido (baliza retroativa)**: `clearLaneAssignment(order)`/`assignLaneToOrder`
+  gravavam em `ac.laneAssignments[order]` e **varriam todas as capturas da ordem** —
+  tocar para limpar apagava as linhas "extrapoladas" de todos os parciais, e corrigir
+  uma linha contaminava as demais. A baliza agora é **propriedade da linha**:
+  - `clearCaptureLane(split, order)` limpa **somente a linha tocada** (`app.js`).
+  - `assignLaneToRow(split, order, baliza)` grava só na linha de `split+order`.
+  - Removidos `ac.laneAssignments` (init), `getOrderForBaliza` e
+    `assignLaneToOrder`/`clearLaneAssignment`.
+- **Prefill por cópia** (`draftLaneForOrder`, usado em `captureLap`): nova captura
+  herda a baliza da captura **mais recente da mesma ordem** (parcial anterior); se a
+  baliza já estiver usada na parcial atual → linha em branco (sem colisão). As linhas
+  novas enchem automaticamente nas passagens seguintes.
+- **Swap ao soltar em linha ocupada** (`dropLaneOnRow`): arrastar a baliza A sobre
+  linha com B troca A↔B dentro da mesma parcial — corrige permutações (75m/100m
+  invertidos) em 1 gesto. `handleLanePointerDown` **desbloqueou os toggles `.used`**
+  (agora são origem de swap; `getUsedBalizasForSplit` vira só sinalização visual).
+- **Indicador do parceiro** (`highlightLaneDropzone` + `.drop-pair`): ao arrastar
+  uma baliza usada, a linha que ela ocupa na parcial atual ganha anel ciano.
+- **`registerPendingTimes`** segue exigindo baliza em todas as capturas, mas agora o
+  atleta é resolvido **por linha** (`a.baliza === capture.lane`) — cada parcial é
+  atribuída ao corredor correto mesmo quando a ordem de chegada muda entre parciais.
+- **`autoFillTwoAthletes`** escopado via `assignLaneToRow(split, order, baliza)`.
+- **`styles.css`**: `.baliza-toggle.used` com `cursor: grab` (arrastável p/ swap);
+  `.baliza-toggle.ghost` com `opacity/border-style` sólidos (não herda o faint do
+  `.used`); novo `.lane-dropzone.drop-pair` (anel ciano).
+- **`app.js`**: `APP_VERSION` → **`0.10.2`**.
+- **`sw.js`**: cache `pbtracker-v16` → **`pbtracker-v17`**.
+
+### Decisões (consultas do usuário)
+- Arraste sobre linha ocupada = **swap** (linha alvo recebe a arrastada; o corredor
+  que a ocupava recebe a anterior), não substituir-e-liberar nem recusar.
+- Novo intervalo herda a baliza da **parcial anterior** (prefill por cópia).
+- Extra de agilidade: **indicar o corredor alvo do swap** (anel ciano) durante o arraste.
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.2), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: baliza por linha com limpeza pontual e swap no registro de tempos do cronometro`
+  → PATCH → **v0.10.2** → push origin master + tag.

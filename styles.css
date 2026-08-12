@@ -902,8 +902,8 @@ button:disabled {
 }
 
 .baliza-toggle.used {
-  opacity: 0.4;
-  cursor: default;
+  opacity: 0.45;
+  cursor: grab;
   border-style: dashed;
 }
 
@@ -920,6 +920,7 @@ button:disabled {
   transform: translate(-50%, -50%) scale(1.15);
   pointer-events: none;
   border-color: var(--btn-start);
+  border-style: solid;
   background: #eef6f1;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
@@ -959,6 +960,12 @@ button:disabled {
   border-style: solid;
   background: #fffdf2;
   box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
+}
+
+.lane-dropzone.drop-pair {
+  border-color: var(--timer-digits);
+  border-style: solid;
+  box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.35);
 }
 
 .chrono-dialog .athletes-card {

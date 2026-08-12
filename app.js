@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.10.1";
+const APP_VERSION = "0.10.2";
 
 const state = {
   teamName: "",
@@ -1263,7 +1263,6 @@ function openChrono(eventKey, seriesKey, athletes) {
     elapsedMs: 0,
     timerId: null,
     pendingCaptures: [],
-    laneAssignments: {},
     currentSplitIndex: 0,
     clickInSplit: 0,
   };
@@ -1342,7 +1341,7 @@ function captureLap(isStop = false) {
     split,
     order: ac.clickInSplit,
     ms: ac.elapsedMs,
-    lane: ac.laneAssignments[String(ac.clickInSplit)] || "",
+    lane: draftLaneForOrder(ac, ac.clickInSplit),
     isStopCapture: isStop,
   });
 
@@ -1361,6 +1360,20 @@ function captureLap(isStop = false) {
 
   renderPending();
   refreshNextCapture();
+}
+
+function draftLaneForOrder(ac, order) {
+  const split = ac.splitPlan[ac.currentSplitIndex];
+  for (let i = ac.pendingCaptures.length - 1; i >= 0; i--) {
+    const c = ac.pendingCaptures[i];
+    if (String(c.order) !== String(order)) continue;
+    if (!c.lane) return "";
+    const taken = ac.pendingCaptures.some(
+      (x) => String(x.split) === String(split) && String(x.lane) === String(c.lane)
+    );
+    return taken ? "" : c.lane;
+  }
+  return "";
 }
 
 function refreshNextCapture() {
@@ -1433,7 +1446,7 @@ function buildBalizaToggle(baliza, used) {
   btn.className = "baliza-toggle" + (used ? " used" : "");
   btn.dataset.baliza = String(baliza);
   btn.textContent = String(baliza);
-  btn.title = `Baliza ${baliza}`;
+  btn.title = used ? `Baliza ${baliza} — arraste para trocar` : `Baliza ${baliza} — arraste para atribuir`;
   return btn;
 }
 
@@ -1447,14 +1460,7 @@ function autoFillTwoAthletes(ac, split) {
     (c) => c.split === split && !c.lane
   );
   if (missing.length !== 1) return;
-  assignLaneToOrder(missing[0].order, available[0]);
-}
-
-function getOrderForBaliza(ac, baliza) {
-  for (const [order, lane] of Object.entries(ac.laneAssignments)) {
-    if (String(lane) === String(baliza)) return order;
-  }
-  return null;
+  assignLaneToRow(split, missing[0].order, available[0]);
 }
 
 function buildPendingTable(ac) {
@@ -1501,12 +1507,12 @@ const laneDrag = {
   startX: 0,
   startY: 0,
   dropZone: null,
+  pairZone: null,
 };
 
 function handleLanePointerDown(event) {
   const toggle = event.target.closest(".baliza-toggle");
   if (!toggle) return;
-  if (toggle.classList.contains("used")) return;
   if (event.pointerType === "mouse" && event.button !== 0) return;
 
   event.preventDefault();
@@ -1553,9 +1559,32 @@ function highlightLaneDropzone(x, y) {
   const target = document.elementFromPoint(x, y);
   const dz = target ? target.closest(".lane-dropzone") : null;
   if (dz === laneDrag.dropZone) return;
+  clearLanePairHighlight();
   if (laneDrag.dropZone) laneDrag.dropZone.classList.remove("drop-active");
   laneDrag.dropZone = dz || null;
-  if (laneDrag.dropZone) laneDrag.dropZone.classList.add("drop-active");
+  if (!laneDrag.dropZone) return;
+  laneDrag.dropZone.classList.add("drop-active");
+  const ac = state.activeChrono;
+  const split = laneDrag.dropZone.dataset.split;
+  const occupant = ac.pendingCaptures.find(
+    (c) => String(c.split) === String(split)
+      && String(c.lane) === String(laneDrag.baliza)
+      && String(c.order) !== String(laneDrag.dropZone.dataset.order)
+  );
+  if (!occupant) return;
+  const pair = el.pendingList.querySelector(
+    `.lane-dropzone[data-split="${split}"][data-order="${occupant.order}"]`
+  );
+  if (!pair) return;
+  pair.classList.add("drop-pair");
+  laneDrag.pairZone = pair;
+}
+
+function clearLanePairHighlight() {
+  if (laneDrag.pairZone) {
+    laneDrag.pairZone.classList.remove("drop-pair");
+    laneDrag.pairZone = null;
+  }
 }
 
 function handleLanePointerUp(event) {
@@ -1583,17 +1612,17 @@ function finishLaneDrag() {
   }
 
   const target = laneDrag.dropZone;
+  clearLanePairHighlight();
   if (target) target.classList.remove("drop-active");
 
-  const ac = state.activeChrono;
   const baliza = laneDrag.baliza;
   const order = target ? String(target.dataset.order) : "";
-  const occupant = baliza ? getOrderForBaliza(ac, baliza) : null;
+  const split = target ? String(target.dataset.split) : "";
 
-  if (order && baliza && (!occupant || occupant === order)) {
+  if (order && split && baliza) {
     animateLaneGhostToDrop(target, () => {
-      assignLaneToOrder(order, baliza);
-      autoFillTwoAthletes(ac, target.dataset.split);
+      dropLaneOnRow(split, order, baliza);
+      autoFillTwoAthletes(state.activeChrono, split);
       cleanupLaneDrag();
       renderPending();
     });
@@ -1638,12 +1667,32 @@ function animateLaneGhostTo(targetX, targetY, onDone) {
   window.setTimeout(done, 240);
 }
 
-function assignLaneToOrder(order, baliza) {
+function assignLaneToRow(split, order, baliza) {
   const ac = state.activeChrono;
-  ac.laneAssignments[String(order)] = String(baliza);
   ac.pendingCaptures.forEach((capture) => {
-    if (String(capture.order) === String(order)) capture.lane = String(baliza);
+    if (String(capture.split) === String(split) && String(capture.order) === String(order)) {
+      capture.lane = String(baliza);
+    }
   });
+}
+
+function dropLaneOnRow(split, order, baliza) {
+  const ac = state.activeChrono;
+  const row = ac.pendingCaptures.find(
+    (c) => String(c.split) === String(split) && String(c.order) === String(order)
+  );
+  if (!row) return;
+  if (String(row.lane) === String(baliza)) return;
+  const occupant = ac.pendingCaptures.find(
+    (c) => c !== row && String(c.split) === String(split) && String(c.lane) === String(baliza)
+  );
+  if (occupant) {
+    const previous = row.lane || "";
+    row.lane = String(baliza);
+    occupant.lane = previous;
+  } else {
+    row.lane = String(baliza);
+  }
 }
 
 function cleanupLaneDrag() {
@@ -1656,6 +1705,7 @@ function cleanupLaneDrag() {
     if (source) source.classList.remove("dragging");
   }
   if (laneDrag.dropZone) laneDrag.dropZone.classList.remove("drop-active");
+  clearLanePairHighlight();
   Object.assign(laneDrag, {
     active: false,
     pointerId: null,
@@ -1665,6 +1715,7 @@ function cleanupLaneDrag() {
     startX: 0,
     startY: 0,
     dropZone: null,
+    pairZone: null,
   });
 }
 
@@ -1672,14 +1723,15 @@ function handleLaneCellClick(event) {
   const cell = event.target.closest(".lane-dropzone");
   if (!cell) return;
   if (!cell.dataset.lane) return;
-  clearLaneAssignment(cell.dataset.order);
+  clearCaptureLane(cell.dataset.split, cell.dataset.order);
 }
 
-function clearLaneAssignment(order) {
+function clearCaptureLane(split, order) {
   const ac = state.activeChrono;
-  delete ac.laneAssignments[String(order)];
   ac.pendingCaptures.forEach((capture) => {
-    if (String(capture.order) === String(order)) capture.lane = "";
+    if (String(capture.split) === String(split) && String(capture.order) === String(order)) {
+      capture.lane = "";
+    }
   });
   renderPending();
 }
