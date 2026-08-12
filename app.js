@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.10.2";
+const APP_VERSION = "0.10.3";
 
 const state = {
   teamName: "",
@@ -221,9 +221,8 @@ function deleteProfile(id) {
 }
 
 function renderVersionTags() {
-  document.querySelectorAll(".version-tag").forEach((elTag) => {
-    elTag.textContent = `v${APP_VERSION}`;
-  });
+  const elTag = document.getElementById("appVersionTag");
+  if (elTag) elTag.textContent = `v${APP_VERSION}`;
 }
 
 function renderProfileChip() {

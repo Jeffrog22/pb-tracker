@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Baliza por linha no cronômetro: limpeza pontual, prefill e swap (v0.10.2) -->
+<!-- última-sessão: 11/08/2026 — Tag de versão no topbar ao lado do nome do app (v0.10.3) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.10.2
+- **Versão atual:** v0.10.3
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático (qualquer host de arquivos estáticos; ex.: GitHub Pages, Netlify, Cloudflare Pages). PDF.js requer rede no primeiro carregamento.
 - **Ferramenta de IA:** opencode (lê este arquivo automaticamente)
@@ -86,7 +86,8 @@ Regras:
 - **UTF-8 garantido** em toda a cadeia para evitar problemas de acentuação.
 - **Dados de importação não persistem** entre sessões (só em memória); apenas o log de atividades fica em `localStorage["pbtracker_activity_log"]`.
 - **Diagnóstico do parser** exposto em `window.__PBSWIM_DIAGNOSTIC__` e renderizado em `#diagnostic-area`.
-- **Tag de versão no rodapé** (perfil/filtro/controle) usa a constante
+- **Tag de versão no topbar** (ao lado do nome do app, `PBTracker vX.Y.Z`, via
+  `#appVersionTag`) usa a constante
   `APP_VERSION` do `app.js` — **atualizar a cada release** junto do CHANGELOG e
   da tag SemVer (app é estático; não lê a tag git).
 - **Exclusão de perfil**: botão `×` em cada `.profile-item` chama `deleteProfile`
@@ -936,3 +937,33 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: baliza por linha com limpeza pontual e swap no registro de tempos do cronometro`
   → PATCH → **v0.10.2** → push origin master + tag.
+
+---
+
+## Sessão: 11/08/2026 — Tag de versão no topbar ao lado do nome do app (v0.10.3)
+
+### O que foi feito
+- **`index.html`**: a tag de versão saiu do rodapé dos painéis (Perfil/Filtro/
+  Controle) e foi para o **topbar**, discreta e pequena ao lado do nome:
+  `<h1>PBTracker <span class="version-tag-inline" id="appVersionTag"></span></h1>`
+  (rende `PBTracker v0.10.3`). Removidos os 3 `<div class="version-tag">` do rodapé.
+- **`app.js`**: `renderVersionTags()` agora preenche apenas `#appVersionTag`;
+  `APP_VERSION` → **`0.10.3`**.
+- **`styles.css`**: `.version-tag` removida; novo `.version-tag-inline`
+  (`font-size:0.7rem`, `font-weight:600`, `color: var(--text-muted)`,
+  `margin-left:0.25rem`, `white-space:nowrap`).
+- **`sw.js`**: cache `pbtracker-v17` → **`pbtracker-v18`**.
+
+### Decisões (consultas do usuário)
+- Tag **depois do nome** (`PBTracker v0.10.3`), não antes.
+- Tags de rodapé **removidas** (versão só no topbar).
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.3), `AGENTS.md` (esta sessão + Contexto Crítico)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `chore: move tag de versao para o topbar ao lado do nome do app`
+  → PATCH → **v0.10.3** → push origin master + tag.

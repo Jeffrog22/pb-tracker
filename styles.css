@@ -435,12 +435,12 @@ button:disabled {
   font-weight: 700;
 }
 
-.version-tag {
-  margin-top: 0.9rem;
-  text-align: center;
-  font-size: 0.72rem;
+.version-tag-inline {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* --- Filtro de Provas --- */

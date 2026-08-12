@@ -18,6 +18,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.3] - 2026-08-11
+### Changed
+- **Tag de versão reposicionada para o topbar**: a versão (`v0.10.3`) agora
+  aparece discreta e pequena ao lado do nome do app (`PBTracker v0.10.3`),
+  preenchida via `#appVersionTag` em `renderVersionTags()`.
+- **Removidas** as tags de versão do rodapé dos painéis de Perfil/Filtro/Controle
+  (a `.version-tag` antiga e seu CSS deram lugar a `.version-tag-inline`).
+
+### Fixed
+- (sem correções nesta versão)
+
 ## [v0.10.2] - 2026-08-11
 ### Fixed
 - **Baliza vira propriedade da linha** (registros pendentes do cronômetro): a
