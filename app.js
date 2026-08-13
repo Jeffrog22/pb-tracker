@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.10.5";
+const APP_VERSION = "0.10.6";
 
 const state = {
   teamName: "",
@@ -462,6 +462,13 @@ function showScreen(screen) {
   el.navItems.forEach((item) => {
     item.classList.toggle("active", item.dataset.screen === screen);
   });
+
+  if (screen === "filter") {
+    el.screenFilter.querySelectorAll(".proof-details.open").forEach((details) => {
+      details.innerHTML = "";
+      details.appendChild(buildEventDetailsTable(details._event));
+    });
+  }
 }
 
 function setStatus(message, tone = "neutral") {
@@ -948,13 +955,14 @@ function renderProofList() {
 
     const toggleBtn = wrapper.querySelector("button[data-toggle]");
     const details = wrapper.querySelector(`#${CSS.escape(detailsId)}`);
+    details._event = event;
 
     toggleBtn.addEventListener("click", () => {
       const isOpen = details.classList.toggle("open");
       toggleBtn.textContent = isOpen ? "Ocultar detalhes" : "Ver séries e atletas";
-      if (isOpen && !details.dataset.loaded) {
+      if (isOpen) {
+        details.innerHTML = "";
         details.appendChild(buildEventDetailsTable(event));
-        details.dataset.loaded = "1";
       }
     });
 

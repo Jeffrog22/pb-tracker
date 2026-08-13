@@ -1037,3 +1037,42 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: remove label Aguardando arquivo (oculto ate 1a mensagem) e badge de status Pronto`
   → PATCH → **v0.10.5** → push origin master + tag.
+
+---
+
+## Sessão: 12/08/2026 — "Tempo da prova" do Filtro atualizado após registrar tempos (v0.10.6)
+
+### O que foi feito
+- **Bug (dado desatualizado)**: a tabela de detalhes do Filtro
+  (`buildEventDetailsTable` em `app.js`) era construída **uma única vez**
+  (`details.dataset.loaded = "1"` no toggle de "Ver séries e atletas"). A coluna
+  **"Tempo da prova"** era impressa **na construção** (`getFinalRaceTime` lê
+  `athlete.current[lastSplit]` imediatamente), enquanto as **parciais do olho**
+  eram calculadas **a cada clique** (`buildPartialsInline` lê `athlete.current`
+  ao vivo). Resultado: depois de cronometrar/registrar e voltar ao Filtro, o olho
+  mostrava o **Tempo Final** mas a coluna ficava `00:00:00` — e o nav
+  (`showScreen("filter")`) não re-renderizava a lista.
+- **Correções**:
+  - `showScreen`: quando `screen === "filter"`, para cada `.proof-details.open`
+    é feita a **reconstrução** da tabela (`details.innerHTML = ""` +
+    `buildEventDetailsTable(details._event)`).
+  - Toggle "Ver séries e atletas": removeu o cache `dataset.loaded` — ao abrir
+    (reopen incluído), a tabela é **sempre reconstruída** com valores atuais.
+  - `details._event = event` guarda a referência da prova para o rebuild.
+- **`app.js`**: `APP_VERSION` → **`0.10.6`**.
+- **`sw.js`**: cache `pbtracker-v19` → **`pbtracker-v20`**.
+
+### Decisões (consultas do usuário)
+- Opção **A**: re-renderizar os detalhes abertos ao entrar no Filtro (consistência
+  entre "Tempo da prova" e parciais sem depender do clique no olho). Também
+  rebuild no reopen para cobrir o mesmo bug por outro caminho.
+
+### Arquivos
+- `app.js`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.6), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: atualiza a coluna Tempo da prova do filtro apos registrar tempos no cronometro`
+  → PATCH → **v0.10.6** → push origin master + tag.

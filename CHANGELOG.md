@@ -18,6 +18,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.6] - 2026-08-12
+### Fixed
+- **"Tempo da prova" desatualizado no Filtro**: a tabela de detalhes era
+  construída uma única vez (`dataset.loaded`) e a coluna "Tempo da prova" era
+  impressa naquele momento — depois de cronometrar e registrar tempos, os
+  parciais do olho recalculavam ao vivo (mostrando o Tempo Final) mas a coluna
+  ficava com `00:00:00`. Agora a tabela é **reconstruída** sempre que a tela do
+  Filtro é exibida (`showScreen`) e a cada clique em "Ver séries e atletas"
+  (reopen), lendo os valores atuais de `athlete.current`. Mantém o lazy-load
+  inicial e os checkboxes de `selectedProofs`.
+- `APP_VERSION` → **`0.10.6`** e cache do `sw.js` → **`pbtracker-v20`**.
+
 ## [v0.10.5] - 2026-08-12
 ### Removed
 - **Badge "Pronto" do dialog de Configurações** (`#appBadge`) removido — o status
