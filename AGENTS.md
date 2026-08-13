@@ -1131,3 +1131,34 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: cores aleatorias por serie nos toggles de baliza e destaque opaco para balizas extrapoladas`
   → MINOR → **v0.11.0** → push origin master + tag.
+
+---
+
+## Sessão: 13/08/2026 — Destaque de fundo nos atletas já cronometrados no Filtro (v0.12.0)
+
+### O que foi feito
+- **`buildEventDetailsTable` (`app.js`)**: quando o atleta tem ao menos um
+  parcial registrado via cronômetro, a linha recebe a classe **`.timed-row`**.
+- **Helper novo `hasRegisteredTimes(athlete)`**: retorna
+  `Object.values(athlete.current || {}).some((t) => t && t !== "00:00:00")` —
+  `athlete.current` só é preenchido por `registerPendingTimes` (PR/parciais
+  manuais ficam em `athlete.history`, não contam).
+- **`styles.css`**: `.details-table tbody tr.timed-row td { background:
+  var(--badge-bg) }` (lilás neutro, leve). Como a tabela já é reconstruída ao
+  entrar no Filtro/reopen (v0.10.6), o destaque acompanha os registros ao vivo.
+- **`app.js`**: `APP_VERSION` → **`0.12.0`**.
+- **`sw.js`**: cache `pbtracker-v21` → **`pbtracker-v22`**.
+
+### Decisões (consultas do usuário)
+- Destaque **lilás neutro** (`--badge-bg`), não verde de sucesso nem accent na borda.
+- Critério: qualquer parcial registrado conta como "cronometrado".
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.12.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: destaque de fundo dos atletas ja cronometrados na tabela de detalhes do filtro`
+  → MINOR → **v0.12.0** → push origin master + tag.

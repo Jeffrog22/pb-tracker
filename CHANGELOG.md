@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.12.0] - 2026-08-13
+### Added
+- **Destaque de fundo nas linhas dos atletas já cronometrados** na tabela de
+  detalhes do Filtro (`buildEventDetailsTable`): quando o atleta tem ao menos um
+  parcial registrado (`athlete.current` preenchido via cronômetro, detectado por
+  `hasRegisteredTimes`), a linha recebe a classe `.timed-row` — fundo lilás
+  neutro (`--badge-bg`) em todas as células. Como a tabela já é reconstruída ao
+  entrar no Filtro (v0.10.6), o destaque acompanha os registros ao vivo.
+- `APP_VERSION` → **`0.12.0`** e cache do `sw.js` → **`pbtracker-v22`**.
+
 ## [v0.11.0] - 2026-08-12
 ### Added
 - **Cores aleatórias por série nos toggles de baliza** (registros pendentes do

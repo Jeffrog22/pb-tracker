@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.11.0";
+const APP_VERSION = "0.12.0";
 
 const state = {
   teamName: "",
@@ -1000,6 +1000,10 @@ function syncGoControlButtons() {
   el.goControlBtnBottom.disabled = disabled;
 }
 
+function hasRegisteredTimes(athlete) {
+  return Object.values(athlete.current || {}).some((t) => t && t !== "00:00:00");
+}
+
 function buildEventDetailsTable(event) {
   const table = document.createElement("table");
   table.className = "details-table";
@@ -1028,6 +1032,7 @@ function buildEventDetailsTable(event) {
         .forEach((athlete) => {
           athleteById.set(athlete.id, athlete);
           const tr = document.createElement("tr");
+          if (hasRegisteredTimes(athlete)) tr.classList.add("timed-row");
           tr.innerHTML = `
             <td>${escapeHtml(seriesKey)}</td>
             <td>${escapeHtml(athlete.baliza)}</td>

@@ -536,6 +536,10 @@ button:disabled {
   text-align: left;
 }
 
+.details-table tbody tr.timed-row td {
+  background: var(--badge-bg);
+}
+
 .eye-btn {
   display: inline-flex;
   align-items: center;
