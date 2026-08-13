@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.10.3";
+const APP_VERSION = "0.10.5";
 
 const state = {
   teamName: "",
@@ -54,7 +54,6 @@ const el = {
   exportBtn: document.getElementById("exportBtn"),
   refreshAppBtn: document.getElementById("refreshAppBtn"),
   downloadLogBtn: document.getElementById("downloadLogBtn"),
-  appBadge: document.getElementById("appBadge"),
   settingsBtn: document.getElementById("settingsBtn"),
   settingsDialog: document.getElementById("settingsDialog"),
   closeSettingsBtn: document.getElementById("closeSettingsBtn"),
@@ -349,9 +348,6 @@ function markUpdateAvailable() {
     el.refreshAppBtn.textContent = "Aplicar atualização";
     el.refreshAppBtn.classList.add("primary");
   }
-  if (el.appBadge) {
-    el.appBadge.textContent = "Nova versão";
-  }
 }
 
 function bindEvents() {
@@ -470,6 +466,7 @@ function showScreen(screen) {
 
 function setStatus(message, tone = "neutral") {
   const elStatus = document.getElementById("importStatus");
+  elStatus.hidden = false;
   elStatus.textContent = message;
   elStatus.className = "status " + (tone || "neutral");
   // Diagnóstico visual

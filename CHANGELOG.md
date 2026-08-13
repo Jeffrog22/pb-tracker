@@ -18,6 +18,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.10.5] - 2026-08-12
+### Removed
+- **Badge "Pronto" do dialog de Configurações** (`#appBadge`) removido — o status
+  de atualização continua sendo sinalizado pelo botão `#refreshAppBtn`
+  ("Atualizar app" → "Aplicar atualização"). Sem usos restantes de `el.appBadge`
+  nem do CSS `.settings-row`.
+
+### Changed
+- **Label "Aguardando arquivo..." da Tela Inicial removido**: o `#importStatus`
+  nasce oculto (`hidden`) e só aparece quando `setStatus()` recebe a primeira
+  mensagem real (Processando/Concluído/Erro).
+- `APP_VERSION` → **`0.10.5`** e cache do `sw.js` → **`pbtracker-v19`**.
+
 ## [v0.10.4] - 2026-08-11
 ### Removed
 - **Workflow do GitHub Pages** (`.github/workflows/deploy.yml`) removido — o

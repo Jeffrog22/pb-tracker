@@ -95,9 +95,11 @@ Regras:
 - **Exclusão de perfil**: botão `×` em cada `.profile-item` chama `deleteProfile`
   (confirmação via `confirm`); perfil ativo excluído é desativado.
 - **Configurações no topbar**: o chip "Pronto" virou a **engrenagem**
-  (`#settingsBtn`) que abre o dialog `#settingsDialog` — dentro dele ficam o
-  status (`#appBadge`), `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn`
-  (Exportar log). `#profileSwitchBtn` permanece no topbar.
+  (`#settingsBtn`) que abre o dialog `#settingsDialog` — dentro dele ficam
+  `#refreshAppBtn` (Atualizar app/ Aplicar atualização) e `#downloadLogBtn`
+  (Exportar log). O badge de status `#appBadge` ("Pronto"/"Nova versão") foi
+  **removido** (v0.10.5) — o aviso de atualização fica só no botão. `#profileSwitchBtn`
+  permanece no topbar.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
   lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
   separador `;`). SheetJS é cacheado em runtime pelo service worker. O botão
@@ -1001,3 +1003,37 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `chore: remove deploy do github pages (migrado para vercel)`
   → PATCH → **v0.10.4** → push origin master + tag.
+
+---
+
+## Sessão: 12/08/2026 — Label "Aguardando arquivo" oculto + badge "Pronto" removido (v0.10.5)
+
+### O que foi feito
+- **Label "Aguardando arquivo..." da Tela Inicial removido**: o `#importStatus`
+  (index.html) nasce **oculto** (`hidden`, sem texto); `setStatus` (`app.js`)
+  agora faz `elStatus.hidden = false` antes de exibir — o box de status só aparece
+  quando há uma mensagem real (Processando/Concluído/Erro). O label inicial era
+  obsoleto, mas o box continua ativo para o feedback pós-importação.
+- **Badge de status "Pronto" removido do dialog de Configurações**: apagado o
+  `<div class="settings-row">` com `<span id="appBadge">Pronto</span>` do
+  `#settingsDialog`; removidas a ref `el.appBadge` (`app.js`) e o bloco
+  `if (el.appBadge)` de `markUpdateAvailable` (`"Nova versão"`). O aviso de
+  atualização continua no `#refreshAppBtn` ("Atualizar app" → "Aplicar atualização").
+- **`styles.css`**: removida a classe `.settings-row` (ficou órfã).
+- **`app.js`**: `APP_VERSION` → **`0.10.5`**.
+- **`sw.js`**: cache `pbtracker-v18` → **`pbtracker-v19`**.
+
+### Decisões (consultas do usuário)
+- **"Aguardando arquivo"**: remover apenas o texto inicial, **mantendo o box**
+  de status (aparece só na 1ª mensagem) — preserva o feedback de erro/sucesso.
+- Badge "Pronto": remover por completo (redundante com o botão Atualizar).
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.10.5), `AGENTS.md` (esta sessão + Contexto Crítico)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: remove label Aguardando arquivo (oculto ate 1a mensagem) e badge de status Pronto`
+  → PATCH → **v0.10.5** → push origin master + tag.

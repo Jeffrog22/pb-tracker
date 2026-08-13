@@ -75,7 +75,7 @@
             Arquivo de Balizamento (PDF, JSON, CSV)
             <input id="fileInput" type="file" accept=".pdf,.json,.csv,text/csv,application/pdf,application/json" />
           </label>
-          <div id="importStatus" class="status neutral">Aguardando arquivo...</div>
+          <div id="importStatus" class="status neutral" hidden></div>
                     <div id="diagnostic-area" style="display:none; margin-top:8px; background:#f8f8f8; border:1px solid #ccc; border-radius:6px; padding:10px; font-size:13px; max-height:220px; overflow:auto;"></div>
           <div class="actions-row">
             <button id="processBtn" class="primary">Processar Arquivo</button>
@@ -155,9 +155,6 @@
       <button id="closeSettingsBtn" class="ghost" type="button">Fechar</button>
     </div>
     <div class="settings-body">
-      <div class="settings-row">
-        <span id="appBadge" class="badge">Pronto</span>
-      </div>
       <div class="actions-row">
         <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
         <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>

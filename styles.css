@@ -1033,12 +1033,6 @@ button:disabled {
   padding: 16px;
 }
 
-.settings-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* --- Footer de Ações --- */
 .action-footer {
   display: flex;
