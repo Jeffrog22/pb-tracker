@@ -109,6 +109,14 @@ Regras:
   (sem Equipe e sem PR Parcial).
 - **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
+- **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
+  `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
+  **estável durante a série** mesmo com re-renders de `renderPending`. Aplicada
+  por `--lane-color` inline no `.baliza-toggle` e na `.lane-dropzone.filled`.
+- **Balizas extrapoladas opacas**: captura criada por `captureLap` nasce com
+  `laneAssigned: false` (lane copiada do parcial anterior é sugestão); a célula
+  fica `.lane-draft` (opacity .45 + tracejado) até atribuição (drag/swap ou
+  auto-fill N=2) — `registerPendingTimes` só exige baliza preenchida.
 - **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
   lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
   separador `;`). SheetJS é cacheado em runtime pelo service worker.
@@ -1076,3 +1084,50 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: atualiza a coluna Tempo da prova do filtro apos registrar tempos no cronometro`
   → PATCH → **v0.10.6** → push origin master + tag.
+
+---
+
+## Sessão: 12/08/2026 — Cores nos toggles de baliza + balizas extrapoladas opacas (v0.11.0)
+
+### O que foi feito
+- **Cores aleatórias por série** (`app.js`):
+  - Nova constante `LANE_COLORS` (10 pastéis legíveis com texto escuro).
+  - `openChrono` inicializa `laneColors: {}`; helper `getBalizaColor(baliza)`
+    embaralha a paleta **sem repetição** e é estável durante a série (mesmo com
+    os re-renders frequentes de `renderPending`).
+  - `buildBalizaToggle` aplica `--lane-color` inline no toggle; `buildPendingTable`
+    aplica o mesmo `--lane-color` na dropzone preenchida (`capture.lane`).
+  - O ghost do drag herda a cor (cloneNode preserva o inline).
+- **Balizas extrapoladas com destaque opaco** (feature B):
+  - `captureLap` cria capturas com `laneAssigned: false` (lane copiada do parcial
+    anterior por `draftLaneForOrder` é apenas uma sugestão).
+  - `buildPendingTable`: quando `lane && !laneAssigned`, adiciona a classe
+    `.lane-draft` (opacidade 0.45 + borda tracejada) — feedback visual de que
+    ainda não foi confirmada.
+  - Atribuição marca `laneAssigned = true`: `dropLaneOnRow` (drag e swap — linha
+    alvo e ocupante) e `assignLaneToRow` (auto-fill N=2). `clearCaptureLane`
+    reseta para `false` ao limpar.
+  - `registerPendingTimes` inalterado: continua exigindo apenas baliza preenchida.
+- **`styles.css`**: `.baliza-toggle`/`.baliza-toggle.ghost` usam
+  `var(--lane-color, ...)`; `.lane-dropzone.filled` ganha tint via
+  `var(--lane-color, #fafbfd)`; novo `.lane-dropzone.filled.lane-draft` (opaco/
+  tracejado, posicionado antes de `.drop-active` para não ofuscar o highlight).
+- **`app.js`**: `APP_VERSION` → **`0.11.0`**.
+- **`sw.js`**: cache `pbtracker-v20` → **`pbtracker-v21`**.
+
+### Decisões (consultas do usuário)
+- Cor por baliza: **aleatória por série** (embaralhada, estável no uso), não
+  determinística por número.
+- A cor também é aplicada **na célula de baliza da tabela** (tint na dropzone
+  preenchida).
+- Balizas extrapoladas: **opacas/tracejadas até a atribuição** (registro anotado).
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.11.0), `AGENTS.md` (esta sessão + Contexto Crítico)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: cores aleatorias por serie nos toggles de baliza e destaque opaco para balizas extrapoladas`
+  → MINOR → **v0.11.0** → push origin master + tag.

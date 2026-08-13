@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.10.6";
+const APP_VERSION = "0.11.0";
 
 const state = {
   teamName: "",
@@ -80,6 +80,19 @@ const EVENT_SPLITS = {
   800: [100, 200, 300, 400, 500, 600, 700, 800],
   1500: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500],
 };
+
+const LANE_COLORS = [
+  "#ffe0e6",
+  "#e0f0ff",
+  "#e2f6e5",
+  "#fff3d1",
+  "#efe4ff",
+  "#d6f6f0",
+  "#fbe3f0",
+  "#e8f0ff",
+  "#f0f0d6",
+  "#ffe9d6",
+];
 
 init();
 
@@ -1269,6 +1282,7 @@ function openChrono(eventKey, seriesKey, athletes) {
     pendingCaptures: [],
     currentSplitIndex: 0,
     clickInSplit: 0,
+    laneColors: {},
   };
 
   el.chronoTitle.textContent = `${eventKey} | Série ${seriesKey}`;
@@ -1346,6 +1360,7 @@ function captureLap(isStop = false) {
     order: ac.clickInSplit,
     ms: ac.elapsedMs,
     lane: draftLaneForOrder(ac, ac.clickInSplit),
+    laneAssigned: false,
     isStopCapture: isStop,
   });
 
@@ -1444,11 +1459,23 @@ function buildLanePalette(ac) {
   return palette;
 }
 
+function getBalizaColor(baliza) {
+  const ac = state.activeChrono;
+  const key = String(baliza);
+  if (ac.laneColors[key]) return ac.laneColors[key];
+  const used = new Set(Object.values(ac.laneColors));
+  const available = LANE_COLORS.filter((c) => !used.has(c));
+  const pool = available.length ? available : LANE_COLORS;
+  ac.laneColors[key] = pool[Math.floor(Math.random() * pool.length)];
+  return ac.laneColors[key];
+}
+
 function buildBalizaToggle(baliza, used) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "baliza-toggle" + (used ? " used" : "");
   btn.dataset.baliza = String(baliza);
+  btn.style.setProperty("--lane-color", getBalizaColor(baliza));
   btn.textContent = String(baliza);
   btn.title = used ? `Baliza ${baliza} — arraste para trocar` : `Baliza ${baliza} — arraste para atribuir`;
   return btn;
@@ -1486,16 +1513,20 @@ function buildPendingTable(ac) {
   ac.pendingCaptures.forEach((capture) => {
     const tr = document.createElement("tr");
     if (capture.isStopCapture) tr.className = "stop-capture-row";
+    const draftClass = capture.lane && !capture.laneAssigned ? " lane-draft" : "";
     tr.innerHTML = `
       <td>${capture.split}m</td>
       <td>${capture.order}</td>
       <td>${msToDisplay(capture.ms)}</td>
       <td class="lane-cell">
-        <button type="button" class="lane-dropzone${capture.lane ? " filled" : ""}"
+        <button type="button" class="lane-dropzone${capture.lane ? " filled" : ""}${draftClass}"
           data-split="${capture.split}" data-order="${capture.order}"
           data-lane="${capture.lane || ""}" title="${capture.lane ? "Toque para limpar a baliza" : "Arraste uma baliza da paleta"}">${capture.lane || "—"}</button>
       </td>
     `;
+    if (capture.lane) {
+      tr.querySelector(".lane-dropzone").style.setProperty("--lane-color", getBalizaColor(capture.lane));
+    }
     tbody.appendChild(tr);
   });
 
@@ -1676,6 +1707,7 @@ function assignLaneToRow(split, order, baliza) {
   ac.pendingCaptures.forEach((capture) => {
     if (String(capture.split) === String(split) && String(capture.order) === String(order)) {
       capture.lane = String(baliza);
+      capture.laneAssigned = true;
     }
   });
 }
@@ -1694,8 +1726,11 @@ function dropLaneOnRow(split, order, baliza) {
     const previous = row.lane || "";
     row.lane = String(baliza);
     occupant.lane = previous;
+    row.laneAssigned = true;
+    occupant.laneAssigned = true;
   } else {
     row.lane = String(baliza);
+    row.laneAssigned = true;
   }
 }
 
@@ -1735,6 +1770,7 @@ function clearCaptureLane(split, order) {
   ac.pendingCaptures.forEach((capture) => {
     if (String(capture.split) === String(split) && String(capture.order) === String(order)) {
       capture.lane = "";
+      capture.laneAssigned = false;
     }
   });
   renderPending();

@@ -887,7 +887,7 @@ button:disabled {
   padding: 0;
   border-radius: 50%;
   border: 1.5px solid var(--border-light);
-  background: var(--bg-card);
+  background: var(--lane-color, var(--bg-card));
   color: var(--text-dark);
   font-weight: 700;
   font-size: 0.85rem;
@@ -921,7 +921,7 @@ button:disabled {
   pointer-events: none;
   border-color: var(--btn-start);
   border-style: solid;
-  background: #eef6f1;
+  background: var(--lane-color, #eef6f1);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
@@ -951,8 +951,15 @@ button:disabled {
 
 .lane-dropzone.filled {
   border-style: solid;
+  background: var(--lane-color, #fafbfd);
   color: var(--text-dark);
   cursor: pointer;
+}
+
+.lane-dropzone.filled.lane-draft {
+  opacity: 0.45;
+  border-style: dashed;
+  cursor: grab;
 }
 
 .lane-dropzone.drop-active {

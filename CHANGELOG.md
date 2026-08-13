@@ -18,6 +18,26 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.11.0] - 2026-08-12
+### Added
+- **Cores aleatórias por série nos toggles de baliza** (registros pendentes do
+  cronômetro): cada série embaralha uma paleta de 10 cores (`LANE_COLORS`) em
+  `state.activeChrono.laneColors` (via `getBalizaColor`) — toggles da paleta
+  ganham `--lane-color` inline e a célula de baliza preenchida da tabela recebe
+  o mesmo tint (`.lane-dropzone.filled`). Cores estáveis durante a série mesmo
+  com re-renders; o ghost do drag herda a cor (cloneNode preserva o inline).
+
+### Changed
+- **Balizas extrapoladas com destaque opaco**: capturas criadas por
+  `captureLap` nascem com `laneAssigned: false` (lane copiada do parcial
+  anterior via `draftLaneForOrder`). Enquanto não há atribuição, a célula
+  recebe `.lane-draft` (opacidade 0.45 + borda tracejada). O destaque volta ao
+  normal ao atribuir (drag/swap em `dropLaneOnRow` ou auto-fill N=2 em
+  `assignLaneToRow`) e ao tocar para limpar (`clearCaptureLane` reseta). O
+  `registerPendingTimes` continua exigindo apenas baliza preenchida — o opaco é
+  só feedback visual.
+- `APP_VERSION` → **`0.11.0`** e cache do `sw.js` → **`pbtracker-v21`**.
+
 ## [v0.10.6] - 2026-08-12
 ### Fixed
 - **"Tempo da prova" desatualizado no Filtro**: a tabela de detalhes era
