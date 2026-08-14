@@ -1196,3 +1196,39 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: reduz botao olho para manter escala e altura da linha na tabela de detalhes do filtro`
   → PATCH → **v0.12.1** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Topbar do cronômetro: moldura colada nos numerais + "Próximo registro" à direita (v0.12.2)
+
+### O que foi feito
+- **Moldura colada nos numerais** (`styles.css`): `.timer-display` com `padding`
+  de `4px 8px` → **`1px 4px`** — a borda ciano passa a contornar `00:00:00` bem
+  de perto (antes havia um grande respiro entre borda e numerais).
+- **"Próximo registro" em oposição ao nome da prova** (`index.html` +
+  `styles.css`): `#chronoTitle` e `#nextCapture` foram envolvidos num novo
+  `.timer-meta` (`display: flex; flex-wrap: wrap; align-items: baseline;
+  column-gap: 0.75rem`). O nome da prova (`Prova X | Série Y`) fica à esquerda;
+  "Próximo registro: parcial Xm, clique N" fica à direita (`text-align: right` +
+  `margin-left: auto`) na **mesma linha**. Em telas estreitas o texto desce para
+  a linha de baixo mas continua **alinhado à direita** (wrap + auto margin).
+- Regra conjunta `.chrono-title, .next-capture` quebrada: base comum mantida
+  (0.75rem, weight 500, branco, opacity .75); `text-align` separado por elemento.
+- Sem mudança de lógica: `refreshNextCapture`/`warning-note`/highlight intactos.
+- **`app.js`**: `APP_VERSION` → **`0.12.2`**.
+- **`sw.js`**: cache `pbtracker-v23` → **`pbtracker-v24`**.
+
+### Decisões (consultas do usuário)
+- "Próximo registro" e nome da prova na **mesma linha** (space-between/flex),
+  com fallback para linha de baixo (direita) em telas estreitas.
+- Padding da moldura: **1px topo/base / 4px laterais**.
+
+### Arquivos
+- `index.html`, `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.12.2), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: moldura do cronometro colada nos numerais e proximo registro alinhado a direita`
+  → PATCH → **v0.12.2** → push origin master + tag.

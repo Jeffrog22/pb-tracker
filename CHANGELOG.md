@@ -18,6 +18,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.12.2] - 2026-08-14
+### Fixed
+- **Topbar do cronômetro (`#chronoDialog`)**:
+  - **Moldura colada nos numerais**: `.timer-display` com `padding` de `4px 8px`
+    → **`1px 4px`** — a borda ciano agora contorna `00:00:00` bem de perto.
+  - **"Próximo registro" à direita, em oposição ao nome da prova**:
+    `#chronoTitle` e `#nextCapture` foram envolvidos num novo `.timer-meta`
+    (`display: flex; flex-wrap: wrap; align-items: baseline`). O nome da prova
+    fica à esquerda e "Próximo registro: parcial Xm, clique N" à direita
+    (`text-align: right` + `margin-left: auto`) na mesma linha; em telas
+    estreitas o texto desce para a linha de baixo mas permanece alinhado à direita.
+- `APP_VERSION` → **`0.12.2`** e cache do `sw.js` → **`pbtracker-v24`**.
+
 ## [v0.12.1] - 2026-08-14
 ### Fixed
 - **Escala/altura da linha da tabela de detalhes do Filtro** (`buildEventDetailsTable`):
