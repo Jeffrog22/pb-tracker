@@ -1427,3 +1427,38 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: cronometro em tela cheia, corrige icone de olho no mobile e remove logica ARN`
   → PATCH → **v0.13.2** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Desbloqueio de orientação do app instalado (v0.13.3)
+
+### O que foi feito
+- **Bug (app instalado preso em retrato)**: o `manifest.webmanifest` tinha
+  `"orientation": "portrait"` — em PWA instalado (standalone), o Android/iOS
+  mantém a janela na vertical e ignora o giroscópio (vertical ↔ horizontal).
+  Não havia trava via JS (`screen.orientation.lock` não é usado) nem no viewport
+  (`width=device-width`), e o `applyDeviceGuard` (bloqueia >1024px) já reage a
+  `resize` — a causa era só o manifest.
+- **Correção**: removida a linha `"orientation": "portrait"` do
+  `manifest.webmanifest` → o app passa a seguir a orientação do dispositivo.
+- **`sw.js`**: cache `pbtracker-v29` → **`pbtracker-v30`** (manifest está no
+  `APP_SHELL`; bump garante que o app instalado baixe o manifest novo).
+- **`ARCHITECTURE.md`** (seção Manifest): atualizada — `display: standalone`
+  sem trava de orientação.
+- **`app.js`**: `APP_VERSION` → **`0.13.3`**.
+
+### Decisões (consultas do usuário)
+- Remover a trava (default segue o dispositivo), sem `screen.orientation.lock`.
+- Nota (fora de escopo): tablets em paisagem >1024px podem disparar o device
+  guard ("desktop blocked") — comportamento existente e intencional.
+
+### Arquivos
+- `manifest.webmanifest`, `sw.js`, `app.js` (APP_VERSION) (alterados)
+- `ARCHITECTURE.md` (seção Manifest), `CHANGELOG.md` (v0.13.3), `AGENTS.md`
+  (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: desbloqueia rotacao do app instalado removendo travas de orientacao do manifest`
+  → PATCH → **v0.13.3** → push origin master + tag.

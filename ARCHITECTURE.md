@@ -183,7 +183,8 @@ o plano correspondente.
 
 ### Manifest (`manifest.webmanifest`)
 
-- `display: standalone`, `orientation: portrait`, cores e ícones SVG.
+- `display: standalone` (sem trava de orientação — segue o dispositivo,
+  retrato ↔ paisagem), cores e ícones SVG.
 - Atendido offline graças ao service worker.
 
 ### Service Worker (`sw.js`) — ciclo de vida

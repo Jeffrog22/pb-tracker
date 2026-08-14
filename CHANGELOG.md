@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.3] - 2026-08-14
+### Fixed
+- **App instalado não respondia à rotação** (giroscópio): o `manifest.webmanifest`
+  tinha `"orientation": "portrait"`, que trava o PWA instalado (standalone) em
+  retrato — ao girar o dispositivo, a janela não mudava para paisagem. Removida
+  a trava: o app passa a seguir a orientação do dispositivo (vertical ↔
+  horizontal). Bump do cache do `sw.js` (`pbtracker-v29` → `v30`) para que o app
+  instalado baixe o manifest atualizado.
+- `APP_VERSION` → **`0.13.3`**.
+
 ## [v0.13.2] - 2026-08-14
 ### Fixed
 - **Ícone de olho achatado no mobile** (tabela de detalhes do Filtro): a regra
