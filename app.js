@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.12.2";
+const APP_VERSION = "0.12.3";
 
 const state = {
   teamName: "",
@@ -1037,7 +1037,7 @@ function buildEventDetailsTable(event) {
             <td>${escapeHtml(seriesKey)}</td>
             <td>${escapeHtml(athlete.baliza)}</td>
             <td>${escapeHtml(athlete.nome)}</td>
-            <td>${escapeHtml(athlete.tempoBalizado)}</td>
+            <td>${maskTimeHTML(athlete.tempoBalizado)}</td>
             <td class="eye-cell" data-athlete-id="${escapeHtml(athlete.id)}">
               <button type="button" class="eye-btn" aria-label="Ver parciais de ${escapeHtml(athlete.nome)}">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -1046,7 +1046,7 @@ function buildEventDetailsTable(event) {
                 </svg>
               </button>
             </td>
-            <td class="race-time">${escapeHtml(getFinalRaceTime(athlete, event.eventName))}</td>
+            <td class="race-time">${maskTimeHTML(getFinalRaceTime(athlete, event.eventName))}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -1086,7 +1086,7 @@ function getFinalRaceTime(athlete, eventName) {
 
 function buildPartialsInline(athlete, eventName) {
   return getSplitsForEvent(eventName)
-    .map((split) => escapeHtml(athlete.current?.[split] || "00:00:00"))
+    .map((split) => maskTimeHTML(athlete.current?.[split] || "00:00:00"))
     .join("/");
 }
 
@@ -1175,7 +1175,7 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
       </div>
       <div class="partial-cell">
         <div class="split-title">${splitLabel(splitA, splits)}</div>
-        <div class="current-value" data-split="${splitA}">${currA}${diffA}</div>
+        <div class="current-value" data-split="${splitA}">${maskTimeHTML(currA)}${diffA}</div>
       </div>
       ${splitB !== undefined ? `
       <div class="partial-cell">
@@ -1184,7 +1184,7 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
       </div>
       <div class="partial-cell">
         <div class="split-title">${splitLabel(splitB, splits)}</div>
-        <div class="current-value" data-split="${splitB}">${currB}${diffB}</div>
+        <div class="current-value" data-split="${splitB}">${maskTimeHTML(currB)}${diffB}</div>
       </div>` : ""}
     `;
   }
@@ -1221,7 +1221,7 @@ function renderAthleteCard(eventName, seriesKey, athlete) {
       const valueEl = card.querySelector(`.current-value[data-split="${split}"]`);
       if (valueEl) {
         valueEl.innerHTML =
-          `${athlete.current[split] || "00:00:00"}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
+          `${maskTimeHTML(athlete.current[split] || "00:00:00")}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
       }
     });
   });
@@ -1239,7 +1239,7 @@ function buildDiffLabel(current, history) {
 
   const diff = currMs - histMs;
   const sign = diff > 0 ? "+" : "-";
-  const diffStr = msToDisplay(Math.abs(diff));
+  const diffStr = maskTimeHTML(msToDisplay(Math.abs(diff)));
 
   if (diff < 0) {
     return ` <span class="improved">(${sign}${diffStr})</span>`;
@@ -1247,7 +1247,7 @@ function buildDiffLabel(current, history) {
   if (diff > 0) {
     return ` <span class="worse">(${sign}${diffStr})</span>`;
   }
-  return ' <span class="neutral-diff">(+00:00:00)</span>';
+  return ` <span class="neutral-diff">(${maskTimeHTML("00:00:00")})</span>`;
 }
 
 function splitLabel(split, splits) {
@@ -1291,7 +1291,7 @@ function openChrono(eventKey, seriesKey, athletes) {
   };
 
   el.chronoTitle.textContent = `${eventKey} | Série ${seriesKey}`;
-  el.chronoDisplay.textContent = "00:00:00";
+  el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
   renderChronoAthletes();
   renderPending();
   refreshNextCapture();
@@ -1333,7 +1333,7 @@ function handleChronoStopReset() {
   state.activeChrono.currentSplitIndex = 0;
   state.activeChrono.clickInSplit = 0;
   state.activeChrono.lastStopCaptured = false;
-  el.chronoDisplay.textContent = "00:00:00";
+  el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
   renderPending();
   refreshNextCapture();
 }
@@ -1349,7 +1349,7 @@ function updateChronoDisplay() {
   if (!state.activeChrono.isRunning) return;
 
   state.activeChrono.elapsedMs = Date.now() - state.activeChrono.startedAt;
-  el.chronoDisplay.textContent = msToDisplay(state.activeChrono.elapsedMs);
+  el.chronoDisplay.innerHTML = maskTimeHTML(msToDisplay(state.activeChrono.elapsedMs));
 }
 
 function captureLap(isStop = false) {
@@ -1522,7 +1522,7 @@ function buildPendingTable(ac) {
     tr.innerHTML = `
       <td>${capture.split}m</td>
       <td>${capture.order}</td>
-      <td>${msToDisplay(capture.ms)}</td>
+      <td>${maskTimeHTML(msToDisplay(capture.ms))}</td>
       <td class="lane-cell">
         <button type="button" class="lane-dropzone${capture.lane ? " filled" : ""}${draftClass}"
           data-split="${capture.split}" data-order="${capture.order}"
@@ -1835,7 +1835,7 @@ function renderChronoAthletes() {
         </div>
         <div class="partial-cell">
           <div class="split-title">${splitLabel(splitA, splits)}</div>
-          <div class="current-value" data-split="${splitA}">${athlete.current[splitA] || "00:00:00"}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
+          <div class="current-value" data-split="${splitA}">${maskTimeHTML(athlete.current[splitA] || "00:00:00")}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
         </div>
         ${splitB !== undefined ? `
         <div class="partial-cell">
@@ -1844,7 +1844,7 @@ function renderChronoAthletes() {
         </div>
         <div class="partial-cell">
           <div class="split-title">${splitLabel(splitB, splits)}</div>
-          <div class="current-value" data-split="${splitB}">${athlete.current[splitB] || "00:00:00"}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
+          <div class="current-value" data-split="${splitB}">${maskTimeHTML(athlete.current[splitB] || "00:00:00")}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
         </div>` : ""}
       `;
     }
@@ -1878,7 +1878,7 @@ function renderChronoAthletes() {
         const valueEl = card.querySelector(`.current-value[data-split="${split}"]`);
         if (valueEl) {
           valueEl.innerHTML =
-            `${athlete.current[split] || "00:00:00"}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
+            `${maskTimeHTML(athlete.current[split] || "00:00:00")}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
         }
       });
     });
@@ -1977,6 +1977,12 @@ function msToDisplay(ms) {
     .toString()
     .padStart(2, "0");
   return `${minutes}:${seconds}:${centiseconds}`;
+}
+
+function maskTimeHTML(value) {
+  const m = String(value || "00:00:00").match(/^(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return escapeHtml(String(value || "00:00:00"));
+  return `${m[1]}'${m[2]}''<span class="cc-mini">${m[3]}</span>`;
 }
 
 function isSameTeam(value, teamName) {

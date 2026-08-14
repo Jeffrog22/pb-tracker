@@ -18,6 +18,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.12.3] - 2026-08-14
+### Changed
+- **Máscara visual de tempos `MM'SS''CC` com centésimos menores**: a lógica
+  interna de tempos continua 100% em `MM:SS:CC` (armazenamento, parsing,
+  inputs de PR Parcial e exports) — apenas a **renderização** mudou. Novo helper
+  `maskTimeHTML` (`app.js`) converte o canônico em `MM'SS''CC` com os 2 últimos
+  dígitos num `<span class="cc-mini">` (**0.7em ≈ 30% menores**). Aplicado em:
+  cronômetro (rodando e resets), tabela de pendentes, parciais `current-value`
+  do Controle e do cronômetro, diffs `(±00'00''00)`, e tabela de detalhes do
+  Filtro (Tempo balizado, Tempo da prova e parciais do olho, separadas por `/`).
+- `APP_VERSION` → **`0.12.3`** e cache do `sw.js` → **`pbtracker-v25`**.
+
 ## [v0.12.2] - 2026-08-14
 ### Fixed
 - **Topbar do cronômetro (`#chronoDialog`)**:

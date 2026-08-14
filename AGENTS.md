@@ -1232,3 +1232,42 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: moldura do cronometro colada nos numerais e proximo registro alinhado a direita`
   → PATCH → **v0.12.2** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Máscara visual de tempos MM'SS''CC com centésimos menores (v0.12.3)
+
+### O que foi feito
+- **Lógica de tempos 100% intacta**: o formato interno canônico continua
+  `MM:SS:CC` em tudo — estado (`athlete.current/history`, `tempoBalizado`,
+  capturas), armazenamento, parsing (`normalizeTime`/`parseTimeToMs`/
+  `attachTimeMask`/`digitsToTimeMask`), inputs editáveis de PR Parcial
+  (`00:00:00`, `maxlength="8"`) e exports (`exporter.js`).
+- **Novo helper `maskTimeHTML(value)`** (`app.js`, ao lado de `msToDisplay`):
+  converte só na renderização `MM:SS:CC` → `MM'SS''CC`, com os 2 últimos
+  dígitos (centésimos) num `<span class="cc-mini">`. Fallback seguro com
+  `escapeHtml` para valores fora do padrão (S/T, NT).
+- **`.cc-mini`** (`styles.css`): `font-size: 0.7em; font-weight: 700` —
+  centésimos ~30% menores, herdando cor/monospace do contexto.
+- **Pontos de exibição trocados** (`textContent`→`innerHTML`/template):
+  cronômetro rodando (`updateChronoDisplay`) e resets (open/reset); tabela de
+  pendentes (Tempo); parciais `current-value` do Controle (A/B + listeners de
+  input) e do cronômetro (A/B + listeners); `buildDiffLabel` (`(±00'00''00)` e
+  neutro `(+00'00''00)`); tabela de detalhes do Filtro (Tempo balizado, Tempo da
+  prova e `buildPartialsInline` — parciais do olho unidas por `/`).
+- **`app.js`**: `APP_VERSION` → **`0.12.3`**.
+- **`sw.js`**: cache `pbtracker-v24` → **`pbtracker-v25`**.
+
+### Decisões (consultas do usuário)
+- Máscara em **todas as telas** (cronômetro, pendentes, parciais, diffs e filtro).
+- Inputs editáveis de PR Parcial **mantidos em `00:00:00`** (zero mudança de lógica).
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.12.3), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: mascara visual de tempos MM'SS''CC com centesimos menores mantendo a logica interna intacta`
+  → PATCH → **v0.12.3** → push origin master + tag.

@@ -568,6 +568,11 @@ button:disabled {
   white-space: nowrap;
 }
 
+.cc-mini {
+  font-size: 0.7em;
+  font-weight: 700;
+}
+
 .proof-details.open {
   overflow-x: auto;
 }
