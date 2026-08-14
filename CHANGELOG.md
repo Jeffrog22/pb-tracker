@@ -18,6 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.5] - 2026-08-14
+### Changed
+- **Paleta de balizas fora do card e na linha do label** (cronômetro):
+  - `index.html`: novo `.pending-head` (flex) com `Registros pendentes` à
+    esquerda e `<div id="lanePalette" class="lane-palette">` à direita;
+    `#pendingList` fica abaixo.
+  - `app.js`: `buildLanePalette` agora popula o `#lanePalette` diretamente
+    (sem o card wrapper); `pointerdown` do DnD migrou de `pendingList` →
+    `lanePalette`; `spawnLaneGhost`/`cleanupLaneDrag` buscam o toggle no novo
+    container.
+  - `styles.css`: `.pending-head` **sticky** (fixo no topo ao rolar, com fundo
+    do card); `.lane-palette` sem card (sem fundo/borda/blur/padding);
+    `.baliza-toggle` reduzido de 34px → **28px** (fonte 0.72rem; ghost 40px
+    intacto).
+- `APP_VERSION` → **`0.13.5`** e cache do `sw.js` → **`pbtracker-v32`**.
+
 ## [v0.13.4] - 2026-08-14
 ### Fixed
 - **Safe areas (bordas/sobreposição com o sistema em PWA standalone)**: adicionado

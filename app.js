@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.13.4";
+const APP_VERSION = "0.13.5";
 
 const state = {
   teamName: "",
@@ -66,6 +66,7 @@ const el = {
   chronoTitle: document.getElementById("chronoTitle"),
   nextCapture: document.getElementById("nextCapture"),
   pendingList: document.getElementById("pendingList"),
+  lanePalette: document.getElementById("lanePalette"),
   navItems: document.querySelectorAll(".nav-item"),
 };
 
@@ -406,7 +407,7 @@ function bindEvents() {
   el.stopResetBtn.addEventListener("click", handleChronoStopReset);
   el.closeChronoBtn.addEventListener("click", closeChrono);
   el.registerBtn.addEventListener("click", registerPendingTimes);
-  el.pendingList.addEventListener("pointerdown", handleLanePointerDown);
+  el.lanePalette.addEventListener("pointerdown", handleLanePointerDown);
   el.pendingList.addEventListener("click", handleLaneCellClick);
   el.chronoDialog.addEventListener("click", (event) => {
     const rect = el.chronoDialog.getBoundingClientRect();
@@ -1428,11 +1429,12 @@ function renderPending() {
   const ac = state.activeChrono;
   if (!ac.pendingCaptures.length) {
     el.pendingList.innerHTML = '<p class="muted">Nenhum tempo pendente até o momento.</p>';
+    el.lanePalette.innerHTML = "";
     return;
   }
 
+  buildLanePalette(ac);
   el.pendingList.innerHTML = "";
-  el.pendingList.appendChild(buildLanePalette(ac));
   el.pendingList.appendChild(buildPendingTable(ac));
 }
 
@@ -1454,12 +1456,10 @@ function getUsedBalizasForSplit(ac, split) {
 function buildLanePalette(ac) {
   const split = ac.splitPlan[ac.currentSplitIndex];
   const used = getUsedBalizasForSplit(ac, split);
-  const palette = document.createElement("div");
-  palette.className = "lane-palette";
+  el.lanePalette.innerHTML = "";
   getSeriesBalizas(ac).forEach((baliza) => {
-    palette.appendChild(buildBalizaToggle(baliza, used.has(baliza)));
+    el.lanePalette.appendChild(buildBalizaToggle(baliza, used.has(baliza)));
   });
-  return palette;
 }
 
 function getBalizaColor(baliza) {
@@ -1581,7 +1581,7 @@ function handleLanePointerMove(event) {
 }
 
 function spawnLaneGhost(x, y) {
-  const source = el.pendingList.querySelector(`.baliza-toggle[data-baliza="${laneDrag.baliza}"]`);
+  const source = el.lanePalette.querySelector(`.baliza-toggle[data-baliza="${laneDrag.baliza}"]`);
   if (!source) return;
   const ghost = source.cloneNode(true);
   ghost.classList.add("ghost");
@@ -1743,7 +1743,7 @@ function cleanupLaneDrag() {
     laneDrag.ghost = null;
   }
   if (laneDrag.baliza) {
-    const source = el.pendingList.querySelector(`.baliza-toggle[data-baliza="${laneDrag.baliza}"]`);
+const source = el.lanePalette.querySelector(`.baliza-toggle[data-baliza="${laneDrag.baliza}"]`);
     if (source) source.classList.remove("dragging");
   }
   if (laneDrag.dropZone) laneDrag.dropZone.classList.remove("drop-active");

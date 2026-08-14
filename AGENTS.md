@@ -1502,3 +1502,47 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: adiciona safe areas (viewport-fit cover) para conteudo nao sobrepor status bar, notch e gesture bar`
   → PATCH → **v0.13.4** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Paleta de balizas na linha do label, fora do card (v0.13.5)
+
+### O que foi feito
+- **Paleta de balizas sai do card de pendentes** (`index.html`): novo
+  `.pending-head` (flex) com o `<h4>Registros pendentes</h4>` à esquerda e o
+  `<div id="lanePalette" class="lane-palette">` **à direita, na mesma linha**;
+  `#pendingList` (só a tabela) fica abaixo.
+- **`app.js`**:
+  - Nova ref `el.lanePalette`.
+  - `buildLanePalette(ac)` passou a popular `el.lanePalette` diretamente (limpa
+    + append dos toggles), sem criar o wrapper de card.
+  - `renderPending`: sem capturas → limpa `el.lanePalette` + mensagem atual.
+  - DnD: `pointerdown` migrou de `el.pendingList` → `el.lanePalette`;
+    `spawnLaneGhost` e `cleanupLaneDrag` buscam o `.baliza-toggle` no novo
+    container (a busca de `.lane-dropzone` do pair-highlight permanece em
+    `pendingList`, pois os dropzones estão na tabela).
+- **`styles.css`**:
+  - `.pending-wrap` sem margin-top (espaço migra para o head); novo
+    `.pending-head` com **`position: sticky; top: 0`** (linha fixa no topo ao
+    rolar, `background: var(--bg-card)` para não vazar conteúdo) +
+    `.pending-head h4 { margin: 0 }`.
+  - `.lane-palette` enxuta: `inline-flex`, `justify-content: flex-end`,
+    `flex-wrap: wrap`, `gap: 6px` (sem fundo/borda/blur/padding).
+  - `.baliza-toggle` menor: **34px → 28px**, fonte `0.85rem → 0.72rem`
+    (ghost de arraste continua 40px).
+- **`app.js`**: `APP_VERSION` → **`0.13.5`**.
+- **`sw.js`**: cache `pbtracker-v31` → **`pbtracker-v32`**.
+
+### Decisões (consultas do usuário)
+- Toggles na **mesma linha do label**, alinhados à direita, podendo ser menores.
+- Linha do label + balizas **sticky** (fixa ao rolar a lista de pendentes).
+
+### Arquivos
+- `index.html`, `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.13.5), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: paleta de balizas na linha do label Registros pendentes (fora do card, sticky, toggles menores)`
+  → PATCH → **v0.13.5** → push origin master + tag.

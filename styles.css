@@ -883,7 +883,23 @@ button:disabled {
 }
 
 .pending-wrap {
-  margin: 10px 12px 0;
+  margin: 0 12px;
+}
+
+.pending-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0 6px;
+  background: var(--bg-card);
+}
+
+.pending-head h4 {
+  margin: 0;
 }
 
 .pending-list-table {
@@ -910,32 +926,23 @@ button:disabled {
 
 /* --- Paleta de balizas + drag-and-drop (registros pendentes) --- */
 .lane-palette {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
+  display: inline-flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 10px;
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--border-light);
-  backdrop-filter: blur(4px);
+  gap: 6px;
 }
 
 .baliza-toggle {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
   padding: 0;
   border-radius: 50%;
   border: 1.5px solid var(--border-light);
   background: var(--lane-color, var(--bg-card));
   color: var(--text-dark);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
