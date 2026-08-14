@@ -18,6 +18,28 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.2] - 2026-08-14
+### Fixed
+- **Ícone de olho achatado no mobile** (tabela de detalhes do Filtro): a regra
+  `@media (pointer: coarse) { button { min-height: 42px } }` esticava o `.eye-btn`
+  de 16×16px para 16×42px (oval deformado) e inflava a linha. Adicionado
+  `min-height: 16px` ao `.eye-btn` (especificidade da classe vence o elemento).
+
+### Changed
+- **Cronômetro com espaço total de tela**: `.chrono-dialog[open]` passou de
+  `max-height: min(82dvh, 100vh)` para **`height: 100dvh; max-height: 100dvh`** —
+  o bottom sheet ocupa a tela inteira para registrar tempos, mantendo a
+  elegância (animação de subida, cantos superiores arredondados, `.sheet-grabber`
+  e backdrop). O `.chrono-scroll` (flex:1) usa todo o espaço vertical.
+
+### Removed
+- **Lógica do relatório ARN** (desnecessária por agora): removidos
+  `ARN_MEET_NAME`, `buildArnCardRows`, `formatArnTime` e `exportArn` do
+  `exporter.js`; `handleExportArn`, a ref `downloadArnBtn` e o binding no
+  `app.js`; o botão `#downloadArnBtn` no dialog de Configurações (`index.html`);
+  e o template `templates/testPBrelatorio.xlsx` do repositório.
+- `APP_VERSION` → **`0.13.2`** e cache do `sw.js` → **`pbtracker-v29`**.
+
 ## [v0.13.1] - 2026-08-14
 ### Changed
 - **Cronômetro virou bottom sheet** (modal compacto, não mais "página"):

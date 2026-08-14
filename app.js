@@ -1,6 +1,6 @@
-import { exportResults, exportArn } from "./exporter.js";
+import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.13.1";
+const APP_VERSION = "0.13.2";
 
 const state = {
   teamName: "",
@@ -54,7 +54,6 @@ const el = {
   exportBtn: document.getElementById("exportBtn"),
   refreshAppBtn: document.getElementById("refreshAppBtn"),
   downloadLogBtn: document.getElementById("downloadLogBtn"),
-  downloadArnBtn: document.getElementById("downloadArnBtn"),
   settingsBtn: document.getElementById("settingsBtn"),
   settingsDialog: document.getElementById("settingsDialog"),
   closeSettingsBtn: document.getElementById("closeSettingsBtn"),
@@ -318,23 +317,6 @@ async function handleExportResults() {
   alert(result.reason || "Nada a exportar.");
 }
 
-async function handleExportArn() {
-  const result = await exportArn({
-    groupedEvents: state.groupedEvents,
-    getSplitsForEvent,
-    teamName: state.teamName,
-  });
-
-  if (result.ok) {
-    logAction("Exportação ARN (XLSX) realizada.");
-    alert("Exportação ARN concluída.");
-    return;
-  }
-
-  logAction(`Exportação ARN falhou: ${result.reason}`);
-  alert(result.reason || "Nada a exportar.");
-}
-
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
@@ -418,9 +400,6 @@ function bindEvents() {
       downloadActivityLog();
       logAction("Exportação do log de atividade requisitada pelo usuário.");
     });
-  }
-  if (el.downloadArnBtn) {
-    el.downloadArnBtn.addEventListener("click", handleExportArn);
   }
 
   el.startLapBtn.addEventListener("click", handleChronoStartLap);

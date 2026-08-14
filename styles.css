@@ -546,6 +546,7 @@ button:disabled {
   justify-content: center;
   width: 16px;
   height: 16px;
+  min-height: 16px;
   padding: 0;
   border-radius: 999px;
   background: #f4f7fd;
@@ -774,8 +775,8 @@ button:disabled {
 .chrono-dialog[open] {
   display: flex;
   flex-direction: column;
-  max-height: 100vh;
-  max-height: min(82dvh, 100vh);
+  height: 100dvh;
+  max-height: 100dvh;
   overflow-y: auto;
   animation: chronoSheetUp 0.22s ease;
 }

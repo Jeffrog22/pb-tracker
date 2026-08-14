@@ -1386,3 +1386,44 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: cronometro vira bottom sheet e remove secao de atletas do modal`
   → PATCH → **v0.13.1** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Espaço total no cronômetro + ícone de olho corrigido no mobile + remoção do ARN (v0.13.2)
+
+### O que foi feito
+- **Ícone de olho achatado no mobile corrigido** (`styles.css`): a regra
+  `@media (pointer: coarse) { button { min-height: 42px } }` esticava o `.eye-btn`
+  de 16×16px para 16×42px (oval deformado) e inflava a linha da tabela de
+  detalhes do Filtro. Adicionado `min-height: 16px` ao `.eye-btn` (especificidade
+  da classe vence o seletor de elemento) → círculo 16×16 restaurado.
+- **Cronômetro com espaço total de tela** (`styles.css`): `.chrono-dialog[open]`
+  de `max-height: min(82dvh, 100vh)` → **`height: 100dvh; max-height: 100dvh`**.
+  O bottom sheet ocupa a tela toda para registrar tempos, mantendo a elegância
+  (animação `chronoSheetUp`, cantos superiores arredondados, `.sheet-grabber`,
+  backdrop). O `.chrono-scroll` (flex:1) usa todo o espaço vertical. Com tela
+  cheia, o toque no backdrop deixa de fechar (o botão Fechar continua no rodapé).
+- **Lógica do relatório ARN removida** (desnecessária por agora):
+  - `exporter.js`: removidos `ARN_MEET_NAME`, `buildArnCardRows`, `formatArnTime`
+    e `exportArn`.
+  - `app.js`: import voltou a ser `exportResults`; removidas a ref
+    `downloadArnBtn`, `handleExportArn` e o binding no `bindEvents`.
+  - `index.html`: removido o botão `#downloadArnBtn` do dialog de Configurações.
+  - `templates/testPBrelatorio.xlsx`: **excluído** do repositório.
+- **`app.js`**: `APP_VERSION` → **`0.13.2`**.
+- **`sw.js`**: cache `pbtracker-v28` → **`pbtracker-v29`**.
+
+### Decisões (consultas do usuário)
+- Cronômetro **tela cheia** (`100dvh`), mantendo o formato bottom sheet elegante.
+- ARN: remover **também o template** `testPBrelatorio.xlsx` (nenhum resquício).
+
+### Arquivos
+- `styles.css`, `app.js`, `exporter.js`, `index.html`, `sw.js` (alterados)
+- `templates/testPBrelatorio.xlsx` (removido)
+- `CHANGELOG.md` (v0.13.2), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: cronometro em tela cheia, corrige icone de olho no mobile e remove logica ARN`
+  → PATCH → **v0.13.2** → push origin master + tag.
