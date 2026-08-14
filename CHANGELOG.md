@@ -18,6 +18,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.0] - 2026-08-14
+### Added
+- **Exportar ARN** (`exporter.js` + botão no dialog de Configurações): novo relatório
+  em XLSX replicando o template experimental `templates/testPBrelatorio.xlsx`.
+  - **1 aba única** (`ARN`) com fichas empilhadas (uma por atleta, linha em
+    branco entre elas), título **ARN** no topo.
+  - Cada ficha preenche **Prova** (`event.eventName`, com ` | Feminino` virado
+    em ` - Feminino`), **Nome**, **Série**, **Raia**, **Tempo de Balizamento**
+    (formatado como no modelo, ex. `2:04:53`), **Categoria**, e mantém o
+    **grid fixo de Passagem** do modelo (`25m/50m - *volta 1`, `50m/100m -
+    *volta 2`, `75m/150m - *volta 3`, `100m/200m - *volta 4`), **Tempo
+    oficial** e **Colocação** como `*vazio`.
+  - Ordem igual à do export de resultados (groupedEvents → séries → baliza);
+    arquivo `arn-<equipe>-<data>.xlsx`. **Sem fallback CSV** (layout de grade);
+    offline retorna alerta.
+- `APP_VERSION` → **`0.13.0`** e cache do `sw.js` → **`pbtracker-v27`**.
+
 ## [v0.12.4] - 2026-08-14
 ### Fixed
 - **Borda do cronômetro colada nos numerais** (`styles.css`): `.timer-display`

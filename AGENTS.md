@@ -1304,3 +1304,45 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: borda do cronometro colada nos numerais e notacao dos segundos com aspas duplas MM'SS\"CC`
   → PATCH → **v0.12.4** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Exportar ARN (novo formato de relatório, via Configurações) (v0.13.0)
+
+### O que foi feito
+- **Novo relatório ARN** replicando o template experimental
+  `templates/testPBrelatorio.xlsx` (ficha por atleta):
+  - `exporter.js`: `ARN_MEET_NAME = "ARN"`, `buildArnCardRows(event, seriesKey,
+    athlete)` (grade 7×7 replicando o grid do modelo) e `exportArn({ groupedEvents,
+    getSplitsForEvent, teamName })`.
+  - **1 aba única** (`ARN`): fichas empilhadas (uma por atleta, linha em branco
+    entre elas), título no topo; `!cols` com larguras próximas do modelo.
+  - Campos preenchidos: **Prova** (`eventName` com ` | Feminino` → ` - Feminino`),
+    **Nome**, **Série**, **Raia**, **Tempo de Balizamento** (formato do modelo
+    `2:04:53`, minutos sem zero à esquerda via `formatArnTime`), **Categoria**.
+    **Passagem** mantém o **grid fixo** do modelo (`25m/50m - *volta 1` ...),
+    **Tempo oficial**/**Colocação** como `*vazio`.
+  - Ordem = groupedEvents → séries → baliza (mesma do export de resultados);
+    arquivo `arn-<equipe>-<data>.xlsx`. **Sem fallback CSV** (grade não cabe em
+    CSV): offline retorna `{ ok:false, reason }` com alerta.
+  - `index.html`: botão **`#downloadArnBtn`** (Exportar ARN) no dialog de
+    Configurações, ao lado de Exportar log.
+  - `app.js`: `import { exportArn }`, ref `downloadArnBtn`, handler
+    `handleExportArn` (chama `exportArn`, loga e alerta), binding no `bindEvents`.
+- **`app.js`**: `APP_VERSION` → **`0.13.0`**.
+- **`sw.js`**: cache `pbtracker-v26` → **`pbtracker-v27`**.
+
+### Decisões (consultas do usuário)
+- Workbook com **1 aba única** (fichas empilhadas).
+- **Passagem = grid fixo do modelo** (com `*volta N`), sem parciais reais do app.
+- Título = **constante `ARN`** (fácil de editar no `exporter.js`).
+
+### Arquivos
+- `exporter.js` (criadas funções ARN), `index.html`, `app.js` (alterados)
+- `CHANGELOG.md` (v0.13.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: exportar ARN - novo formato de relatorio em XLSX via Configuracoes`
+  → MINOR → **v0.13.0** → push origin master + tag.
