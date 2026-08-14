@@ -45,7 +45,7 @@ body {
 }
 
 body {
-  padding-bottom: 70px;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 
 /* --- Aviso Desktop --- */
@@ -88,7 +88,7 @@ body.desktop-blocked .desktop-notice {
 .app-shell {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 0.9rem;
+  padding: 0.9rem calc(0.9rem + env(safe-area-inset-right)) 0.9rem calc(0.9rem + env(safe-area-inset-left));
 }
 
 .topbar {
@@ -99,7 +99,7 @@ body.desktop-blocked .desktop-notice {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-card);
-  padding: 0.8rem 1rem;
+  padding: calc(0.8rem + env(safe-area-inset-top)) 1rem 0.8rem;
   box-shadow: var(--shadow-soft);
 }
 
@@ -778,6 +778,7 @@ button:disabled {
   height: 100dvh;
   max-height: 100dvh;
   overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
   animation: chronoSheetUp 0.22s ease;
 }
 
@@ -1094,7 +1095,8 @@ button:disabled {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom));
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   background-color: var(--bg-card);
   border-top: 1px solid var(--border-light);
   display: flex;

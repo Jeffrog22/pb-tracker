@@ -18,6 +18,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.4] - 2026-08-14
+### Fixed
+- **Safe areas (bordas/sobreposição com o sistema em PWA standalone)**: adicionado
+  `viewport-fit=cover` ao viewport e `env(safe-area-inset-*)` nos elementos de
+  borda — o conteúdo deixa de ficar sob a status bar/notch (topo), sob a gesture
+  bar (rodapé) e sob o notch lateral em paisagem:
+  - `body`: `padding-bottom: calc(70px + env(safe-area-inset-bottom))`.
+  - `.topbar`: `padding-top: calc(0.8rem + env(safe-area-inset-top))`.
+  - `.bottom-nav`: `height: calc(60px + env(safe-area-inset-bottom))` +
+    `padding` com os 3 insets (bottom/lateral).
+  - `.chrono-dialog[open]`: `padding-bottom: env(safe-area-inset-bottom)` —
+    botões Registrar/Fechar acima da gesture bar.
+  - `.app-shell`: `padding-left/right: calc(0.9rem + env(safe-area-inset-*))` —
+    conteúdo não fica sob o notch em paisagem.
+  - Em Android `env()` retorna 0 (sem efeito colateral).
+- `APP_VERSION` → **`0.13.4`** e cache do `sw.js` → **`pbtracker-v31`**.
+
 ## [v0.13.3] - 2026-08-14
 ### Fixed
 - **App instalado não respondia à rotação** (giroscópio): o `manifest.webmanifest`

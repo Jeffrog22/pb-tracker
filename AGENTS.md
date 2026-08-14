@@ -1462,3 +1462,43 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: desbloqueia rotacao do app instalado removendo travas de orientacao do manifest`
   → PATCH → **v0.13.3** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Safe areas no layout (bordas/sobreposição com o sistema) (v0.13.4)
+
+### O que foi feito
+- **`index.html`**: viewport ganhou `viewport-fit=cover` (`width=device-width,
+  initial-scale=1.0, viewport-fit=cover`) — pré-requisito para `env(safe-area-*)`
+  ter valor e o app poder encostar nas bordas.
+- **`styles.css`** (insets `env(safe-area-inset-*)` nos elementos de borda):
+  - `body`: `padding-bottom: calc(70px + env(safe-area-inset-bottom))` — conteúdo
+    não fica sob a gesture bar.
+  - `.topbar`: `padding-top: calc(0.8rem + env(safe-area-inset-top))` — não fica
+    sob a status bar/notch em retrato.
+  - `.bottom-nav`: `height: calc(60px + env(safe-area-inset-bottom))` +
+    `padding: 0 right bottom left` (insets) — ícones acima da gesture bar e fora
+    do notch lateral em paisagem.
+  - `.chrono-dialog[open]`: `padding-bottom: env(safe-area-inset-bottom)` —
+    botões Registrar/Fechar acima da gesture bar.
+  - `.app-shell`: `padding-left/right: calc(0.9rem + env(safe-area-inset-*))` —
+    conteúdo fora do notch em paisagem.
+- Em Android `env()` retorna 0 (sem efeito colateral); mudança é visual apenas
+  (a rotação em si no Android instalado continua exigindo reinstalar o atalho —
+  passo A da sessão v0.13.3, não executado por opção).
+- **`app.js`**: `APP_VERSION` → **`0.13.4`**.
+- **`sw.js`**: cache `pbtracker-v30` → **`pbtracker-v31`**.
+
+### Decisões (consultas do usuário)
+- Aplicar **somente o plano B** (safe areas); o passo A (reinstalação) fica para
+  depois. "Vamos verificar" — validação visual no dispositivo após o deploy.
+
+### Arquivos
+- `index.html`, `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.13.4), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: adiciona safe areas (viewport-fit cover) para conteudo nao sobrepor status bar, notch e gesture bar`
+  → PATCH → **v0.13.4** → push origin master + tag.
