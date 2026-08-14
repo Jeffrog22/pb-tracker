@@ -1271,3 +1271,36 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: mascara visual de tempos MM'SS''CC com centesimos menores mantendo a logica interna intacta`
   → PATCH → **v0.12.3** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Borda do cronômetro colada nos numerais + notação MM'SS"CC (v0.12.4)
+
+### O que foi feito
+- **Borda do cronômetro colada nos numerais** (`styles.css`): o `.timer-display`
+  tinha `flex: 1; min-width: 0` dentro de `.timer-controls` (`justify-content:
+  space-between`) — o box **esticava** para ocupar o espaço entre os botões e a
+  borda contornava esse box inteiro (`|  ... 00'00''00  ...  |`). Trocado para
+  **`flex: 0 0 auto`** (removido `min-width: 0`): o box encolhe até o conteúdo,
+  centralizado entre os botões, e a borda fica colada nos numerais.
+  `padding` `1px 4px` → **`1px 2px`**.
+- **Notação dos segundos**: o separador `''` (duas apóstrofes) virou **`"`
+  (aspas duplas)** em `maskTimeHTML` — formato padrão de natação `MM'SS"CC`
+  (ex. `1'52"67`). Como todos os pontos de exibição passam pelo helper, vale em
+  todas as telas (diffs viram `(±00'00"00)`).
+- **`app.js`**: `APP_VERSION` → **`0.12.4`**.
+- **`sw.js`**: cache `pbtracker-v25` → **`pbtracker-v26`**.
+
+### Decisões (consultas do usuário)
+- Segundos com **aspas duplas `"`** (padrão de natação), não duas apóstrofes.
+- Respiro da moldura: **1px topo/base / 2px laterais**.
+
+### Arquivos
+- `app.js`, `styles.css`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.12.4), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: borda do cronometro colada nos numerais e notacao dos segundos com aspas duplas MM'SS\"CC`
+  → PATCH → **v0.12.4** → push origin master + tag.

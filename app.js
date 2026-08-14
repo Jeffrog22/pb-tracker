@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.12.3";
+const APP_VERSION = "0.12.4";
 
 const state = {
   teamName: "",
@@ -1982,7 +1982,7 @@ function msToDisplay(ms) {
 function maskTimeHTML(value) {
   const m = String(value || "00:00:00").match(/^(\d{2}):(\d{2}):(\d{2})$/);
   if (!m) return escapeHtml(String(value || "00:00:00"));
-  return `${m[1]}'${m[2]}''<span class="cc-mini">${m[3]}</span>`;
+  return `${m[1]}'${m[2]}"<span class="cc-mini">${m[3]}</span>`;
 }
 
 function isSameTeam(value, teamName) {

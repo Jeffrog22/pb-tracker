@@ -18,6 +18,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.12.4] - 2026-08-14
+### Fixed
+- **Borda do cronômetro colada nos numerais** (`styles.css`): `.timer-display`
+  com `flex: 1; min-width: 0` → **`flex: 0 0 auto`** — o box deixava de esticar
+  entre os botões e agora encolhe até o conteúdo, contornando `00'00"00` de perto
+  (centralizado via `justify-content: space-between`). `padding` `1px 4px` →
+  **`1px 2px`**.
+- **Notação dos segundos** (`maskTimeHTML` em `app.js`): separador `''` (duas
+  apóstrofes) → **`"` (aspas duplas)** — formato padrão de natação
+  `MM'SS"CC` (ex. `1'52"67`), em todas as telas (diffs viram `(±00'00"00)`).
+- `APP_VERSION` → **`0.12.4`** e cache do `sw.js` → **`pbtracker-v26`**.
+
 ## [v0.12.3] - 2026-08-14
 ### Changed
 - **Máscara visual de tempos `MM'SS''CC` com centésimos menores**: a lógica
