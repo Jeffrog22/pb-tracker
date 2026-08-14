@@ -760,11 +760,13 @@ button:disabled {
   font-size: 0.78rem;
 }
 
-/* --- Dialog do Cronômetro --- */
+/* --- Dialog do Cronômetro (bottom sheet) --- */
 .chrono-dialog {
-  width: min(960px, 96vw);
+  width: 100%;
+  max-width: 760px;
+  margin: auto auto 0;
   border: none;
-  border-radius: var(--radius-card);
+  border-radius: 16px 16px 0 0;
   padding: 0;
   background: var(--bg-card);
 }
@@ -773,12 +775,30 @@ button:disabled {
   display: flex;
   flex-direction: column;
   max-height: 100vh;
-  max-height: min(100dvh, 100vh);
+  max-height: min(82dvh, 100vh);
   overflow-y: auto;
+  animation: chronoSheetUp 0.22s ease;
+}
+
+@keyframes chronoSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .chrono-dialog::backdrop {
   background: rgba(4, 22, 43, 0.45);
+}
+
+.sheet-grabber {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  margin: 0 auto 2px;
 }
 
 .timer-container {
@@ -998,14 +1018,11 @@ button:disabled {
   box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.35);
 }
 
-.chrono-dialog .athletes-card {
-  margin: 10px 12px 0;
-}
-
 .chrono-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 

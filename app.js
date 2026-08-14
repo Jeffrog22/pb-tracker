@@ -1,6 +1,6 @@
 import { exportResults, exportArn } from "./exporter.js";
 
-const APP_VERSION = "0.13.0";
+const APP_VERSION = "0.13.1";
 
 const state = {
   teamName: "",
@@ -67,7 +67,6 @@ const el = {
   chronoTitle: document.getElementById("chronoTitle"),
   nextCapture: document.getElementById("nextCapture"),
   pendingList: document.getElementById("pendingList"),
-  chronoAthletes: document.getElementById("chronoAthletes"),
   navItems: document.querySelectorAll(".nav-item"),
 };
 
@@ -1313,7 +1312,6 @@ function openChrono(eventKey, seriesKey, athletes) {
 
   el.chronoTitle.textContent = `${eventKey} | Série ${seriesKey}`;
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
-  renderChronoAthletes();
   renderPending();
   refreshNextCapture();
   el.chronoDialog.showModal();
@@ -1834,77 +1832,6 @@ function registerPendingTimes() {
   renderControl();
   logAction(`Tempos registrados: ${savedCount} registros salvos na série ${ac.seriesKey}.`);
   alert("Tempos registrados na tela de controle.");
-}
-
-function renderChronoAthletes() {
-  const ac = state.activeChrono;
-  el.chronoAthletes.innerHTML = "";
-
-  ac.athletes.forEach((athlete) => {
-    const card = document.createElement("article");
-    card.className = "athlete-row";
-
-    const splits = getSplitsForEvent(ac.eventKey);
-    let partialCells = "";
-    for (let i = 0; i < splits.length; i += 2) {
-      const splitA = splits[i];
-      const splitB = splits[i + 1];
-      partialCells += `
-        <div class="partial-cell">
-          <div class="split-title">PR Parcial ${splitA}m</div>
-          <input class="partial-input" data-role="history" data-split="${splitA}" value="${athlete.history[splitA] || "00:00:00"}" maxlength="8" />
-        </div>
-        <div class="partial-cell">
-          <div class="split-title">${splitLabel(splitA, splits)}</div>
-          <div class="current-value" data-split="${splitA}">${maskTimeHTML(athlete.current[splitA] || "00:00:00")}${buildDiffLabel(athlete.current[splitA] || "00:00:00", athlete.history[splitA] || "00:00:00")}</div>
-        </div>
-        ${splitB !== undefined ? `
-        <div class="partial-cell">
-          <div class="split-title">PR Parcial ${splitB}m</div>
-          <input class="partial-input" data-role="history" data-split="${splitB}" value="${athlete.history[splitB] || "00:00:00"}" maxlength="8" />
-        </div>
-        <div class="partial-cell">
-          <div class="split-title">${splitLabel(splitB, splits)}</div>
-          <div class="current-value" data-split="${splitB}">${maskTimeHTML(athlete.current[splitB] || "00:00:00")}${buildDiffLabel(athlete.current[splitB] || "00:00:00", athlete.history[splitB] || "00:00:00")}</div>
-        </div>` : ""}
-      `;
-    }
-    card.innerHTML = `
-      <div class="athlete-main">
-        <div class="athlete-head">
-          <div class="athlete-name">${escapeHtml(athlete.nome)}</div>
-          <div class="tagline">
-            <span class="tag">Baliza ${escapeHtml(athlete.baliza)}</span>
-            <span class="tag">Balizado ${escapeHtml(athlete.tempoBalizado)}</span>
-          </div>
-        </div>
-        <div class="athlete-meta">
-          <div>
-            <div class="split-title">Equipe</div>
-            <strong>${escapeHtml(athlete.equipe)}</strong>
-          </div>
-          <div>
-            <div class="split-title">Série</div>
-            <strong>${escapeHtml(ac.seriesKey)}</strong>
-          </div>
-        </div>
-      </div>
-      <div class="partials-grid">${partialCells}</div>
-    `;
-    card.querySelectorAll("input[data-role='history']").forEach((input) => {
-      attachTimeMask(input);
-      input.addEventListener("input", () => {
-        const split = Number(input.dataset.split);
-        athlete.history[split] = input.value;
-        const valueEl = card.querySelector(`.current-value[data-split="${split}"]`);
-        if (valueEl) {
-          valueEl.innerHTML =
-            `${maskTimeHTML(athlete.current[split] || "00:00:00")}${buildDiffLabel(athlete.current[split] || "00:00:00", input.value)}`;
-        }
-      });
-    });
-    el.chronoAthletes.appendChild(card);
-  });
 }
 
 function attachTimeMask(input) {

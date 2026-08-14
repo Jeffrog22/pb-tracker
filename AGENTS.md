@@ -1346,3 +1346,43 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: exportar ARN - novo formato de relatorio em XLSX via Configuracoes`
   → MINOR → **v0.13.0** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Cronômetro vira bottom sheet + remoção da seção "Atletas da série" (v0.13.1)
+
+### O que foi feito
+- **Cronômetro como bottom sheet** (`styles.css`): `.chrono-dialog` deixou de ser
+  um modal centrado quase full-screen (`96vw`/`100dvh`, cara de página) e passou a
+  uma **gaveta inferior** (`width:100%; max-width:760px; margin:auto auto 0;
+  border-radius:16px 16px 0 0`), com `max-height:min(82dvh,100vh)` e animação de
+  subida (`@keyframes chronoSheetUp`). A tela anterior continua visível acima →
+  leitura clara de overlay, não de navegação (melhora o arraste das balizas).
+- **`.sheet-grabber`**: barra horizontal 44×4px (translúcida) no topo do
+  `.timer-container` indicando a gaveta.
+- **`.chrono-scroll`** com `overscroll-behavior: contain` (scroll não propaga
+  para o fundo).
+- **Seção "Atletas da série" removida do modal** (`index.html` apagou o bloco
+  `.athletes-card`/`#chronoAthletes`): o modal ficou só com relógio +
+  `#pendingList` (paleta de balizas + tabela) + Registrar/Fechar. Os inputs de
+  PR Parcial continuam na tela de **Controle**.
+- **`app.js`**: removidas a chamada `renderChronoAthletes()` em `openChrono` e a
+  função `renderChronoAthletes`; ref `el.chronoAthletes` removida do objeto `el`.
+- Sem mudança de lógica: DnD da paleta, `registerPendingTimes`,
+  `refreshNextCapture` e close-on-backdrop intactos.
+- **`app.js`**: `APP_VERSION` → **`0.13.1`**.
+- **`sw.js`**: cache `pbtracker-v27` → **`pbtracker-v28`**.
+
+### Decisões (consultas do usuário)
+- Formato **bottom sheet** (desliza de baixo, topo arredondado), não centrado.
+- Seção "Atletas da série": **removida** do modal (PR Parcial fica só no Controle).
+
+### Arquivos
+- `index.html`, `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.13.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `refactor: cronometro vira bottom sheet e remove secao de atletas do modal`
+  → PATCH → **v0.13.1** → push origin master + tag.

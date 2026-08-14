@@ -18,6 +18,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.1] - 2026-08-14
+### Changed
+- **Cronômetro virou bottom sheet** (modal compacto, não mais "página"):
+  - `.chrono-dialog` ancorado embaixo (`width: 100%; max-width: 760px; margin:
+    auto auto 0; border-radius: 16px 16px 0 0`), `max-height: min(82dvh, 100vh)`
+    com animação de subida (`@keyframes chronoSheetUp`).
+  - Adicionada a barra `.sheet-grabber` (44×4px) no topo do `.timer-container`
+    indicando a gaveta; `.chrono-scroll` com `overscroll-behavior: contain`.
+  - **Removida a seção "Atletas da série" do modal** (`#chronoAthletes`):
+    o modal agora tem só relógio + registros pendentes (paleta de balizas +
+    tabela) + Registrar/Fechar. Os PR Parciais continuam na tela de **Controle**.
+  - Removidos `renderChronoAthletes` (função) e a chamada em `openChrono`.
+- `APP_VERSION` → **`0.13.1`** e cache do `sw.js` → **`pbtracker-v28`**.
+
 ## [v0.13.0] - 2026-08-14
 ### Added
 - **Exportar ARN** (`exporter.js` + botão no dialog de Configurações): novo relatório
