@@ -1162,3 +1162,37 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: destaque de fundo dos atletas ja cronometrados na tabela de detalhes do filtro`
   → MINOR → **v0.12.0** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Ícone de olho reduzido: escala/alinhamento da tabela do Filtro (v0.12.1)
+
+### O que foi feito
+- **Bug de renderização na tabela de detalhes do Filtro** (`buildEventDetailsTable`):
+  com os tempos ocultos, a célula mostrava o botão `.eye-btn` de **30×30px**
+  (`min-height: 30px`) → linha colapsada com ~41px de altura; com as parciais
+  abertas, o `.partials-inline` (0.82rem) deixava a linha com ~27px. A mudança de
+  escala/altura entre os dois estados era o resultado indesejado.
+- **Correção (CSS only)** em `styles.css`:
+  - `.eye-btn`: `width/height` **30px → 16px**, `min-height: 30px` **removido**
+    (mantém flex centrado e `border-radius: 999px`).
+  - `.eye-btn svg`: **18px → 11px**.
+- Resultado: os dois estados renderizam com a **mesma escala, alinhamento e
+  altura de linha** (linhas mais estreitas), preservando a renderização do estado
+  expandido como referência.
+- **`app.js`**: `APP_VERSION` → **`0.12.1`**.
+- **`sw.js`**: cache `pbtracker-v22` → **`pbtracker-v23`**.
+
+### Decisões (consultas do usuário)
+- Tamanho do olho: **16px** (ícone 11px) — paridade exata de altura com o texto
+  das parciais (~27px), linhas mais estreitas.
+
+### Arquivos
+- `styles.css`, `app.js` (APP_VERSION), `sw.js` (alterados)
+- `CHANGELOG.md` (v0.12.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: reduz botao olho para manter escala e altura da linha na tabela de detalhes do filtro`
+  → PATCH → **v0.12.1** → push origin master + tag.

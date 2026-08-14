@@ -18,6 +18,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.12.1] - 2026-08-14
+### Fixed
+- **Escala/altura da linha da tabela de detalhes do Filtro** (`buildEventDetailsTable`):
+  o botão olho `.eye-btn` tinha **30×30px** com `min-height: 30px`, o que inflava a
+  linha colapsada (~41px) em relação à expandida com as parciais inline (~27px).
+  O botão foi reduzido para **16×16px** (ícone SVG de 18px → **11px**) e o
+  `min-height` removido. Agora ambos os estados (olho e parciais) renderizam com a
+  **mesma escala, alinhamento e altura de linha** (linhas mais estreitas).
+- `APP_VERSION` → **`0.12.1`** e cache do `sw.js` → **`pbtracker-v23`**.
+
 ## [v0.12.0] - 2026-08-13
 ### Added
 - **Destaque de fundo nas linhas dos atletas já cronometrados** na tabela de

@@ -1,6 +1,6 @@
 import { exportResults } from "./exporter.js";
 
-const APP_VERSION = "0.12.0";
+const APP_VERSION = "0.12.1";
 
 const state = {
   teamName: "",

@@ -544,9 +544,8 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  min-height: 30px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border-radius: 999px;
   background: #f4f7fd;
@@ -555,8 +554,8 @@ button:disabled {
 }
 
 .eye-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 11px;
+  height: 11px;
 }
 
 .partials-inline {
