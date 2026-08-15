@@ -18,6 +18,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.13.6] - 2026-08-14
+### Changed
+- **Células de parcial sem metragem no export viram `--`** (`exporter.js`):
+  - `buildResultsRows`: cada coluna de parcial preenche `athlete.current[split]`
+    quando há tempo anotado; caso contrário (split fora da prova, intermediária
+    não registrada ou `00:00:00`) grava `--` no lugar do `00:00:00`.
+  - Cobre os casos mistos do arquivo: 50m com colunas 25/50/75/100 → 75 e 100
+    ficam `--`; 200m com intermediárias não anotadas → `--`.
+  - Vale para **XLSX e CSV de fallback** (mesma função). `Tempo Balizado`
+    permanece como estava (só as colunas de parcial mudam).
+- `APP_VERSION` → **`0.13.6`** e cache do `sw.js` → **`pbtracker-v33`**.
+
 ## [v0.13.5] - 2026-08-14
 ### Changed
 - **Paleta de balizas fora do card e na linha do label** (cronômetro):

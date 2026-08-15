@@ -1,4 +1,4 @@
-<!-- última-sessão: 11/08/2026 — Migração do deploy do GitHub Pages para o Vercel (v0.10.4) -->
+<!-- última-sessão: 14/08/2026 — Células de parcial sem metragem viram "--" no export (v0.13.6) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -106,8 +106,10 @@ Regras:
   `#exportBtn` fica no **topbar** e exporta **todas** as provas importadas
   (`groupedEvents`), independente de `selectedProofs`. Colunas atuais:
   `Prova | Série | Baliza | Nome | Sexo | Tempo Balizado | Prova Xm...`
-  (sem Equipe e sem PR Parcial).
-- **Cache do service worker**: nome `pbtracker-v4` em `sw.js` (app shell inclui
+  (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
+  (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
+  split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
+- **Cache do service worker**: nome `pbtracker-v33` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -117,9 +119,6 @@ Regras:
   `laneAssigned: false` (lane copiada do parcial anterior é sugestão); a célula
   fica `.lane-draft` (opacity .45 + tracejado) até atribuição (drag/swap ou
   auto-fill N=2) — `registerPendingTimes` só exige baliza preenchida.
-- **Exportação de resultados**: `exporter.js` — XLSX via SheetJS (CDN, sob demanda,
-  lazy-load no clique) com abas Resultados + Log; offline cai para CSV (BOM UTF-8,
-  separador `;`). SheetJS é cacheado em runtime pelo service worker.
 
 ---
 
@@ -1546,3 +1545,41 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `refactor: paleta de balizas na linha do label Registros pendentes (fora do card, sticky, toggles menores)`
   → PATCH → **v0.13.5** → push origin master + tag.
+
+---
+
+## Sessão: 14/08/2026 — Células de parcial sem metragem viram `--` no export (v0.13.6)
+
+### O que foi feito
+- **Células de parcial sem tempo anotado agora saem `--` no export**
+  (`exporter.js`, `buildResultsRows`): a célula de cada coluna de parcial
+  (`athlete.current?.[split]`) deixou de cair no fallback `"00:00:00"` e passou
+  a gravar `--` quando não há tempo registrado:
+  ```js
+  const t = athlete.current?.[split];
+  row.push(t && t !== "00:00:00" ? t : "--");
+  ```
+- Cobre os casos mistos do mesmo arquivo: prova de 50m com colunas
+  25/50/75/100 → 75 e 100 saem `--`; prova de 200m com intermediárias não
+  registradas → `--`; qualquer split dentro da prova que não tenha sido
+  cronometrado também sai `--`.
+- Vale para **XLSX e CSV de fallback** (mesma função `buildResultsRows`).
+  A coluna **Tempo Balizado** permanece como estava (só as colunas de parcial
+  mudam; `athlete.current` só é preenchido por `registerPendingTimes`).
+- **`app.js`**: `APP_VERSION` → **`0.13.6`**.
+- **`sw.js`**: cache `pbtracker-v32` → **`pbtracker-v33`**.
+
+### Decisões (consultas do usuário)
+- `--` vale **no XLSX e no CSV** (consistência; mesma função).
+- **Tempo Balizado inalterado** — o `--` é aplicado só nas colunas de parcial.
+
+### Arquivos
+- `exporter.js` (alterado)
+- `app.js` (APP_VERSION), `sw.js` (cache v33) (alterados)
+- `CHANGELOG.md` (v0.13.6), `AGENTS.md` (esta sessão + Contexto Crítico)
+
+### Verificações
+- `node --check app.js exporter.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: celulas de parcial sem metragem viram -- no export em vez de 00:00:00`
+  → PATCH → **v0.13.6** → push origin master + tag.

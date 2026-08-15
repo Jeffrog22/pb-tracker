@@ -63,7 +63,8 @@ export function buildResultsRows(state, getSplitsForEvent, includeSexo = true, s
           if (includeSexo) row.push(athlete.sexo || "");
           row.push(athlete.tempoBalizado || "00:00:00");
           orderedSplits.forEach((split) => {
-            row.push(athlete.current?.[split] || "00:00:00");
+            const t = athlete.current?.[split];
+            row.push(t && t !== "00:00:00" ? t : "--");
           });
           rows.push(row);
         });
