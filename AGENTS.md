@@ -1,4 +1,4 @@
-<!-- última-sessão: 14/08/2026 — Células de parcial sem metragem viram "--" no export (v0.13.6) -->
+<!-- última-sessão: 19/08/2026 — SwimBase (Tier 2 / Modo Treino) completo: atletas, treino, PRs, análise e export (v0.14.0) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -38,10 +38,10 @@ Regras:
 
 ## Identidade
 - **Nome:** PBTracker
-- **Descrição:** Balizamento e controle rápido de parciais para competição de natação — PWA mobile/tablet-first, sem backend.
-- **Repositório:** git ativo localmente (remote ainda não configurado — push exige definir a URL remota).
-- **Versão atual:** v0.10.4
-- **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker). Sem backend, sem banco, sem testes automatizados.
+- **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
+- **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
+- **Versão atual:** v0.14.0
+- **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
   raiz). PDF.js requer rede no primeiro carregamento.
@@ -61,8 +61,13 @@ Regras:
 | `README.md` | Porta de entrada + como rodar/testar |
 | `project-summary.md` | Resumo legado do desenvolvimento inicial |
 | `project-action-log.js` | Script para registrar ações em `project-actions.log` |
-| `app.js` | Toda a lógica da aplicação (estado, parsing, cronômetro, UI) |
-| `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) |
+| `app.js` | Toda a lógica da aplicação (estado, parsing, cronômetro, UI, modos/roteamento) |
+| `utils.js` | Helpers compartilhados (máscara de tempo, normalização, `uid`, `todayStamp`) |
+| `db.js` | Wrapper IndexedDB (SwimBase) — stores atletas/turmas/registros/prs/settings |
+| `swimbase.js` | SwimBase (Tier 2): atletas, turmas, Modo Treino, PRs, Análise |
+| `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
+| `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs |
+| `PDR-SwimBase.md` | Requisitos do SwimBase (Tier 2) — MVP = Fase 1 |
 | `index.html` | Telas e dialog do cronômetro |
 | `styles.css` | Tema e layout mobile-first |
 | `sw.js` | Service worker (PWA offline) |
@@ -119,6 +124,30 @@ Regras:
   `laneAssigned: false` (lane copiada do parcial anterior é sugestão); a célula
   fica `.lane-draft` (opacity .45 + tracejado) até atribuição (drag/swap ou
   auto-fill N=2) — `registerPendingTimes` só exige baliza preenchida.
+- **SwimBase (Tier 2)** vive em `swimbase.js` + `db.js` (IndexedDB
+  `pbtracker-swimbase`, stores `atletas`/`turmas`/`registros`/`prs`/`settings`).
+  Roteamento por `state.appMode` ("balizamento"|"swimbase"); `enterMode`
+  esconde o `#exportBtn` no SwimBase. O **device guard só bloqueia o
+  balizamento** (>1024px) — SwimBase é liberado em desktop.
+- **PR = melhor tempo por `atletaId+estilo+distancia`** (pode vir de prova OU
+  treino). `checkPrAndFlag` em `recordSplit` grava `flagPr` no registro e
+  atualiza o store `prs`; a raia ganha badge `PR!` dourado + haptics. O store
+  `prs` também é alimentado em memória (`sw.prs`) para a Análise.
+- **`sw.registros` é a fonte da Análise** (não re-lê o IndexedDB por tela):
+  `persistRegistro` mantém o array em memória em sincronia (push/update).
+- **Wake Lock** (`navigator.wakeLock("screen")`) é acionado em `startTreino` e
+  liberado em `finalizeTreino`/`closeTreino` (re-adquirido em
+  `visibilitychange`).
+- **Alto contraste**: `#highContrastToggle` no dialog de Configurações →
+  `body.high-contrast` (CSS custom properties no `styles.css`) + persistência em
+  `localStorage["pbtracker_high_contrast"]` (`loadHighContrast`/`applyHighContrast`).
+- **Indicador offline**: `#offlineBadge` no topbar, ligado via
+  `bindOnlineStatus` (eventos `online`/`offline`).
+- **Export SwimBase**: `exportSwimBaseRegistros`/`exportSwimBasePRs` +
+  `exportSpreadsheet` em `exporter.js` (XLSX via SheetJS, fallback CSV); arquivos
+  `swimbase-registros-<YYYYMMDD>.xlsx` / `swimbase-prs-<YYYYMMDD>.xlsx`.
+- **Categoria automática** por idade (`categoriaPorIdade`/`calcularCategoria`):
+  tabela Pré-Mirim → M80+; a hint é atualizada no `#sbAtletaNasc` (change).
 
 ---
 
@@ -1583,3 +1612,75 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: celulas de parcial sem metragem viram -- no export em vez de 00:00:00`
   → PATCH → **v0.13.6** → push origin master + tag.
+
+---
+
+## Sessão: 19/08/2026 — SwimBase completo: atletas, Modo Treino, PRs, Análise e export (v0.14.0)
+
+### O que foi feito
+- **Fase B (Tier 2 / SwimBase) implementada por completo**, seguindo o
+  `PDR-SwimBase.md` (MVP = Fase 1). Fatias B1→B6 entregues numa única sessão.
+- **B1 — Fundação**:
+  - `utils.js` (novo): `uid`, `todayStamp`, `digitsToTimeMask`, `attachTimeMask`,
+    `normalizeTime`, `parseTimeToMs`, `msToDisplay`, `maskTimeHTML`,
+    `normalizeText`, `toTitleCase`, `slugify`, `escapeHtml` — funções duplicadas
+    removidas do `app.js` (passou a importar do módulo).
+  - `db.js` (novo): wrapper IndexedDB `pbtracker-swimbase` v1 com
+    `STORES = { ATHLETES, GROUPS, RECORDS, PRS, SETTINGS }` e helpers
+    `getAll/get/getByIndex/put/putAll/remove/clear/getSetting/setSetting`.
+  - `app.js`: `state.appMode` ("balizamento"|"swimbase"), `#screenMode` com cards
+    de modo, bottom-nav dinâmica (`renderNav`/`navConfig`), `enterMode` oculta o
+    `#exportBtn` no SwimBase, `applyDeviceGuard` passa a bloquear **só o
+    balizamento** (>1024px) — SwimBase liberado em desktop. Perfis/fluxos de
+    login passam a rotear para a tela de Modos.
+- **B2 — Atletas e turmas**: CRUD local de turmas e atletas (IndexedDB), busca
+  por nome, categorização automática por idade (`CATEGORIAS` Pré-Mirim→M80+,
+  hint no campo nascimento).
+- **B3 — Modo Treino 2**: wizard de 3 passos (turma → atletas → configuração
+  estilo/distância/séries/repetições/descanso/intervalo), cronômetro mestre com
+  raias individuais (`#sbChronoDialog`, ticker 30ms), toque registra o tempo da
+  repetição, avanço automático com descanso/intervalo por raia, persistência
+  incremental (`persistRegistro`) em `registros` + memória (`sw.registros`).
+- **B4 — PRs + UX**: `checkPrAndFlag` (PR por `atletaId+estilo+distancia`),
+  badge `PR!` dourado na raia, haptics (`[80,60,160]`), `flagPr` no registro;
+  **Wake Lock** durante o treino (`requestWakeLock`/`releaseWakeLock`,
+  re-adquirido em `visibilitychange`); toggle **alto contraste** no dialog de
+  Configurações (persistido em `localStorage`).
+- **B5 — Análise e export**: tela Análise com seletor atleta/estilo/distância/
+  período, gráfico de progressão temporal em Canvas (`charts.js`,
+  `drawProgressChart`, com linha tracejada de evolução de PR), tabelas de PRs e
+  registros recentes; exportação XLSX/CSV de registros e PRs
+  (`exportSwimBaseRegistros`/`exportSwimBasePRs`/`exportSpreadsheet` no
+  `exporter.js`); indicador **offline** `#offlineBadge` no topbar
+  (`bindOnlineStatus`).
+- **`app.js`**: `APP_VERSION` → **`0.14.0`**.
+- **`sw.js`**: cache `pbtracker-v34` → **`pbtracker-v35`** (+ `charts.js` no
+  shell).
+
+### Decisões (consultas do usuário)
+- PDR do SwimBase entregue em arquivo próprio na raiz: **`PDR-SwimBase.md`**
+  (o `PDR.md` ganha só o ponteiro).
+- SwimBase **dentro do mesmo app** (feature flags / `appMode`), sem separar.
+- Stack **vanilla JS PWA** (sem build/backend), sync **adiado** (export manual
+  no lugar).
+- Login por **perfil local** (reuso do perfil do balizamento; sem senha).
+- **MVP = Fase 1** do PDR-SwimBase (Modos 1 e 3, multi-timer e sync ficam fora).
+- **Desktop liberado** para o SwimBase (guard só no balizamento).
+- **Upsert de atletas via balizamento** fica para depois (sem importação cruzada).
+- Fatias B1→B6 entregues em **um commit único `feat:`** (v0.14.0) em vez de um
+  commit por fatia — sessão única de trabalho.
+
+### Arquivos
+- `utils.js`, `db.js`, `charts.js` (criados)
+- `swimbase.js` (criado — todo o SwimBase)
+- `app.js`, `index.html`, `styles.css`, `exporter.js`, `sw.js` (alterados)
+- `CHANGELOG.md` (v0.14.0), `AGENTS.md` (esta sessão + Contexto Crítico +
+  Identidade/Sumário)
+
+### Verificações
+- `node --check app.js exporter.js sw.js utils.js db.js swimbase.js charts.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `feat: SwimBase - atletas, turmas, modo treino, PRs, analise com graficos e export` 
+  → MINOR → **v0.14.0** → push origin master + tag.

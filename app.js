@@ -1,6 +1,19 @@
 import { exportResults } from "./exporter.js";
+import {
+  attachTimeMask,
+  digitsToTimeMask,
+  normalizeTime,
+  parseTimeToMs,
+  msToDisplay,
+  maskTimeHTML,
+  normalizeText,
+  toTitleCase,
+  slugify,
+  escapeHtml,
+} from "./utils.js";
+import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.13.6";
+const APP_VERSION = "0.14.0";
 
 const state = {
   teamName: "",
@@ -12,6 +25,7 @@ const state = {
   activityLog: [],
   profiles: [],
   activeProfile: null,
+  appMode: "balizamento",
   activeChrono: {
     eventKey: null,
     seriesKey: null,
@@ -33,9 +47,18 @@ let swUpdateAvailable = false;
 
 const el = {
   screenLogin: document.getElementById("screenLogin"),
+  screenMode: document.getElementById("screenMode"),
   screenImport: document.getElementById("screenImport"),
   screenFilter: document.getElementById("screenFilter"),
   screenControl: document.getElementById("screenControl"),
+  screenSbHome: document.getElementById("screenSbHome"),
+  screenSbAtletas: document.getElementById("screenSbAtletas"),
+  screenSbTreino: document.getElementById("screenSbTreino"),
+  screenSbAnalise: document.getElementById("screenSbAnalise"),
+  modeBalizamentoBtn: document.getElementById("modeBalizamentoBtn"),
+  modeSwimBaseBtn: document.getElementById("modeSwimBaseBtn"),
+  modeProfileChip: document.getElementById("modeProfileChip"),
+  bottomNav: document.getElementById("bottomNav"),
   fileInput: document.getElementById("fileInput"),
   teamName: document.getElementById("teamName"),
   profileSwitchBtn: document.getElementById("profileSwitchBtn"),
@@ -103,12 +126,24 @@ function init() {
   applyDeviceGuard();
   loadActivityLog();
   loadProfiles();
+  loadHighContrast();
+  bindHighContrast();
+  bindOnlineStatus();
   renderVersionTags();
+  renderNav();
+  initSwimBase({
+    state,
+    showScreen,
+    renderNav,
+    enterMode,
+    applyDeviceGuard,
+    logAction,
+  });
   logAction("App iniciado");
   const active = getActiveProfile();
   if (active) {
     activateProfile(active.id, { skipLog: true });
-    showScreen("import");
+    showScreen("mode");
   } else {
     renderProfileList();
     showScreen("login");
@@ -201,7 +236,7 @@ function renderProfileList() {
     `;
     main.addEventListener("click", () => {
       activateProfile(profile.id);
-      showScreen("import");
+      showScreen("mode");
     });
 
     const del = document.createElement("button");
@@ -241,11 +276,16 @@ function renderProfileChip() {
   const profile = state.activeProfile;
   if (!profile) {
     el.activeProfileChip.hidden = true;
+    if (el.modeProfileChip) el.modeProfileChip.hidden = true;
     el.profileSwitchBtn.hidden = true;
     return;
   }
   el.activeProfileChip.hidden = false;
   el.activeProfileChip.textContent = `${profile.professor} · ${profile.equipe}`;
+  if (el.modeProfileChip) {
+    el.modeProfileChip.hidden = false;
+    el.modeProfileChip.textContent = `${profile.professor} · ${profile.equipe}`;
+  }
   el.profileSwitchBtn.hidden = false;
 }
 
@@ -254,6 +294,44 @@ function todayISO() {
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const dd = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${mm}-${dd}`;
+}
+
+function loadHighContrast() {
+  let enabled = false;
+  try {
+    enabled = window.localStorage.getItem("pbtracker_high_contrast") === "1";
+  } catch (e) {
+    enabled = false;
+  }
+  const toggle = document.getElementById("highContrastToggle");
+  if (toggle) toggle.checked = enabled;
+  applyHighContrast(enabled);
+}
+
+function applyHighContrast(enabled) {
+  document.body.classList.toggle("high-contrast", enabled);
+  try {
+    window.localStorage.setItem("pbtracker_high_contrast", enabled ? "1" : "0");
+  } catch (e) {
+    // ignore storage failures
+  }
+}
+
+function bindHighContrast() {
+  const toggle = document.getElementById("highContrastToggle");
+  if (!toggle) return;
+  toggle.addEventListener("change", () => applyHighContrast(toggle.checked));
+}
+
+function bindOnlineStatus() {
+  const badge = document.getElementById("offlineBadge");
+  if (!badge) return;
+  const update = () => {
+    badge.hidden = navigator.onLine;
+  };
+  window.addEventListener("online", update);
+  window.addEventListener("offline", update);
+  update();
 }
 
 function loadActivityLog() {
@@ -375,7 +453,7 @@ function bindEvents() {
     }
     createProfile(professor, equipe);
     el.profileForm.reset();
-    showScreen("import");
+    showScreen("mode");
   });
   el.profileSwitchBtn.addEventListener("click", switchProfile);
   el.settingsBtn.addEventListener("click", () => el.settingsDialog.showModal());
@@ -419,16 +497,8 @@ function bindEvents() {
     if (isOutside) closeChrono();
   });
 
-  el.navItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      const screen = item.dataset.screen;
-      if (screen === "import" && !state.activeProfile) {
-        showScreen("login");
-        return;
-      }
-      showScreen(screen);
-    });
-  });
+  el.modeBalizamentoBtn.addEventListener("click", () => enterMode("balizamento"));
+  el.modeSwimBaseBtn.addEventListener("click", () => enterMode("swimbase"));
 }
 
 async function handleAppRefresh() {
@@ -459,18 +529,25 @@ function bindDeviceGuard() {
 
 function applyDeviceGuard() {
   const desktopNotice = document.getElementById("desktopNotice");
-  const isDesktopLayout = window.innerWidth > 1024;
-  document.body.classList.toggle("desktop-blocked", isDesktopLayout);
+  const shouldBlock = state.appMode === "balizamento" && window.innerWidth > 1024;
+  document.body.classList.toggle("desktop-blocked", shouldBlock);
   if (desktopNotice) {
-    desktopNotice.setAttribute("aria-hidden", isDesktopLayout ? "false" : "true");
+    desktopNotice.setAttribute("aria-hidden", shouldBlock ? "false" : "true");
   }
 }
 
 function showScreen(screen) {
+  if (screen === "mode" && !state.activeProfile) screen = "login";
+
   el.screenLogin.classList.toggle("active", screen === "login");
+  el.screenMode.classList.toggle("active", screen === "mode");
   el.screenImport.classList.toggle("active", screen === "import");
   el.screenFilter.classList.toggle("active", screen === "filter");
   el.screenControl.classList.toggle("active", screen === "control");
+  el.screenSbHome.classList.toggle("active", screen === "sb-home");
+  el.screenSbAtletas.classList.toggle("active", screen === "sb-atletas");
+  el.screenSbTreino.classList.toggle("active", screen === "sb-treino");
+  el.screenSbAnalise.classList.toggle("active", screen === "sb-analise");
 
   el.navItems.forEach((item) => {
     item.classList.toggle("active", item.dataset.screen === screen);
@@ -482,6 +559,66 @@ function showScreen(screen) {
       details.appendChild(buildEventDetailsTable(details._event));
     });
   }
+
+  if (screen.startsWith("sb-")) {
+    renderSwimBaseScreen(screen);
+  }
+}
+
+const NAV_ICONS = {
+  mode: '<path d="M4 11l8-8 8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 10v10h12V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+  filter: '<path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>',
+  control: '<circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>',
+  "sb-atletas": '<circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M3 20v-1a6 6 0 0 1 12 0v1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path><path d="M17 9a2.5 2.5 0 1 0-1 4.8M17 14a6 6 0 0 1 4 6v1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>',
+  "sb-treino": '<circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>',
+  "sb-analise": '<path d="M3 3v18h18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path><path d="M8 15l3-4 3 2 5-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+};
+
+function navConfig() {
+  if (state.appMode === "swimbase") {
+    return [
+      { screen: "mode", label: "Modo", icon: NAV_ICONS.mode },
+      { screen: "sb-atletas", label: "Atletas", icon: NAV_ICONS["sb-atletas"] },
+      { screen: "sb-treino", label: "Treino", icon: NAV_ICONS["sb-treino"] },
+      { screen: "sb-analise", label: "Análise", icon: NAV_ICONS["sb-analise"] },
+    ];
+  }
+  return [
+    { screen: "mode", label: "Modo", icon: NAV_ICONS.mode },
+    { screen: "filter", label: "Provas", icon: NAV_ICONS.filter },
+    { screen: "control", label: "Controle", icon: NAV_ICONS.control },
+  ];
+}
+
+function renderNav() {
+  const container = el.bottomNav;
+  if (!container) return;
+  container.innerHTML = "";
+  navConfig().forEach(({ screen, label, icon }) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "nav-item";
+    btn.dataset.screen = screen;
+    btn.setAttribute("aria-label", label);
+    btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${icon}</svg><span>${label}</span>`;
+    btn.addEventListener("click", () => {
+      if (screen === "import" && !state.activeProfile) {
+        showScreen("login");
+        return;
+      }
+      showScreen(screen);
+    });
+    container.appendChild(btn);
+  });
+  el.navItems = container.querySelectorAll(".nav-item");
+}
+
+function enterMode(mode) {
+  state.appMode = mode;
+  if (el.exportBtn) el.exportBtn.hidden = mode !== "balizamento";
+  renderNav();
+  applyDeviceGuard();
+  showScreen(mode === "swimbase" ? "sb-home" : "import");
 }
 
 function setStatus(message, tone = "neutral") {
@@ -1813,105 +1950,6 @@ function registerPendingTimes() {
   alert("Tempos registrados na tela de controle.");
 }
 
-function attachTimeMask(input) {
-  input.addEventListener("beforeinput", (event) => {
-    const type = event.inputType;
-    if (type === "deleteContentBackward" || type === "deleteContentForward") {
-      event.preventDefault();
-      const buffer = (input.dataset.digits || "").replace(/\D/g, "");
-      const next = type === "deleteContentBackward" ? buffer.slice(0, -1) : buffer.slice(1);
-      input.dataset.digits = next;
-      input.value = digitsToTimeMask(next);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      return;
-    }
-
-    if (!event.data) return;
-    event.preventDefault();
-    const digits = String(event.data).replace(/\D/g, "");
-    if (!digits.length) return;
-    const buffer = ((input.dataset.digits || "") + digits).slice(-6);
-    input.dataset.digits = buffer;
-    input.value = digitsToTimeMask(buffer);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-
-  input.addEventListener("focus", () => {
-    if (input.dataset.digits === undefined) {
-      const digits = input.value.replace(/\D/g, "");
-      input.dataset.digits = digits === "000000" ? "" : digits;
-    }
-    if (!input.value.replace(/\D/g, "")) input.value = "00:00:00";
-    input.select();
-  });
-}
-
-function digitsToTimeMask(digits) {
-  const padded = digits.padEnd(6, "0");
-  const mm = padded.slice(0, 2);
-  const ss = padded.slice(2, 4);
-  const cc = padded.slice(4, 6);
-  return `${mm}:${ss}:${cc}`;
-}
-
-function normalizeTime(value) {
-  if (!value) return "00:00:00";
-
-  const cleaned = String(value).replace(/,/g, ":").replace(/\./g, ":").trim();
-  const numeric = cleaned.replace(/\D/g, "");
-  if (numeric.length >= 6) {
-    return digitsToTimeMask(numeric.slice(0, 6));
-  }
-
-  const hms = cleaned;
-  const fullPattern = /^\d{2}:\d{2}:\d{2}$/;
-  if (fullPattern.test(hms)) return hms;
-
-  const mmsscc = hms.match(/^(\d{1,2})[:.](\d{2})[:.](\d{2})$/);
-  if (mmsscc) {
-    const [, mm, ss, cc] = mmsscc;
-    return `${mm.padStart(2, "0")}:${ss}:${cc}`;
-  }
-
-  const sscc = hms.match(/^(\d{1,2})[:.](\d{2})$/);
-  if (sscc) {
-    const [, ss, cc] = sscc;
-    return `00:${ss.padStart(2, "0")}:${cc}`;
-  }
-
-  return "00:00:00";
-}
-
-function parseTimeToMs(display) {
-  if (!display) return null;
-  const match = String(display).match(/^(\d{2}):(\d{2}):(\d{2})$/);
-  if (!match) return null;
-  const mm = Number(match[1]);
-  const ss = Number(match[2]);
-  const cc = Number(match[3]);
-  return ((mm * 60) + ss) * 1000 + (cc * 10);
-}
-
-function msToDisplay(ms) {
-  const totalCentiseconds = Math.floor(ms / 10);
-  const minutes = Math.floor(totalCentiseconds / 6000)
-    .toString()
-    .padStart(2, "0");
-  const seconds = Math.floor((totalCentiseconds % 6000) / 100)
-    .toString()
-    .padStart(2, "0");
-  const centiseconds = Math.floor(totalCentiseconds % 100)
-    .toString()
-    .padStart(2, "0");
-  return `${minutes}:${seconds}:${centiseconds}`;
-}
-
-function maskTimeHTML(value) {
-  const m = String(value || "00:00:00").match(/^(\d{2}):(\d{2}):(\d{2})$/);
-  if (!m) return escapeHtml(String(value || "00:00:00"));
-  return `${m[1]}'${m[2]}"<span class="cc-mini">${m[3]}</span>`;
-}
-
 function isSameTeam(value, teamName) {
   const a = normalizeText(value);
   const b = normalizeText(teamName);
@@ -1959,36 +1997,4 @@ function getTeamTokens(normalizedTeam) {
     .split(/\s+/)
     .map((token) => token.trim())
     .filter((token) => token.length >= 3 && !stopWords.has(token));
-}
-
-function normalizeText(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function toTitleCase(value) {
-  return String(value || "")
-    .toLowerCase()
-    .split(" ")
-    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : ""))
-    .join(" ")
-    .trim();
-}
-
-function slugify(text) {
-  return normalizeText(text)
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }

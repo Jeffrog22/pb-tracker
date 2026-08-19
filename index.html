@@ -29,6 +29,7 @@
         <p>Balizamento e controle de parciais para competição</p>
       </div>
       <div class="topbar-actions">
+        <span id="offlineBadge" class="offline-badge" hidden>offline</span>
         <button id="profileSwitchBtn" class="ghost" type="button" hidden>Trocar usuário</button>
         <button id="exportBtn" class="primary" type="button">Exportar Excel</button>
         <button id="settingsBtn" class="ghost icon-btn" type="button" aria-label="Configurações" title="Configurações">
@@ -60,6 +61,22 @@
               <button type="submit" class="primary">Cadastrar e entrar</button>
             </div>
           </form>
+        </div>
+      </section>
+
+      <section id="screenMode" class="screen">
+        <div class="panel">
+          <h2>Selecionar Modo</h2>
+          <p class="muted">Como você quer operar agora?</p>
+          <div id="modeProfileChip" class="profile-chip" hidden></div>
+          <button id="modeBalizamentoBtn" class="mode-card" type="button">
+            <strong>Balizamento</strong>
+            <span>Competição: importar balizamento e cronometrar provas</span>
+          </button>
+          <button id="modeSwimBaseBtn" class="mode-card mode-card-accent" type="button">
+            <strong>SwimBase · Treino</strong>
+            <span>Gerenciar atletas, cronometrar treinos e acompanhar PRs</span>
+          </button>
         </div>
       </section>
 
@@ -116,6 +133,51 @@
           <div id="controlContainer"></div>
         </div>
       </section>
+
+      <section id="screenSbHome" class="screen">
+        <div class="panel">
+          <div class="section-head">
+            <h3>SwimBase</h3>
+            <button id="sbBackToModeBtn" class="ghost" type="button">Trocar modo</button>
+          </div>
+          <div id="sbHomeContent"></div>
+        </div>
+      </section>
+
+      <section id="screenSbAtletas" class="screen">
+        <div class="panel">
+          <div class="section-head">
+            <h3>Atletas</h3>
+            <button id="sbAddAtletaBtn" class="primary" type="button">Novo atleta</button>
+          </div>
+          <div class="sb-turma-row">
+            <select id="sbTurmaSelect" aria-label="Selecionar turma"></select>
+            <button id="sbAddTurmaBtn" class="ghost" type="button">Nova turma</button>
+          </div>
+          <label>
+            Buscar
+            <input id="sbAtletaSearch" type="search" placeholder="Nome ou categoria" />
+          </label>
+          <div id="sbAtletasList" class="sb-list"></div>
+        </div>
+      </section>
+
+      <section id="screenSbTreino" class="screen">
+        <div class="panel">
+          <div class="section-head">
+            <h3>Treino</h3>
+            <span id="sbTreinoModeTag" class="tag" hidden>Modo 2 · Tempo/Parcial</span>
+          </div>
+          <div id="sbTreinoContent"></div>
+        </div>
+      </section>
+
+      <section id="screenSbAnalise" class="screen">
+        <div class="panel">
+          <h3>Análise</h3>
+          <div id="sbAnaliseContent"></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -156,6 +218,10 @@
       <button id="closeSettingsBtn" class="ghost" type="button">Fechar</button>
     </div>
     <div class="settings-body">
+      <label class="settings-toggle">
+        <span>Alto contraste (beira de piscina)</span>
+        <input type="checkbox" id="highContrastToggle" />
+      </label>
       <div class="actions-row">
         <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
         <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
@@ -163,28 +229,96 @@
     </div>
   </dialog>
 
-  <nav class="bottom-nav" aria-label="Navegação principal">
-    <button class="nav-item" data-screen="import" type="button" aria-label="Início">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M4 11l8-8 8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-        <path d="M6 10v10h12V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-      </svg>
-      <span>Início</span>
-    </button>
-    <button class="nav-item" data-screen="filter" type="button" aria-label="Provas">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-      </svg>
-      <span>Provas</span>
-    </button>
-    <button class="nav-item" data-screen="control" type="button" aria-label="Controle">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2.2"></circle>
-        <path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-      </svg>
-      <span>Controle</span>
-    </button>
-  </nav>
+  <dialog id="sbTurmaDialog" class="sb-dialog">
+    <div class="sb-dialog-head">
+      <h3>Turma</h3>
+      <button id="sbCloseTurmaDialog" class="ghost" type="button">Fechar</button>
+    </div>
+    <form id="sbTurmaForm" class="sb-dialog-body">
+      <label>
+        Nome da turma
+        <input id="sbTurmaNome" type="text" maxlength="80" required />
+      </label>
+      <label>
+        Nível
+        <select id="sbTurmaNivel">
+          <option value="">—</option>
+          <option value="Iniciante">Iniciante</option>
+          <option value="Intermediário">Intermediário</option>
+          <option value="Avançado">Avançado</option>
+        </select>
+      </label>
+      <label>
+        Horário
+        <input id="sbTurmaHorario" type="text" maxlength="80" placeholder="Ex.: seg/qua 16h-17h" />
+      </label>
+      <div class="actions-row">
+        <button type="submit" class="primary">Salvar turma</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sbAtletaDialog" class="sb-dialog">
+    <div class="sb-dialog-head">
+      <h3 id="sbAtletaDialogTitle">Novo atleta</h3>
+      <button id="sbCloseAtletaDialog" class="ghost" type="button">Fechar</button>
+    </div>
+    <form id="sbAtletaForm" class="sb-dialog-body">
+      <label>
+        Nome
+        <input id="sbAtletaNome" type="text" maxlength="120" required />
+      </label>
+      <label>
+        Data de nascimento
+        <input id="sbAtletaNasc" type="date" />
+      </label>
+      <label>
+        Sexo
+        <select id="sbAtletaSexo">
+          <option value="">—</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </label>
+      <label>
+        Turma
+        <select id="sbAtletaTurma"></select>
+      </label>
+      <label>
+        Observações
+        <textarea id="sbAtletaObs" rows="2"></textarea>
+      </label>
+      <div class="sb-categoria-hint">Categoria: <strong id="sbAtletaCategoria">—</strong></div>
+      <div class="actions-row">
+        <button type="submit" class="primary">Salvar</button>
+        <button type="button" id="sbDeleteAtletaBtn" class="ghost">Excluir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sbChronoDialog" class="chrono-dialog">
+    <div class="timer-container">
+      <div class="sheet-grabber" aria-hidden="true"></div>
+      <div class="timer-controls">
+        <button id="sbMasterStartBtn" class="btn-pill btn-start">Iniciar</button>
+        <div id="sbMasterDisplay" class="timer-display">00:00:00</div>
+        <button id="sbMasterStopBtn" class="btn-pill btn-reset">Parar</button>
+      </div>
+      <div class="timer-meta">
+        <div id="sbChronoTitle" class="chrono-title">Treino</div>
+        <div id="sbChronoNext" class="next-capture">Toque na raia para registrar</div>
+      </div>
+    </div>
+    <div class="chrono-scroll">
+      <div id="sbChronoList" class="sb-chrono-list"></div>
+    </div>
+    <div class="action-footer">
+      <button id="sbChronoFinishBtn" class="btn-save">Finalizar</button>
+      <button id="sbChronoCloseBtn" class="btn-cancel">Fechar</button>
+    </div>
+  </dialog>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal"></nav>
 
   <script type="module" src="app.js"></script>
   <script>

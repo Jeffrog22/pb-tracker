@@ -1187,3 +1187,422 @@ button:disabled {
     min-height: auto;
   }
 }
+
+/* --- SwimBase: seleção de modo --- */
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 1rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-dark);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.mode-card strong {
+  font-size: 1.05rem;
+  color: var(--text-dark);
+}
+
+.mode-card span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.mode-card-accent {
+  border-color: var(--timer-digits);
+  background: linear-gradient(180deg, #ffffff, #eefaf9);
+}
+
+.mode-card:active {
+  transform: scale(0.985);
+}
+
+/* --- SwimBase: atletas e turmas --- */
+.sb-turma-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.sb-turma-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sb-athlete-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.sb-athlete-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.6rem 0.8rem;
+  background: transparent;
+  border: 0;
+  color: var(--text-dark);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-athlete-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.sb-athlete-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sb-athlete-delete {
+  width: 44px;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border-light);
+  color: var(--danger);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.sb-dialog {
+  border: 0;
+  border-radius: var(--radius-card);
+  padding: 0;
+  width: min(92vw, 420px);
+  max-height: 90dvh;
+  box-shadow: var(--shadow-soft);
+}
+
+.sb-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sb-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.sb-dialog-head h3 {
+  margin: 0;
+}
+
+.sb-dialog-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.sb-categoria-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.7rem;
+}
+
+/* --- SwimBase: wizard de treino (Modo 2) --- */
+.sb-steps {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.sb-step {
+  flex: 1;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #ececec;
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.3rem;
+}
+
+.sb-step.active {
+  background: var(--badge-bg);
+  color: #554f68;
+  border: 1px solid #d5d0e8;
+}
+
+.sb-step-body {
+  margin-bottom: 0.8rem;
+}
+
+.sb-step-nav {
+  margin-top: 0.4rem;
+}
+
+.sb-atleta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.sb-atleta-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+}
+
+.sb-atleta-check input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.sb-atleta-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.sb-atleta-check strong {
+  font-size: 0.9rem;
+}
+
+.sb-atleta-check small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sb-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+/* --- SwimBase: raias do cronômetro de treino --- */
+.sb-chrono-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sb-raia {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 0.6rem 0.7rem;
+  color: var(--text-dark);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-raia-lane {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--badge-bg);
+  color: #554f68;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.sb-raia-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.sb-raia-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-raia-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sb-raia-last {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.sb-raia-time {
+  flex: 0 0 auto;
+  font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.sb-raia.done {
+  opacity: 0.55;
+}
+
+.sb-raia.done .sb-raia-time {
+  color: var(--ok);
+}
+
+/* --- SwimBase: PR badge, toggle de contraste, tema alto contraste --- */
+.pr-badge {
+  display: inline-block;
+  background: #ffd700;
+  color: #000;
+  font-weight: 800;
+  font-size: 0.68rem;
+  border-radius: 6px;
+  padding: 0 4px;
+  margin-right: 4px;
+  animation: prPulse 0.8s ease-in-out;
+}
+
+@keyframes prPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.9rem;
+}
+
+.settings-toggle input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+}
+
+body.high-contrast {
+  --bg-main: #000;
+  --bg-card: #000;
+  --text-dark: #ffffff;
+  --text-muted: #ffd700;
+  --border-light: #3a3a3a;
+  --badge-bg: #101010;
+  --timer-digits: #ffff00;
+  background: #000;
+  color: #fff;
+}
+
+body.high-contrast .timer-display,
+body.high-contrast .sb-raia-time {
+  color: #ffff00;
+}
+
+body.high-contrast .mode-card {
+  background: #000;
+  border-color: #3a3a3a;
+}
+
+/* --- SwimBase: Análise (gráfico + tabelas) --- */
+.sb-chart {
+  display: block;
+  width: 100%;
+  margin: 0.4rem 0 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+}
+
+.sb-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sb-table th,
+.sb-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sb-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+}
+
+/* --- Indicador offline no topbar --- */
+.offline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}

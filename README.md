@@ -1,11 +1,13 @@
 # PBTracker
 
 Balizamento e controle rápido de parciais para competição de natação — PWA
-mobile/tablet-first, sem backend, para operação na beira da piscina.
+mobile/tablet-first, sem backend, para operação na beira da piscina. Inclui o
+**SwimBase** (Modo Treino): cadastro de atletas/turmas, cronômetro por raias,
+PRs, gráficos de progressão e exportação (Tier 2).
 
 ## Status do Projeto
 
-![Version](https://img.shields.io/badge/version-v0.2.0-blue)
+![Version](https://img.shields.io/badge/version-v0.14.0-blue)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-PWA-brightgreen)
 
@@ -13,8 +15,9 @@ mobile/tablet-first, sem backend, para operação na beira da piscina.
 
 | Documento | Conteúdo |
 |---|---|
-| [`PDR.md`](PDR.md) | Definição do produto e requisitos (funcionais, não-funcionais, fluxos, casos de uso) |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Arquitetura técnica (stack, estado, parsing, cronômetro, PWA) |
+| [`PDR.md`](PDR.md) | Definição do produto e requisitos (Tier 1 — balizamento) |
+| [`PDR-SwimBase.md`](PDR-SwimBase.md) | Requisitos do SwimBase (Tier 2) — MVP = Fase 1 |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Arquitetura técnica (stack, estado, parsing, cronômetro, PWA, SwimBase) |
 | [`AGENTS.md`](AGENTS.md) | Histórico do projeto (sessões, regras de ouro, contexto crítico) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Histórico de versões |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Convenções de commits, versionamento e rotina de registros |

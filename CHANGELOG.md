@@ -18,6 +18,35 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.14.0] - 2026-08-19
+### Added
+- **SwimBase (Modo Treino — Tier 2)** — nova área do app acessível via
+  tela de Modos (`#screenMode`), conforme `PDR-SwimBase.md` (MVP = Fase 1):
+  - **Base (B1)**: `utils.js` (máscara de tempo, normalização, `uid`,
+    `todayStamp`), `db.js` (IndexedDB `pbtracker-swimbase` v1 com stores
+    `atletas`, `turmas`, `registros`, `prs`, `settings`), roteamento
+    `appMode` ("balizamento" | "swimbase"), bottom-nav dinâmica
+    (`renderNav`), device guard restrito ao balizamento (SwimBase liberado
+    em desktop), perfil compartilhado.
+  - **Atletas e turmas (B2)**: CRUD local de turmas e atletas, busca,
+    categoria automática por idade (tabela Pré-Mirim → M80+).
+  - **Modo Treino 2 (B3)**: wizard 3 passos (turma → atletas → configuração
+    de estilo/distância/séries/repetições/descanso), cronômetro mestre com
+    raias individuais, tempos por repetição, auto-avanço com descanso/
+    intervalo, persistência incremental em `registros`.
+  - **PRs, háptico, Wake Lock, contraste (B4)**: detecção automática de PR
+    por atleta+estilo+distância (badge `PR!` dourado, haptics, store `prs`),
+    `navigator.wakeLock` durante o treino, toggle de **alto contraste** no
+    dialog de Configurações (persistido em `localStorage`).
+  - **Análise e export (B5)**: tela Análise com gráfico de progressão
+    temporal em Canvas (`charts.js`, com linha de evolução de PR), filtros
+    de atleta/estilo/distância/período, tabelas de PRs e registros,
+    exportação de registros e PRs em XLSX (SheetJS) com fallback CSV
+    (`exportSwimBaseRegistros`/`exportSwimBasePRs`), indicador offline no
+    topbar (`#offlineBadge`).
+- `sw.js`: cache → **`pbtracker-v35`** (+ `charts.js` no shell).
+- `APP_VERSION` → **`0.14.0`**.
+
 ## [v0.13.6] - 2026-08-14
 ### Changed
 - **Células de parcial sem metragem no export viram `--`** (`exporter.js`):

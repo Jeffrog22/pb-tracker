@@ -37,9 +37,13 @@ primeiro clique em "Exportar Excel" (com rede); sem rede, o app usa fallback CSV
 
 ```
 PBSwimTrack/
-├── index.html              # Estrutura das telas, dialog do cronômetro, manifesto
-├── app.js                  # Toda a lógica da aplicação (estado, parsing, cronômetro, UI)
-├── exporter.js             # Exportação CSV/XLSX (SheetJS sob demanda + fallback CSV)
+├── index.html              # Estrutura das telas, dialogs (cronômetro/SwimBase), manifesto
+├── app.js                  # Toda a lógica da aplicação (estado, parsing, cronômetro, UI, roteamento de modos)
+├── utils.js                # Helpers compartilhados (máscara de tempo, normalização, uid)
+├── db.js                   # Wrapper IndexedDB (SwimBase: atletas/turmas/registros/prs/settings)
+├── swimbase.js             # SwimBase (Tier 2): atletas, turmas, Modo Treino, PRs, Análise
+├── charts.js               # Gráficos Canvas nativos (progressão temporal + evolução de PR)
+├── exporter.js             # Exportação CSV/XLSX (SheetJS sob demanda + fallback CSV) + registros/PRs
 ├── styles.css              # Tema, layout mobile-first, cartões, telas, dialog
 ├── sw.js                   # Service worker: cache offline e estratégia de fetch
 ├── manifest.webmanifest    # Metadados PWA (nome, ícones, orientação, cores)
@@ -49,6 +53,7 @@ PBSwimTrack/
 ├── project-action-log.js   # Script Node para registrar ações de desenvolvimento em log
 ├── project-summary.md      # Resumo de desenvolvimento
 ├── PDR.md                  # Definição do produto e requisitos (este repositório)
+├── PDR-SwimBase.md         # Requisitos do SwimBase (Tier 2) — MVP = Fase 1
 ├── ARCHITECTURE.md         # Este documento
 ├── .gitignore              # Ignora logs (*.log), temporários e .DS_Store
 ├── pbcards.png             # Screenshot (tela de controle) usada no shell PWA
@@ -57,17 +62,27 @@ PBSwimTrack/
 
 ## 4. Arquitetura de Telas (SPA)
 
-Três `<section>` com classe `.screen` controladas por `showScreen()`:
+O app tem **dois modos** controlados por `state.appMode` ("balizamento" |
+"swimbase"). A tela de Modos (`#screenMode`) roteia para cada área; a bottom-nav
+é renderizada dinamicamente por `renderNav()` conforme o modo. Seções
+`.screen`:
 
 | Seção | ID | Função |
 |---|---|---|
 | Perfil | `#screenLogin` | Cadastro/seleção de professor + equipe (perfil local) |
+| Modos | `#screenMode` | Escolha entre Balizamento e SwimBase |
 | Importação | `#screenImport` | Formulário (equipe preenchida do perfil, arquivo) e status |
 | Filtro | `#screenFilter` | Lista de provas com checkboxes e detalhes |
 | Controle | `#screenControl` | Cartões de atleta e botões de abrir cronômetro |
+| SB Home | `#screenSbHome` | Resumo do SwimBase (links/atalhos) |
+| SB Atletas | `#screenSbAtletas` | CRUD de turmas e atletas + categoria automática |
+| SB Treino | `#screenSbTreino` | Wizard de treino (turma → atletas → config) |
+| SB Análise | `#screenSbAnalise` | Gráfico de progressão, PRs, registros e export |
 
-O **cronômetro** é um `<dialog>` (`#chronoDialog`) com visor, botões, lista de
-capturas pendentes e cartões dos atletas da série.
+O **cronômetro** de balizamento é um `<dialog>` (`#chronoDialog`) com visor,
+botões, lista de capturas pendentes e paleta de balizas. O **cronômetro do
+SwimBase** é outro `<dialog>` (`#sbChronoDialog`, tela cheia) com relógio mestre
+e raias individuais.
 
 ## 5. Estado Global
 
@@ -75,6 +90,7 @@ Um único objeto `state` centraliza os dados em `app.js`:
 
 ```js
 const state = {
+  appMode,                // "balizamento" | "swimbase" (área ativa)
   teamName,               // Equipe preenchida (perfil ativo ou editada)
   competitionDate,        // Data da competição (hoje, automática)
   importedAt,             // Timestamp da importação
@@ -87,6 +103,26 @@ const state = {
   activeChrono,           // Estado do cronômetro (ver §7)
 };
 ```
+
+O **SwimBase** mantém o próprio estado em `swimbase.js` (`sw`, `tr`, `an`),
+persistido no **IndexedDB** (`pbtracker-swimbase` v1, via `db.js`):
+
+```
+stores
+ ├── atletas    { id, turmaId, nome, nascimento, sexo, categoria, observacoes }
+ ├── turmas     { id, professorId, nome, nivel, horario }
+ ├── registros  { id, atletaId, professorId, dataHora, modo, tipoTreino,
+ │                estilo, distancia, serie, tempos[], series, repeticoes,
+ │                descanso, intervaloSeries, flagPr, observacoes, syncStatus }
+ ├── prs        { id, atletaId, professorId, estilo, distancia, melhorTempo,
+ │                tempoAnterior, melhoria, data, local, registroId }
+ └── settings   (key/value)
+```
+
+PR é a chave `atletaId + estilo + distancia`; `checkPrAndFlag` grava
+`flagPr` no registro e faz upsert no store `prs`. `sw.registros`/`sw.prs`
+são mantidos em memória (fonte da tela Análise), sincronizados por
+`persistRegistro`.
 
 ### Modelo do atleta (linha normalizada)
 
@@ -189,9 +225,10 @@ o plano correspondente.
 
 ### Service Worker (`sw.js`) — ciclo de vida
 
-1. **`install`**: abre o cache `pbtracker-v10` e pré-cacheia o *app shell*
-   (`index.html`, `styles.css`, `app.js`, `exporter.js`, manifest, ícones e
-   screenshots). Chama `skipWaiting()`.
+1. **`install`**: abre o cache `pbtracker-v35` e pré-cacheia o *app shell*
+   (`index.html`, `styles.css`, `app.js`, `utils.js`, `db.js`, `swimbase.js`,
+   `charts.js`, `exporter.js`, manifest, ícones e screenshots). Chama
+   `skipWaiting()`.
 2. **`activate`**: remove caches antigos e executa `clients.claim()`.
 3. **`fetch`** — estratégia:
    - **GET** de navegação ou arquivos core (`.html|.js|.css|.webmanifest`):
@@ -220,9 +257,18 @@ recarrega a página automaticamente.
   2. **Offline ou falha** → `exportCsv` com **BOM UTF-8** e separador `;` (Excel
      pt-BR), com escape correto de células.
 - O botão **Exportar Excel** (`#exportBtn`) fica no **topbar** (entre "Trocar
-  usuário" e a engrenagem), disponível em todas as telas.
+  usuário" e a engrenagem), disponível no **balizamento** (é ocultado no
+  SwimBase via `enterMode`).
 - O SheetJS, uma vez carregado, é cacheado em runtime pela estratégia
   **cache-first** do service worker (GET cross-origin).
+
+### Exportação do SwimBase
+
+- `exportSwimBaseRegistros` / `exportSwimBasePRs` (no `exporter.js`) geram
+  XLSX (SheetJS) com fallback para CSV da primeira aba; arquivos
+  `swimbase-registros-<data>.xlsx` / `swimbase-prs-<data>.xlsx`.
+- `exportSpreadsheet({ sheets, filename })` é o helper comum (tenta XLSX;
+  offline → CSV). Os botões ficam na tela Análise do SwimBase.
 
 ## 10. Persistência e Log de Atividades
 
@@ -241,29 +287,38 @@ recarrega a página automaticamente.
 
 ### Versão do app
 
-- A constante `APP_VERSION` em `app.js` define a versão exibida no rodapé das
-  telas de **perfil, filtro e controle** (`renderVersionTags` preenche os
-  elementos `.version-tag` com `v${APP_VERSION}`). Deve ser **atualizada a cada
-  release** junto do CHANGELOG e da tag SemVer.
+- A constante `APP_VERSION` em `app.js` define a versão exibida **no topbar, ao
+  lado do nome do app** (`#appVersionTag`, via `renderVersionTags`). Deve ser
+  **atualizada a cada release** junto do CHANGELOG e da tag SemVer.
 
 ## 11. Camada de UI e Estilos
 
 - **Tema**: variáveis CSS em `:root` (cores de fundo, gradientes, `--ok`, `--danger`).
-- **Mobile-first**: `@media`/breakpoints; bloqueio em larguras `> 1024px`
-  (`applyDeviceGuard` ativa `.desktop-blocked` e o aviso `#desktopNotice`).
+- **Mobile-first**: `@media`/breakpoints; bloqueio em larguras `> 1024px` **apenas
+  no modo balizamento** (`applyDeviceGuard` ativa `.desktop-blocked` e o aviso
+  `#desktopNotice`; o SwimBase é liberado em desktop).
+- **Alto contraste**: `body.high-contrast` sobrescreve as custom properties
+  (fundo preto, texto branco, ciano/amarelo), acionado pelo `#highContrastToggle`
+  no dialog de Configurações e persistido em `localStorage`.
 - **Componentes principais**:
-  - `.bottom-nav` / `.nav-item` — navegação inferior fixa (Início, Provas, Controle).
-  - `.topbar-actions` — ações do topo: `#profileSwitchBtn` (Trocar usuário) e
+  - `.bottom-nav` / `.nav-item` — navegação inferior **renderizada por
+    `renderNav()`** conforme o modo ativo (`state.appMode`).
+  - `.topbar-actions` — ações do topo: `#offlineBadge` (indicador offline),
+    `#profileSwitchBtn` (Trocar usuário), `#exportBtn` (Exportar Excel) e
     `#settingsBtn` (engrenagem que abre o dialog `#settingsDialog`).
-  - `#settingsDialog` — dialog modal de Configurações com `#appBadge` (status),
-    `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn` (Exportar log).
+  - `#settingsDialog` — dialog modal de Configurações com `#highContrastToggle`
+    (Alto contraste), `#refreshAppBtn` (Atualizar app) e `#downloadLogBtn`
+    (Exportar log).
   - `.proof-row` / `.proof-details` — lista de provas e tabela de detalhes.
   - `.event-block` / `.series-block` — seções da tela de controle.
   - `.athletes-card` / `.athlete-row` / `.partials-grid` / `.partial-input` —
     cartão de atleta com badges e parciais lado a lado.
   - `.timer-container` / `.timer-display` / `.btn-pill` — header escuro do dialog
     do cronômetro com dígitos ciano e botões pill.
-  - `.chrono-dialog` — dialog do cronômetro (visor, pendências, atletas).
+  - `.chrono-dialog` — dialog do cronômetro (visor, pendências, paleta de balizas).
+  - `.sb-*` — componentes do SwimBase: cartões de modo, CRUD de turmas/atletas,
+    wizard de treino, raias do cronômetro (`#sbChronoDialog`) e tela Análise
+    (`.sb-chart` + `.sb-table`).
 - **Segurança de renderização**: todo conteúdo vindo de arquivos passa por
   `escapeHtml` antes de ser injetado no DOM.
 
@@ -284,7 +339,11 @@ recarrega a página automaticamente.
   `parseRowsFromPdfLines`/`parseAthleteLine`.
 - **Dados não persistidos entre sessões**: `importedRows`/`groupedEvents` vivem
   apenas em memória.
-- **Sem backend/sincronização** entre dispositivos.
+- **Sem backend/sincronização** entre dispositivos (SwimBase tem `syncStatus`
+  no registro para futura sincronização; hoje exporta manualmente).
 - **PDF.js carregado via CDN**: requer rede no primeiro carregamento para habilitar
   importação de PDF (o restante do app funciona offline).
 - **XLSX depende do SheetJS (CDN)**: sem rede o app exporta em CSV (fallback).
+- **Categoria automática** por idade usa a **data atual** (recalculada a cada
+  render); limites de idade conforme `PDR-SwimBase.md` §2.3.
+- **Modos 1 e 3 do SwimBase, multi-timer e sync ficam fora do MVP** (Fase 1).

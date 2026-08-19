@@ -1,4 +1,5 @@
 const SHEETJS_CDN = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+import { slugify, msToDisplay, parseTimeToMs, todayStamp } from "./utils.js";
 
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -9,16 +10,6 @@ function triggerDownload(blob, filename) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-}
-
-function slugify(value) {
-  return String(value || "equipe")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/^$/, "equipe");
 }
 
 export function buildResultsRows(state, getSplitsForEvent, includeSexo = true, splitLabels = false) {
@@ -163,4 +154,73 @@ export async function exportResults({
 
   exportCsv(results, `${base}-${datePart}.csv`);
   return { ok: true, format: "csv", fallback: true };
+}
+
+/* --- SwimBase: exportação de registros e PRs (Fase B / Tier 2) --- */
+
+export async function exportSpreadsheet({ sheets, filename }) {
+  let XLSX = null;
+  try {
+    XLSX = await loadSheetJs();
+  } catch {
+    XLSX = null;
+  }
+  if (XLSX && sheets.length) {
+    exportXlsx(XLSX, sheets, filename);
+    return { ok: true, format: "xlsx" };
+  }
+  if (sheets.length) {
+    exportCsv(sheets[0], filename.replace(/\.xlsx$/i, ".csv"));
+    return { ok: true, format: "csv", fallback: true };
+  }
+  return { ok: false, reason: "Nada para exportar." };
+}
+
+export async function exportSwimBaseRegistros({ registros, getAtletaName }) {
+  const headers = ["Data", "Atleta", "Estilo", "Distância (m)", "Série", "Repetição", "Tempo", "PR"];
+  const rows = [];
+  (registros || []).forEach((registro) => {
+    const tempos = registro.tempos || [];
+    let bestIdx = -1;
+    if (registro.flagPr && tempos.length) {
+      bestIdx = tempos.reduce((best, t, idx, arr) => {
+        const bt = parseTimeToMs(t);
+        const bb = parseTimeToMs(arr[best]);
+        return bt != null && (bb == null || bt < bb) ? idx : best;
+      }, 0);
+    }
+    tempos.forEach((tempo, idx) => {
+      rows.push([
+        new Date(registro.dataHora).toLocaleString("pt-BR"),
+        getAtletaName(registro.atletaId),
+        registro.estilo || "",
+        registro.distancia || "",
+        registro.serie || "",
+        idx + 1,
+        tempo,
+        idx === bestIdx ? "PR" : "",
+      ]);
+    });
+  });
+  return exportSpreadsheet({
+    sheets: [{ name: "Registros", headers, rows }],
+    filename: `swimbase-registros-${todayStamp()}.xlsx`,
+  });
+}
+
+export async function exportSwimBasePRs({ prs, getAtletaName }) {
+  const headers = ["Atleta", "Estilo", "Distância (m)", "Melhor tempo", "Tempo anterior", "Melhoria (%)", "Data"];
+  const rows = (prs || []).map((p) => [
+    getAtletaName(p.atletaId),
+    p.estilo || "",
+    p.distancia || "",
+    msToDisplay(p.melhorTempo),
+    p.tempoAnterior != null ? msToDisplay(p.tempoAnterior) : "",
+    p.melhoria ? p.melhoria.toFixed(1) : "",
+    new Date(p.data).toLocaleString("pt-BR"),
+  ]);
+  return exportSpreadsheet({
+    sheets: [{ name: "PRs", headers, rows }],
+    filename: `swimbase-prs-${todayStamp()}.xlsx`,
+  });
 }

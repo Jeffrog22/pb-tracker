@@ -202,6 +202,10 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 - Não há **backend** nem sincronização entre dispositivos.
 - O bloqueio de desktop é proposital e pode ser revisado para operação em telas grandes.
 
+> **SwimBase (Tier 2)**: os requisitos do Modo Treino/atletas/PRs/análise vivem
+> em **`PDR-SwimBase.md`** (MVP = Fase 1). Este documento descreve apenas o
+> balizamento (Tier 1).
+
 ## 11. Glossário
 
 | Termo | Definição |
@@ -219,7 +223,8 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 
 | Documento | Conteúdo | Quando atualizar |
 |---|---|---|
-| `PDR.md` | Definição do produto, requisitos, fluxos, casos de uso, critérios de aceite | Ao mudar requisito, escopo, fluxo ou critério de aceite |
+| `PDR.md` | Definição do produto, requisitos, fluxos, casos de uso, critérios de aceite (Tier 1) | Ao mudar requisito, escopo, fluxo ou critério de aceite |
+| `PDR-SwimBase.md` | Requisitos do SwimBase (Tier 2 / Modo Treino) — MVP = Fase 1 | Ao mudar requisito ou escopo do SwimBase |
 | `ARCHITECTURE.md` | Arquitetura técnica: stack, estado, parsing, cronômetro, PWA, limitações | Ao mudar estrutura, fluxo de dados, estado ou estratégia de cache |
 | `README.md` | Porta de entrada: mapa de docs, como rodar e testar | Ao mudar instruções de execução/teste ou estrutura |
 | `AGENTS.md` | Histórico do projeto: sessões, regras, contexto crítico | Ao **final de cada sessão** (obrigatório) |
