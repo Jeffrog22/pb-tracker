@@ -1,4 +1,4 @@
-<!-- última-sessão: 19/08/2026 — SwimBase (Tier 2 / Modo Treino) completo: atletas, treino, PRs, análise e export (v0.14.0) -->
+<!-- última-sessão: 19/08/2026 — Fix TDZ do bootstrap (modos inoperantes) + verificação B2 (v0.14.1) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -1684,3 +1684,40 @@ Regras:
   (após o done).
 - Commit `feat: SwimBase - atletas, turmas, modo treino, PRs, analise com graficos e export` 
   → MINOR → **v0.14.0** → push origin master + tag.
+
+---
+
+## Sessão: 19/08/2026 — Fix TDZ do bootstrap (modos inoperantes) + verificação B2 (v0.14.1)
+
+### O que foi feito
+- **Bug crítico reproduzido e corrigido**: ao clicar nos cards de modo
+  (`#modeBalizamentoBtn`/`#modeSwimBaseBtn`) **nenhum modo abria**. Causa:
+  `init()` era chamado na **linha 120** do `app.js`, antes de `const NAV_ICONS`
+  (linha 568) ser avaliada — `renderNav()` → `navConfig()` acessava `NAV_ICONS`
+  ainda na **temporal dead zone** (`Uncaught ReferenceError: Cannot access
+  'NAV_ICONS' before initialization`), abortando o bootstrap (`initSwimBase` e o
+  roteamento pós-login nunca rodavam; `enterMode` falhava antes de `showScreen`).
+- **Correção**: `init()` **movido para o fim do módulo** (após todas as
+  declarações `const`), padrão correto em ES modules (funções são hoisted).
+- **Verificação automatizada (Chrome headless + CDP)**: com perfil ativo,
+  reload → `screenMode`; Balizamento → `screenImport`; SwimBase → `screenSbHome`;
+  **zero erros de console**.
+- **Verificação B2**: fluxo de turmas/atletas testado no navegador — turma
+  "Turma A" criada, atleta "João da Silva" (nasc 2012-05-10) criado, lista exibiu
+  `João da Silva · Infantil II · M · Turma A` (categoria automática correta) e o
+  select de turmas populado.
+
+### Decisões (consultas do usuário)
+- Aplicar o fix de TDZ movendo `init()` para o fim do arquivo (não mover a const).
+- Prossiga a verificação funcional do B2 após o fix.
+
+### Arquivos
+- `app.js` (init movido para o fim)
+- `CHANGELOG.md` (v0.14.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js`: 0 erros
+- Chrome headless: modos + B2 funcionando, 0 erros de console
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: corrige TDZ do NAV_ICONS no bootstrap movendo init() para o fim do modulo`
+  → PATCH → **v0.14.1** → push origin master + tag.

@@ -117,8 +117,6 @@ const LANE_COLORS = [
   "#ffe9d6",
 ];
 
-init();
-
 function init() {
   registerServiceWorker();
   bindEvents();
@@ -1998,3 +1996,5 @@ function getTeamTokens(normalizedTeam) {
     .map((token) => token.trim())
     .filter((token) => token.length >= 3 && !stopWords.has(token));
 }
+
+init();

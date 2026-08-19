@@ -18,6 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.14.1] - 2026-08-19
+### Fixed
+- **Cliques nos cards de modo não funcionavam** (`app.js`): `init()` era chamado
+  na linha 120, antes de `const NAV_ICONS` (linha 568) ser avaliada —
+  `renderNav()` → `navConfig()` acessava `NAV_ICONS` ainda na *temporal dead
+  zone* (`Uncaught ReferenceError: Cannot access 'NAV_ICONS' before
+  initialization`), abortando o bootstrap. Com isso, `enterMode()` falhava e
+  **nenhum dos modos (Balizamento/SwimBase) abria**.
+  - Correção: `init()` movido para o **fim do módulo** (após todas as
+    declarações `const`), padrão correto em ES modules (funções são hoisted).
+  - Verificado em Chrome headless: reload com perfil ativo → `screenMode`;
+    Balizamento → `screenImport`; SwimBase → `screenSbHome`; **zero erros** de
+    console. Fluxo B2 testado: turma + atleta criados, categoria automática
+    (Infantil II) e select de turmas corretos.
+- `APP_VERSION` permanece `0.14.0` (bump via tag SemVer PATCH → v0.14.1).
+
 ## [v0.14.0] - 2026-08-19
 ### Added
 - **SwimBase (Modo Treino — Tier 2)** — nova área do app acessível via
