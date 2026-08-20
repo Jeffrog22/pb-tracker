@@ -264,7 +264,14 @@ Busca por nome ou categoria
 
 Dados carregados do IndexedDB (offline)
 
-Passo 3: Configuração do Treino
+Passo 3: Seleção do Modo do Cronômetro
+
+Cards de seleção: Modo 1 (Saída a Cada), Modo 2 (Tempo/Parcial) e
+Modo 3 (Largada em Ondas)
+
+✅ Implementado (v0.16.0)
+
+Passo 4: Configuração do Treino
 
 Modo 1: Saída a Cada
 
@@ -280,6 +287,10 @@ Intervalo entre séries
 
 Visualização da ordem de saída
 
+✅ Implementado (v0.16.0): relógio regressivo gigante com avanço automático,
+contador Série/Rep, cores (verde→amarelo→vermelho) e toque na raia registra o
+tempo global da repetição.
+
 Modo 2: Tempo/Parcial
 
 Configurações:
@@ -293,6 +304,9 @@ Número de séries
 Intervalo entre séries
 
 Controle individual por atleta
+
+✅ Implementado (v0.14.0): cronômetro individual por raia; toque registra o
+parcial.
 
 Modo 3: Largada em Ondas
 
@@ -309,6 +323,11 @@ Tempo de descanso entre ondas
 Número de séries
 
 Interface drag-and-drop para organizar ondas
+
+✅ Implementado (v0.16.0): nº ondas 2–6 (1 onda → usar Modo 2), distribuição
+manual por toque (onda ativa), saídas escalonadas por descanso entre ondas e
+avanço de série automático ao concluir todas as ondas. Drag-and-drop de ondas
+fica como evolução futura (distribuição por toque no MVP).
 
 Multi-Timer (todos os modos)
 
@@ -849,7 +868,7 @@ PRs recentes da turma
 Status de sincronização
 
 Configuração do Treino
-Wizard de 3 passos
+Wizard de 4 passos (Turma → Atletas → Modo → Config)
 
 Indicador de progresso
 

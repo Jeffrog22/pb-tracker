@@ -1,4 +1,4 @@
-<!-- última-sessão: 19/08/2026 — Fix máscara horário (80:00) + duração 45min aceita (v0.15.1) -->
+<!-- última-sessão: 20/08/2026 — Modos de cronômetro no SwimBase (M1 Saída a Cada / M3 Largada em Ondas) v0.16.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.15.1
+- **Versão atual:** v0.16.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1816,3 +1816,81 @@ Regras:
   (após o done).
 - Commit `fix: mascara de horario bloqueia horas invalidas e duracao aceita qualquer minuto inteiro`
   → PATCH → **v0.15.1** → push origin master + tag.
+
+---
+
+## Sessão: 20/08/2026 — Modos de cronômetro no SwimBase (M1 Saída a Cada / M3 Largada em Ondas) (v0.16.0)
+
+### O que foi feito
+- **Wizard de treino com 4 passos** (`swimbase.js` `buildTreinoSteps`):
+  `1·Turma → 2·Atletas → 3·Modo → 4·Config`. Novo `stepModo()` renderiza os
+  cards `.sb-modo-card` (Modo 1 Saída a Cada, Modo 2 Tempo/Parcial — default,
+  Modo 3 Largada em Ondas); o bind grava `tr.config.modo` e alterna `.active`.
+  Constante `MODOS = {1,2,3}` no topo.
+- **Config por modo** (`stepConfig`/`readTreinoConfig`):
+  - **M1**: tempo de saída (s), repetições, séries, intervalo entre séries.
+  - **M2**: repetições, descanso, séries, intervalo (comportamento anterior).
+  - **M3**: nº de ondas (**2–6**; validação com aviso "1 onda → use o Modo 2"),
+    descanso entre ondas, séries + bloco **`#sbOndaDist`** de distribuição.
+- **Distribuição manual de ondas** (`renderOndaDist`): chips `Onda 1..N` com
+  contadores de atletas (`.sb-wave-chip`, onda ativa destacada) + lista de
+  atletas (`.sb-onda-athlete`, `.unassigned` tracejado); toque na linha move o
+  atleta para a onda ativa, toque de novo remove; re-render + rebind a cada
+  interação. `readTreinoConfig` **bloqueia o início** com atletas não alocados.
+- **Cronômetro por modo**:
+  - `startMasterTicker` ramifica `tickModo1()`/`tickModo2()`/`tickModo3(now)`.
+  - **M1** (`renderChronoModo1`): `#sbCountdown` regressivo gigante com
+    avanço automático ao zerar (haptics + `.flash`), classes `.amber` (≤10s) /
+    `.red` (≤5s), `#sbGroupCounter` (`Série X/Y · Rep Z/W`), fase `serieInt`
+    para intervalo entre séries; toque na raia grava `tr.masterElapsedMs` na rep
+    global (`recordSplit` exige `phase === "rep"`).
+  - **M3** (`renderChronoModo3`): raias ordenadas por onda; saída escalonada
+    (`onda k` inicia em `(k−1)×descansoOndas`, absoluto a partir de
+    `masterStartedAt`); countdown negativo vira progressivo ao iniciar
+    (`#sbWaveStatus` com pills concluída/em andamento/inicia em Xs); toque grava
+    o tempo desde o início da onda; **avanço de série automático** quando todas
+    as ondas concluídas (`tr.modo3Serie` incrementa, raias/ondas reiniciam).
+  - `updateRaiaRow` ramifica M1 (só tempo do toque) / M3 (countdown, label
+    "Onda N") / M2 (comportamento anterior).
+- **`recordSplit` por modo**: M1 guarda `phase !== "rep"` → ignora; M3 exige
+  `wave.started && !raia.done`; M2 mantém o fluxo de descanso/intervalo.
+- **`persistRegistro`** passa a gravar `tipoTreino: tr.config.modo` (1/2/3) e
+  os campos `onda` (M3), `tempoSaida` (M1) e `descansoOndas` (M3).
+- **`resetTreinoSession()`** (em `finalizeTreino`/`closeTreino`): limpa wizard,
+  `waveAssigned`/`ondaAtiva`, `waves`, `group`, raias e relógio mestre para o
+  próximo treino começar do passo 1.
+- **`index.html`**: `#sbTreinoModeTag` (era estático "Modo 2 · Tempo/Parcial")
+  passa a ser preenchido dinamicamente (`Modo X · <nome>`) no `startTreino`;
+  hint `#sbChronoNext` muda por modo.
+- **`styles.css`**: `.sb-modo-grid/.sb-modo-card(.active)`,
+  `.sb-countdown(.amber/.red/.done/.flash)` + keyframes,
+  `.sb-group-counter`, `.sb-wave-status/.sb-wave-pill(.running/.done)`,
+  `.sb-dist-head/.sb-wave-chips/.sb-wave-chip(.active)`,
+  `.sb-onda-list/.sb-onda-athlete(.unassigned)/.sb-onda-name/.sb-onda-badge`.
+- **`app.js`**: `APP_VERSION` → **`0.16.0`**.
+- **`sw.js`**: cache `pbtracker-v37` → **`pbtracker-v38`**.
+- **`PDR-SwimBase.md`**: wizard passa a 4 passos (Passo 3 · Modo, Passo 4 ·
+  Config); Modos 1–3 marcados **✅ implementado**; drag-and-drop de ondas segue
+  como evolução futura (distribuição por toque no MVP).
+
+### Decisões (consultas do usuário)
+- Passo do modo **antes** da configuração (1·Turma → 2·Atletas → 3·Modo → 4·Config).
+- Escopo: **comportamento completo** dos 3 modos, não só seleção+config.
+- M3: nº ondas **2–6** (min=2; 1 onda → usar Modo 2, com aviso no campo).
+- M3: **distribuição manual** (sem drag-and-drop no MVP) com UX "onda ativa +
+  toque na linha do atleta".
+- M1: avanço pelo **relógio mestre** (grupo sincronizado), não individual.
+
+### Arquivos
+- `swimbase.js`, `index.html`, `styles.css`, `app.js` (APP_VERSION), `sw.js`
+  (cache v38) (alterados)
+- `CHANGELOG.md` (v0.16.0), `AGENTS.md` (esta sessão + Identidade),
+  `PDR-SwimBase.md` (wizard 4 passos, Modos 1–3)
+
+### Verificações
+- `node --check app.js sw.js utils.js db.js swimbase.js charts.js exporter.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `feat: modos de cronometro no SwimBase - saida a cada e largada em ondas`
+  → MINOR → **v0.16.0** → push origin master + tag.

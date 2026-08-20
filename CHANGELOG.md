@@ -18,6 +18,40 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.16.0] - 2026-08-20
+### Added
+- **Seleção do Modo do cronômetro no wizard de treino** (`swimbase.js`,
+  `index.html`, `styles.css`): novo **Passo 3 · Modo** entre Atletas e Config
+  (wizard passa a ter 4 passos: Turma → Atletas → Modo → Config). Cards
+  `.sb-modo-card` para **Modo 1 · Saída a Cada**, **Modo 2 · Tempo/Parcial**
+  (default, comportamento anterior) e **Modo 3 · Largada em Ondas**.
+- **Modo 1 · Saída a Cada**: relógio regressivo gigante (`#sbCountdown`) com
+  avanço automático ao zerar (beep/haptics + flash), cores
+  verde→amarelo→vermelho nos últimos 10s/5s, contador `Série X/Y · Rep Z/W`,
+  intervalo entre séries (`serieInt`) e toque na raia registra o tempo global da
+  repetição. Config: tempo de saída, repetições, séries e intervalo.
+- **Modo 3 · Largada em Ondas**: configuração de nº de ondas (**2–6**, com
+  aviso "1 onda → use Modo 2"), descanso entre ondas, séries e **distribuição
+  manual** dos atletas (`renderOndaDist`): chips `Onda 1..N` com contadores +
+  toque na linha do atleta move para a onda ativa (toque de novo remove;
+  `.unassigned` tracejado). Validação exige **todos os atletas alocados**.
+  Saídas escalonadas: onda k inicia em `(k−1)×descansoOndas`; countdown
+  negativo → vira progressivo; pills `#sbWaveStatus` (concluída/em andamento/
+  inicia em Xs); avanço automático de série ao concluir todas as ondas.
+- **Cronômetro por modo** (`startMasterTicker` ramifica `tickModo1`/`tickModo2`/
+  `tickModo3`; `renderChronoModo1/2/3`; `recordSplit` por modo): M2 mantém o
+  comportamento de raias individuais; M1 usa o relógio mestre; M3 usa o tempo
+  da onda.
+- **`persistRegistro`** grava `tipoTreino: tr.config.modo` (1/2/3) e campos
+  específicos: `onda` (M3), `tempoSaida` (M1), `descansoOndas` (M3).
+- **Tag dinâmica no wizard**: `#sbTreinoModeTag` exibe `Modo X · <nome>` ao
+  iniciar o treino; hint `#sbChronoNext` muda por modo.
+- `resetTreinoSession()` limpa wizard/raias/ondas ao finalizar ou fechar o
+  treino.
+- `APP_VERSION` → `0.16.0`; cache do service worker → `pbtracker-v38`.
+- `PDR-SwimBase.md`: passos do wizard (Passo 3 · Modo), Modos 1–3 marcados como
+  implementados (drag-and-drop de ondas segue como evolução futura).
+
 ## [v0.15.1] - 2026-08-19
 ### Fixed
 - **Máscara de horário da turma aceitava horas inválidas (80:00/88:00)**
