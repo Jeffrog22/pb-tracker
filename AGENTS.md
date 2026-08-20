@@ -1,4 +1,4 @@
-<!-- última-sessão: 19/08/2026 — Turmas: nível removido + dias/horário com máscara/duração (v0.15.0) -->
+<!-- última-sessão: 19/08/2026 — Fix máscara horário (80:00) + duração 45min aceita (v0.15.1) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.15.0
+- **Versão atual:** v0.15.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1777,3 +1777,42 @@ Regras:
   (após o done).
 - Commit `feat: turmas com dias da semana, horario com mascara 00:00 e duracao (nivel removido)`
   → MINOR → **v0.15.0** → push origin master + tag.
+
+---
+
+## Sessão: 19/08/2026 — Fix máscara de horário (80:00) + duração 45min aceita (v0.15.1)
+
+### O que foi feito
+- **Horário aceitava `80:00`/`88:00`** (`utils.js`): `attachClockMask` deixava
+  qualquer 4 dígitos virarem `HH:MM` sem travar a digitação.
+  - Adicionado `isValidClockBuffer` interno: **bloqueia a tecla** quando o
+    buffer forma relógio inválido (1º dígito da hora só `0–2`; hora ≤ 23; 1º
+    dígito do minuto `0–5`; minuto ≤ 59). Impossível digitar `80:00`/`24:00`.
+  - `beforeinput` agora detecta **select-all** (`selectionStart === 0` e
+    `selectionEnd === value.length`): digitar após focar **substitui tudo**
+    (focar + "1" → `10:00`, sem vazar dígitos do buffer antigo).
+  - A validação de `saveTurma` (`hh > 23 || mm > 59`) permanece como backstop.
+- **Duração de 45min recusada** (`index.html`): `#sbTurmaDuracao` com
+  `step="5"` e `min="1"` → o navegador só aceita `1,6,11,…,41,46` (não
+  múltiplos) e sugeria 41/46. Trocado para **`step="1"`** — qualquer inteiro
+  ≥ 1 é aceito (o JS já validava inteiro ≥ 1).
+- **`app.js`**: `APP_VERSION` → **`0.15.1`**.
+- **`sw.js`**: cache `pbtracker-v36` → **`pbtracker-v37`**.
+
+### Decisões (consultas do usuário)
+- Bloquear a digitação inválida **na máscara** (não só no salvamento).
+- Duração aceita **qualquer inteiro ≥ 1** (sem step de 5).
+
+### Arquivos
+- `utils.js`, `index.html` (alterados)
+- `app.js` (APP_VERSION), `sw.js` (cache v37) (alterados)
+- `CHANGELOG.md` (v0.15.1), `AGENTS.md` (esta sessão + Identidade)
+
+### Verificações
+- `node --check app.js utils.js swimbase.js sw.js`: 0 erros
+- Teste lógico `isValidClockBuffer` (20 casos): 0..23 OK; `24`, `80`, `129`,
+  `126`, `8000`, `1280`, `1295` bloqueados; `0000`/`2359` OK.
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: mascara de horario bloqueia horas invalidas e duracao aceita qualquer minuto inteiro`
+  → PATCH → **v0.15.1** → push origin master + tag.

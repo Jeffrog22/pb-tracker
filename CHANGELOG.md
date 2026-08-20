@@ -18,6 +18,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.15.1] - 2026-08-19
+### Fixed
+- **Máscara de horário da turma aceitava horas inválidas (80:00/88:00)**
+  (`utils.js`): `attachClockMask` deixava qualquer 4 dígitos virarem `HH:MM`.
+  Agora **bloqueia na digitação** via `isValidClockBuffer` — 1º dígito da hora
+  só 0–2, hora ≤ 23, 1º dígito do minuto 0–5 e minuto ≤ 59 (impossível chegar a
+  "80:00"). Digitar após o select-all substitui o valor inteiro (focar + "1" →
+  "10:00"), sem vazar dígitos do buffer. A validação de `saveTurma` permanece
+  como backstop.
+- **Duração de 45min era recusada** (`index.html`): `#sbTurmaDuracao` com
+  `step="5"` e `min="1"` fazia o navegador só aceitar múltiplos de 5 a partir
+  de 1 (`1,6,11,…,41,46`) e sugerir 41/46. Trocado para `step="1"` — qualquer
+  inteiro ≥ 1 é aceito.
+- `APP_VERSION` → `0.15.1`; cache do service worker → `pbtracker-v37`.
+
 ## [v0.15.0] - 2026-08-19
 ### Changed
 - **Formulário de turmas (SwimBase) reestruturado** (`index.html`,

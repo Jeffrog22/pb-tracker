@@ -27,6 +27,17 @@ export function digitsToClockMask(digits) {
   return `${hh}:${mm}`;
 }
 
+function isValidClockBuffer(buffer) {
+  const len = buffer.length;
+  if (len === 0) return true;
+  if (len === 1) return /^[0-2]$/.test(buffer);
+  const hh = Number(buffer.slice(0, 2));
+  if (hh > 23) return false;
+  if (len === 2) return true;
+  if (len === 3) return /^[0-5]$/.test(buffer[2]);
+  return Number(buffer.slice(2, 4)) <= 59;
+}
+
 export function attachClockMask(input) {
   input.addEventListener("beforeinput", (event) => {
     const type = event.inputType;
@@ -44,7 +55,11 @@ export function attachClockMask(input) {
     event.preventDefault();
     const digits = String(event.data).replace(/\D/g, "");
     if (!digits.length) return;
-    const buffer = ((input.dataset.digits || "") + digits).slice(-4);
+    const replacedAll =
+      input.selectionStart === 0 && input.selectionEnd === input.value.length;
+    const current = replacedAll ? "" : input.dataset.digits || "";
+    const buffer = (current + digits).slice(-4);
+    if (!isValidClockBuffer(buffer)) return;
     input.dataset.digits = buffer;
     input.value = digitsToClockMask(buffer);
     input.dispatchEvent(new Event("input", { bubbles: true }));
