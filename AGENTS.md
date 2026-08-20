@@ -1,4 +1,4 @@
-<!-- última-sessão: 19/08/2026 — Fix TDZ do bootstrap (modos inoperantes) + verificação B2 (v0.14.1) -->
+<!-- última-sessão: 19/08/2026 — Turmas: nível removido + dias/horário com máscara/duração (v0.15.0) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.14.0
+- **Versão atual:** v0.15.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1721,3 +1721,59 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: corrige TDZ do NAV_ICONS no bootstrap movendo init() para o fim do modulo`
   → PATCH → **v0.14.1** → push origin master + tag.
+
+---
+
+## Sessão: 19/08/2026 — Turmas: nível removido + dias da semana + horário com máscara + duração (v0.15.0)
+
+### O que foi feito
+- **Formulário de turma reestruturado** (`index.html` `#sbTurmaDialog`):
+  - **Nível removido** — só o nome da turma é obrigatório.
+  - Novo grupo de **toggles de dias da semana** (`#sbTurmaDias`): chips
+    `Seg/Ter/Qua/Qui/Sex` (`<button class="sb-day-chip" data-day="...">`),
+    multi-seleção visual (`.active`), sem necessidade de validação mínima.
+  - **Horário** virou input de hora com **máscara `00:00`** (`inputmode=
+    "numeric"`, `maxlength="5"`, placeholder `00:00`) e **validação** de hora
+    (00–23) e minutos (00–59).
+  - Novo campo **Duração (min)** (`#sbTurmaDuracao`, número, `min=1`) com
+    validação de inteiro ≥ 1; horário + duração em `sb-grid-2`.
+- **`utils.js`**: novos helpers `digitsToClockMask(digits)` (buffer de 4
+  dígitos → `HH:MM`) e `attachClockMask(input)` (mesmo modelo de
+  `attachTimeMask`: `beforeinput` com digitação/backspace + `focus` com
+  select-all).
+- **`swimbase.js`**:
+  - `initSwimBase`: listener delegado de clique em `#sbTurmaDias` (alterna
+    `.active` nos chips) + `attachClockMask` no `#sbTurmaHorario`.
+  - `openTurmaDialog`: **começa em branco** para turmas legadas (horário em
+    texto livre); turmas com estrutura nova (`dias` array / `horario` "HH:MM" /
+    `duracao` numérico) são repopuladas na edição. `nivel` deixou de ser lido.
+  - `saveTurma`: valida horário (`HH:MM`, hora ≤ 23, minuto ≤ 59) e duração
+    (inteiro ≥ 1) quando preenchidos; salva `{ nome, dias, horario, duracao }`
+    — campo `nivel` removido.
+- **`styles.css`**: `.sb-day-fieldset`, `.sb-day-toggles` (flex wrap) e
+  `.sb-day-chip`/`.sb-day-chip.active` (pill com destaque `--badge-bg`).
+- **`app.js`**: `APP_VERSION` → **`0.15.0`**.
+- **`sw.js`**: cache `pbtracker-v35` → **`pbtracker-v36`**.
+- **`PDR-SwimBase.md`** §2.2.3 (Tabela: Turmas): removido `Nível`; documentados
+  `Horário (HH:MM)`, `Dias (seg/ter/qua/qui/sex)` e `Duração (min)`.
+
+### Decisões (consultas do usuário)
+- **Obrigatórios**: apenas o nome da turma; dias/horário/duração opcionais
+  (validação de hora só quando preenchido).
+- **Turmas antigas (texto livre)**: abrem a edição **em branco** nos novos
+  campos (sem reaproveitar o texto livre).
+- Toggles de dia: **multi-seleção simples** (toque alterna; sem mínima exigida).
+
+### Arquivos
+- `index.html`, `swimbase.js`, `utils.js`, `styles.css`, `app.js` (APP_VERSION),
+  `sw.js` (cache v36) (alterados)
+- `CHANGELOG.md` (v0.15.0), `AGENTS.md` (esta sessão + Identidade),
+  `PDR-SwimBase.md` (§2.2.3)
+
+### Verificações
+- `node --check app.js exporter.js sw.js utils.js db.js swimbase.js charts.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `feat: turmas com dias da semana, horario com mascara 00:00 e duracao (nivel removido)`
+  → MINOR → **v0.15.0** → push origin master + tag.

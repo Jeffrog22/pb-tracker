@@ -1334,6 +1334,47 @@ button:disabled {
   padding: 0.4rem 0.7rem;
 }
 
+.sb-day-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sb-day-fieldset legend {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  padding: 0;
+}
+
+.sb-day-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sb-day-chip {
+  flex: 1 1 auto;
+  min-width: 48px;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--text-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sb-day-chip.active {
+  background: var(--badge-bg);
+  border-color: #d5d0e8;
+  color: #554f68;
+}
+
 /* --- SwimBase: wizard de treino (Modo 2) --- */
 .sb-steps {
   display: flex;

@@ -239,19 +239,26 @@
         Nome da turma
         <input id="sbTurmaNome" type="text" maxlength="80" required />
       </label>
-      <label>
-        Nível
-        <select id="sbTurmaNivel">
-          <option value="">—</option>
-          <option value="Iniciante">Iniciante</option>
-          <option value="Intermediário">Intermediário</option>
-          <option value="Avançado">Avançado</option>
-        </select>
-      </label>
-      <label>
-        Horário
-        <input id="sbTurmaHorario" type="text" maxlength="80" placeholder="Ex.: seg/qua 16h-17h" />
-      </label>
+      <fieldset class="sb-day-fieldset">
+        <legend>Dias da semana</legend>
+        <div id="sbTurmaDias" class="sb-day-toggles" role="group" aria-label="Dias da semana">
+          <button type="button" class="sb-day-chip" data-day="seg">Seg</button>
+          <button type="button" class="sb-day-chip" data-day="ter">Ter</button>
+          <button type="button" class="sb-day-chip" data-day="qua">Qua</button>
+          <button type="button" class="sb-day-chip" data-day="qui">Qui</button>
+          <button type="button" class="sb-day-chip" data-day="sex">Sex</button>
+        </div>
+      </fieldset>
+      <div class="sb-grid-2">
+        <label>
+          Horário
+          <input id="sbTurmaHorario" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" />
+        </label>
+        <label>
+          Duração (min)
+          <input id="sbTurmaDuracao" type="number" min="1" step="5" placeholder="Ex.: 60" />
+        </label>
+      </div>
       <div class="actions-row">
         <button type="submit" class="primary">Salvar turma</button>
       </div>

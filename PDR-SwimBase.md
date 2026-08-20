@@ -126,8 +126,9 @@ ID	UUID	Identificador único
 Nome	String	Nome da turma
 ID Professor	UUID	Professor responsável
 ID Unidade	UUID	Unidade
-Horário	String	Dias/horários
-Nível	String	Iniciante/Intermediário/Avançado
+Horário	String	Hora da sessão no formato HH:MM (ex.: 16:00)
+Dias	Array	Dias da semana ativos (seg/ter/qua/qui/sex)
+Duração	Number	Minutos da sessão
 2.2.4 Tabela: Unidades
 Campo	Tipo	Descrição
 ID	UUID	Identificador único

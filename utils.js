@@ -20,6 +20,46 @@ export function digitsToTimeMask(digits) {
   return `${mm}:${ss}:${cc}`;
 }
 
+export function digitsToClockMask(digits) {
+  const padded = digits.padEnd(4, "0");
+  const hh = padded.slice(0, 2);
+  const mm = padded.slice(2, 4);
+  return `${hh}:${mm}`;
+}
+
+export function attachClockMask(input) {
+  input.addEventListener("beforeinput", (event) => {
+    const type = event.inputType;
+    if (type === "deleteContentBackward" || type === "deleteContentForward") {
+      event.preventDefault();
+      const buffer = (input.dataset.digits || "").replace(/\D/g, "");
+      const next = type === "deleteContentBackward" ? buffer.slice(0, -1) : buffer.slice(1);
+      input.dataset.digits = next;
+      input.value = digitsToClockMask(next);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+
+    if (!event.data) return;
+    event.preventDefault();
+    const digits = String(event.data).replace(/\D/g, "");
+    if (!digits.length) return;
+    const buffer = ((input.dataset.digits || "") + digits).slice(-4);
+    input.dataset.digits = buffer;
+    input.value = digitsToClockMask(buffer);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.dataset.digits === undefined) {
+      const digits = input.value.replace(/\D/g, "");
+      input.dataset.digits = digits === "0000" ? "" : digits;
+    }
+    if (!input.value.replace(/\D/g, "")) input.value = "00:00";
+    input.select();
+  });
+}
+
 export function attachTimeMask(input) {
   input.addEventListener("beforeinput", (event) => {
     const type = event.inputType;

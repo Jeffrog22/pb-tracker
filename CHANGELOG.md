@@ -18,6 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.15.0] - 2026-08-19
+### Changed
+- **Formulário de turmas (SwimBase) reestruturado** (`index.html`,
+  `swimbase.js`, `utils.js`, `styles.css`):
+  - Campo **Nível removido** — o nome da turma basta.
+  - Novo grupo de **toggles de dias da semana** (`seg/ter/qua/qui/sex`,
+    `#sbTurmaDias`) com multi-seleção visual (chips `.sb-day-chip.active`).
+  - Campo **Horário** virou input de hora com **máscara `00:00`**
+    (`attachClockMask`/`digitsToClockMask` em `utils.js`, buffer de 4
+    dígitos) e **validação** de hora (00–23) e minutos (00–59).
+  - Novo campo **Duração (min)** com validação de inteiro ≥ 1.
+  - Turma passa a persistir `{ nome, dias, horario, duracao }`; `nivel`
+    removido. Turmas legadas (horário em texto livre) abrem a edição **em
+    branco** nesses campos.
+- `APP_VERSION` → `0.15.0`; cache do service worker → `pbtracker-v36`.
+
 ## [v0.14.1] - 2026-08-19
 ### Fixed
 - **Cliques nos cards de modo não funcionavam** (`app.js`): `init()` era chamado

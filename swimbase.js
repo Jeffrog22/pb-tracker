@@ -2,6 +2,7 @@
 // MVP = Fase 1 do PDR-SwimBase.md. Cresce por slices (B1 → B5).
 import { STORES, getAll, get, put, remove } from "./db.js";
 import {
+  attachClockMask,
   escapeHtml,
   maskTimeHTML,
   msToDisplay,
@@ -100,6 +101,14 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbTurmaForm")
     ?.addEventListener("submit", saveTurma);
+  document
+    .getElementById("sbTurmaDias")
+    ?.addEventListener("click", (event) => {
+      const chip = event.target.closest(".sb-day-chip");
+      if (chip) chip.classList.toggle("active");
+    });
+  const horarioInput = document.getElementById("sbTurmaHorario");
+  if (horarioInput) attachClockMask(horarioInput);
   document
     .getElementById("sbAtletaForm")
     ?.addEventListener("submit", saveAtleta);
@@ -371,8 +380,18 @@ async function deleteAtleta(id) {
 function openTurmaDialog(turma = null) {
   editingTurmaId = turma?.id || null;
   document.getElementById("sbTurmaNome").value = turma?.nome || "";
-  document.getElementById("sbTurmaNivel").value = turma?.nivel || "";
-  document.getElementById("sbTurmaHorario").value = turma?.horario || "";
+  document.querySelectorAll("#sbTurmaDias .sb-day-chip").forEach((chip) => {
+    chip.classList.toggle(
+      "active",
+      Array.isArray(turma?.dias) && turma.dias.includes(chip.dataset.day)
+    );
+  });
+  const structured =
+    Array.isArray(turma?.dias) &&
+    (typeof turma.horario === "string" && /^\d{2}:\d{2}$/.test(turma.horario)) &&
+    typeof turma.duracao === "number";
+  document.getElementById("sbTurmaHorario").value = structured ? turma.horario : "";
+  document.getElementById("sbTurmaDuracao").value = structured ? turma.duracao : "";
   document.getElementById("sbTurmaDialog").showModal();
 }
 
@@ -383,6 +402,26 @@ async function saveTurma(event) {
     alert("Informe o nome da turma.");
     return;
   }
+  const dias = [...document.querySelectorAll("#sbTurmaDias .sb-day-chip.active")].map(
+    (chip) => chip.dataset.day
+  );
+  const horario = document.getElementById("sbTurmaHorario").value.trim();
+  if (horario && !/^\d{2}:\d{2}$/.test(horario)) {
+    alert("Horário inválido. Use o formato HH:MM (ex.: 16:00).");
+    return;
+  }
+  if (horario) {
+    const [hh, mm] = horario.split(":").map(Number);
+    if (hh > 23 || mm > 59) {
+      alert("Horário inválido. Hora entre 00–23 e minutos entre 00–59.");
+      return;
+    }
+  }
+  const duracao = document.getElementById("sbTurmaDuracao").value;
+  if (duracao !== "" && !(Number.isInteger(Number(duracao)) && Number(duracao) >= 1)) {
+    alert("Duração inválida. Informe os minutos da sessão (mínimo 1).");
+    return;
+  }
   const existing = editingTurmaId
     ? sw.turmas.find((t) => t.id === editingTurmaId)
     : null;
@@ -390,8 +429,9 @@ async function saveTurma(event) {
   const turma = {
     id: existing?.id || uid("turma"),
     nome,
-    nivel: document.getElementById("sbTurmaNivel").value,
-    horario: document.getElementById("sbTurmaHorario").value.trim(),
+    dias,
+    horario: horario || "",
+    duracao: duracao === "" ? null : Number(duracao),
     professorId: api.state.activeProfile?.id || null,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
