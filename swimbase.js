@@ -866,17 +866,66 @@ function startTreino() {
           ? "Toque na linha do atleta para registrar"
           : "Toque na raia para registrar";
   }
+  const chronoTitle = document.getElementById("sbChronoTitle");
+  if (chronoTitle) {
+    chronoTitle.textContent = `${tr.config.estilo} ${tr.config.distancia}m · ${turmaNome()}`;
+  }
+  const chronoInterval = document.getElementById("sbChronoInterval");
+  if (chronoInterval) {
+    if (tr.config.modo === 1) {
+      chronoInterval.textContent = `Saída a cada: ${tr.config.tempoSaida}s`;
+    } else if (tr.config.modo === 3) {
+      let txt = `Descanso ondas: ${tr.config.descansoOndas}s`;
+      if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
+      chronoInterval.textContent = txt;
+    } else {
+      let txt = `Descanso: ${tr.config.descanso}s`;
+      if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
+      chronoInterval.textContent = txt;
+    }
+  }
+  updateGroupHeader();
   if (tr.config.modo === 1) initGroupTimer();
   if (tr.config.modo === 3) initWaves();
   renderChronoList();
-  document.getElementById("sbChronoTitle").textContent =
-    `${tr.config.estilo} ${tr.config.distancia}m · ${turmaNome()}`;
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
+  syncStateBadge(false);
   const startBtn = document.getElementById("sbMasterStartBtn");
   const stopBtn = document.getElementById("sbMasterStopBtn");
   if (startBtn) startBtn.disabled = false;
   if (stopBtn) stopBtn.disabled = true;
+}
+
+function syncStateBadge(running) {
+  const badge = document.getElementById("sbMasterStateBadge");
+  if (badge) {
+    badge.textContent = running ? "Rodando" : "Parado";
+    badge.style.backgroundColor = running ? "#1a3a2a" : "#2a1b2e";
+    badge.style.color = running ? "#3fcb7a" : "#ff3366";
+  }
+}
+
+function updateGroupHeader() {
+  const el = document.getElementById("sbChronoGroup");
+  if (!el) return;
+  const modo = tr.config.modo;
+  if (modo === 1 && tr.group) {
+    const g = tr.group;
+    el.textContent = g.phase === "done"
+      ? "Concluído"
+      : `Série ${g.serie}/${tr.config.series} · Rep ${g.rep}/${tr.config.repeticoes}`;
+  } else if (modo === 2) {
+    let worst = null;
+    tr.raias.forEach((r) => { if (!r.done && !worst) worst = r; });
+    const sr = worst ? worst.serie : 1;
+    const rp = worst ? worst.rep : 1;
+    el.textContent = worst && worst.done
+      ? "Concluído"
+      : `Série ${sr}/${tr.config.series} · Rep ${rp}/${tr.config.repeticoes}`;
+  } else if (modo === 3) {
+    el.textContent = `Série ${tr.modo3Serie}/${tr.config.series}`;
+  }
 }
 
 function initGroupTimer() {
@@ -950,6 +999,7 @@ function startMaster() {
       w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
     });
   }
+  syncStateBadge(true);
   const startBtn = document.getElementById("sbMasterStartBtn");
   const stopBtn = document.getElementById("sbMasterStopBtn");
   if (startBtn) startBtn.disabled = true;
@@ -968,6 +1018,7 @@ function stopMaster() {
     });
   }
   stopMasterTicker();
+  syncStateBadge(false);
   const startBtn = document.getElementById("sbMasterStartBtn");
   const stopBtn = document.getElementById("sbMasterStopBtn");
   if (startBtn) startBtn.disabled = false;
@@ -987,6 +1038,7 @@ function startMasterTicker() {
     if (tr.config.modo === 1) tickModo1();
     else if (tr.config.modo === 3) tickModo3(now);
     else tickModo2(now);
+    updateGroupHeader();
   }, 30);
 }
 
@@ -1058,6 +1110,7 @@ function updateModo1Ui() {
   if (!g) return;
   const countdown = document.getElementById("sbCountdown");
   const counter = document.getElementById("sbGroupCounter");
+  const groupEl = document.getElementById("sbChronoGroup");
   if (countdown) {
     if (g.phase === "done") {
       countdown.innerHTML = "Concluído";
@@ -1068,14 +1121,14 @@ function updateModo1Ui() {
     }
     countdown.classList.toggle("done", g.phase === "done");
   }
-  if (counter) {
-    counter.textContent =
-      g.phase === "done"
-        ? "Concluído"
-        : g.phase === "serieInt"
-          ? `Intervalo entre séries · Série ${g.serie}/${tr.config.series}`
-          : `Série ${g.serie}/${tr.config.series} · Rep ${g.rep}/${tr.config.repeticoes}`;
-  }
+  const groupText =
+    g.phase === "done"
+      ? "Concluído"
+      : g.phase === "serieInt"
+        ? `Intervalo entre séries · Série ${g.serie}/${tr.config.series}`
+        : `Série ${g.serie}/${tr.config.series} · Rep ${g.rep}/${tr.config.repeticoes}`;
+  if (counter) counter.textContent = groupText;
+  if (groupEl) groupEl.textContent = groupText;
 }
 
 function tickModo3(now) {
@@ -1159,24 +1212,25 @@ function renderChronoList() {
 
 function renderChronoModo1(list) {
   list.innerHTML = `
-    <div class="sb-countdown" id="sbCountdown">00:00:00</div>
+    <div class="sb-countdown" id="sbCountdown">00'00"00</div>
     <div class="sb-group-counter" id="sbGroupCounter">Série 1/${tr.config.series} · Rep 1/${tr.config.repeticoes}</div>
-    <div class="sb-modo1-raias">
-      ${[...tr.raias.values()]
-        .map(
-          (raia) => `
-        <button type="button" class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
-          <span class="sb-raia-lane">${raia.lane}</span>
-          <span class="sb-raia-body">
-            <span class="sb-raia-name">${escapeHtml(raia.nome)}</span>
-            <span class="sb-raia-splits"></span>
-            <span class="sb-raia-last">Toque para registrar</span>
-          </span>
-          <span class="sb-raia-time">—</span>
-        </button>`
-        )
-        .join("")}
-    </div>
+    ${[...tr.raias.values()]
+      .map(
+        (raia) => `
+      <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
+        <div class="sb-raia-left">
+          <div class="sb-raia-lane">${raia.lane}</div>
+          <div class="sb-raia-body">
+            <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
+            <div class="sb-raia-splits" hidden></div>
+            <div class="sb-raia-last">Toque para registrar</div>
+          </div>
+        </div>
+        <div class="sb-raia-center"><span class="sb-raia-tag">—</span></div>
+        <div class="sb-raia-right"><span class="sb-raia-time">—</span></div>
+      </div>`
+      )
+      .join("")}
   `;
   list.querySelectorAll(".sb-raia").forEach((btn) =>
     btn.addEventListener("click", () => recordSplit(btn.dataset.id))
@@ -1188,16 +1242,19 @@ function renderChronoModo2(list) {
   list.innerHTML = [...tr.raias.values()]
     .map(
       (raia) => `
-    <button type="button" class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
-      <span class="sb-raia-lane">${raia.lane}</span>
-      <span class="sb-raia-body">
-        <span class="sb-raia-name">${escapeHtml(raia.nome)}</span>
-        <span class="sb-raia-splits"></span>
-        <span class="sb-raia-meta">Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}</span>
-        <span class="sb-raia-last">Toque para registrar</span>
-      </span>
-      <span class="sb-raia-time">00:00:00</span>
-    </button>`
+    <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
+      <div class="sb-raia-left">
+        <div class="sb-raia-lane">${raia.lane}</div>
+        <div class="sb-raia-body">
+          <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
+          <div class="sb-raia-splits" hidden></div>
+          <div class="sb-raia-meta">Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}</div>
+          <div class="sb-raia-last">Toque para registrar</div>
+        </div>
+      </div>
+      <div class="sb-raia-center"><span class="sb-raia-tag">00</span></div>
+      <div class="sb-raia-right"><span class="sb-raia-time">00'00"00</span></div>
+    </div>`
     )
     .join("");
   list.querySelectorAll(".sb-raia").forEach((btn) =>
@@ -1209,23 +1266,24 @@ function renderChronoModo2(list) {
 function renderChronoModo3(list) {
   list.innerHTML = `
     <div class="sb-wave-status" id="sbWaveStatus"></div>
-    <div class="sb-modo3-raias">
-      ${[...tr.raias.values()]
-        .sort((a, b) => a.onda - b.onda || a.lane - b.lane)
-        .map(
-          (raia) => `
-        <button type="button" class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
-          <span class="sb-raia-lane">${raia.onda}</span>
-          <span class="sb-raia-body">
-            <span class="sb-raia-name">${escapeHtml(raia.nome)}</span>
-            <span class="sb-raia-meta">Onda ${raia.onda}</span>
-            <span class="sb-raia-last">Toque para registrar</span>
-          </span>
-          <span class="sb-raia-time">—</span>
-        </button>`
-        )
-        .join("")}
-    </div>
+    ${[...tr.raias.values()]
+      .sort((a, b) => a.onda - b.onda || a.lane - b.lane)
+      .map(
+        (raia) => `
+      <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
+        <div class="sb-raia-left">
+          <div class="sb-raia-lane">${raia.onda}</div>
+          <div class="sb-raia-body">
+            <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
+            <div class="sb-raia-meta">Onda ${raia.onda}</div>
+            <div class="sb-raia-last">Toque para registrar</div>
+          </div>
+        </div>
+        <div class="sb-raia-center"><span class="sb-raia-tag">—</span></div>
+        <div class="sb-raia-right"><span class="sb-raia-time">—</span></div>
+      </div>`
+      )
+      .join("")}
   `;
   list.querySelectorAll(".sb-raia").forEach((btn) =>
     btn.addEventListener("click", () => recordSplit(btn.dataset.id))
@@ -1254,14 +1312,15 @@ function updateRaiaRow(raia) {
   if (!row) return;
   row.classList.toggle("done", raia.done);
   const timeEl = row.querySelector(".sb-raia-time");
-  const metaEl = row.querySelector(".sb-raia-meta");
+  const tagEl = row.querySelector(".sb-raia-tag");
+  const splitsEl = row.querySelector(".sb-raia-splits");
   const lastEl = row.querySelector(".sb-raia-last");
+  const metaEl = row.querySelector(".sb-raia-meta");
 
   if (tr.config.modo === 1) {
     if (timeEl)
       timeEl.innerHTML =
         raia.lastSplitMs != null ? maskTimeHTML(msToDisplay(raia.lastSplitMs)) : "—";
-    const splitsEl = row.querySelector(".sb-raia-splits");
     if (splitsEl) {
       if (raia.tempos.length > 0) {
         splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
@@ -1270,6 +1329,7 @@ function updateRaiaRow(raia) {
         splitsEl.hidden = true;
       }
     }
+    if (tagEl) tagEl.textContent = raia.rep || "—";
     if (lastEl)
       lastEl.innerHTML =
         raia.lastSplitMs != null
@@ -1286,6 +1346,15 @@ function updateRaiaRow(raia) {
       else if (raia.waiting) timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
       else timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
     }
+    if (tagEl) tagEl.textContent = raia.waiting ? Math.ceil(raia.waitMs / 1000) : `O${raia.onda}`;
+    if (splitsEl) {
+      if (raia.tempos.length > 0) {
+        splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
+        splitsEl.hidden = false;
+      } else {
+        splitsEl.hidden = true;
+      }
+    }
     if (metaEl) metaEl.textContent = raia.waiting ? raia.waitLabel : `Onda ${raia.onda}`;
     if (lastEl)
       lastEl.innerHTML =
@@ -1297,12 +1366,13 @@ function updateRaiaRow(raia) {
     return;
   }
 
+  /* Modo 2 */
   if (timeEl) {
     if (raia.done) timeEl.textContent = "✓";
     else if (raia.waiting) timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
     else timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
   }
-  const splitsEl = row.querySelector(".sb-raia-splits");
+  if (tagEl) tagEl.textContent = raia.waiting ? Math.ceil(raia.waitMs / 1000) : "00";
   if (splitsEl) {
     if (raia.tempos.length > 0) {
       splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
@@ -1317,12 +1387,31 @@ function updateRaiaRow(raia) {
       : `Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}`;
   }
   if (lastEl) {
-    lastEl.innerHTML =
-      raia.lastSplitMs != null
-        ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
-            raia.lastSplitMs
-          )}`
-        : "Toque para registrar";
+    if (raia.waiting) lastEl.textContent = raia.waitLabel;
+    else if (raia.done) lastEl.textContent = "Concluído";
+    else
+      lastEl.innerHTML =
+        raia.lastSplitMs != null
+          ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
+              raia.lastSplitMs
+            )}`
+          : "Toque para registrar";
+  }
+  /* M2 rest timer overlay */
+  const existingTimer = row.querySelector(".sb-rest-timer");
+  if (raia.waiting && raia.waitMs > 0 && raia.waitMs <= 5000) {
+    row.classList.add("rest-alert");
+    if (existingTimer) {
+      existingTimer.textContent = Math.ceil(raia.waitMs / 1000);
+    } else {
+      const timer = document.createElement("span");
+      timer.className = "sb-rest-timer";
+      timer.textContent = Math.ceil(raia.waitMs / 1000);
+      row.appendChild(timer);
+    }
+  } else {
+    row.classList.remove("rest-alert");
+    if (existingTimer) existingTimer.remove();
   }
 }
 

@@ -1,4 +1,4 @@
-<!-- última-sessão: 20/08/2026 — Modos de cronômetro no SwimBase (M1 Saída a Cada / M3 Largada em Ondas) v0.16.0 -->
+<!-- última-sessão: 22/08/2026 — Modal cronômetro SwimBase dark card fiel ao mockup v0.19.0 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.16.0
+- **Versão atual:** v0.19.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1894,3 +1894,58 @@ Regras:
   (após o done).
 - Commit `feat: modos de cronometro no SwimBase - saida a cada e largada em ondas`
   → MINOR → **v0.16.0** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Modal cronômetro SwimBase dark card fiel ao mockup (v0.19.0)
+
+### O que foi feito
+- **`#sbChronoDialog` reestruturado** (`index.html`): anatomia fiel ao mockup
+  com top controls (botão verde Iniciar + timer box escuro `#0c101c` com ícone
+  de relógio ciano, status badge "Parado"/"Rodando", dígitos `00'00"00` com
+  centésimos menores + botão roxo Parar), barra de info (`sbChronoTitle` estilo
+  + distância + turma à esquerda, `sbChronoInterval` intervalo à direita),
+  header centralizado (`sbChronoGroup` Série/Rep + `sbChronoNext` hint), card
+  de raias (`.sb-chrono-card` branco com rows `.sb-raia` que têm lane badge,
+  nome, splits, tag central e tempo) e botões Salvar/Cancelar dentro do card.
+- **Tema escuro** (`styles.css`) escopado em `#sbChronoDialog`: paleta
+  `--sb-bg:#0f151b` / `--sb-cyan:#00ffaa` / `--sb-red:#e74c3c`. Timer box
+  com fundo `#0c101c`, ícone relógio ciano, badge de status. Rows de atleta
+  em `#ebebeb` com lane badge cinza. Tag central com borda e vermelho para
+  countdown de descanso M2. Override de alto contraste.
+- Novos helpers `syncStateBadge(running)` e `updateGroupHeader()` —后者
+  chamado a cada tick do `startMasterTicker`.
+- `startTreino` agora preenche `sbChronoTitle` (nome do treino),
+  `sbChronoInterval` (chip de intervalo por modo) e `sbChronoGroup` (Série/Rep
+  iniciais).
+- `renderChronoModo1/2/3` reescritos com row layout do mockup (`.sb-raia-left`
+  + `.sb-raia-center` tag + `.sb-raia-right` tempo).
+- `updateRaiaRow` adaptado: M2 exibe `.sb-rest-timer` (overlay vermelho,
+  `pointer-events:none`) com contagem 5→1 + `.rest-alert` quando `waitMs ≤ 5000`.
+- `updateModo1Ui` agora também popula `sbChronoGroup`.
+- **`app.js`**: `APP_VERSION` → `0.19.0`.
+- **`sw.js`**: cache `pbtracker-v40` → `pbtracker-v41`.
+
+### Decisões
+- Layout fiel ao mockup fornecido pelo usuário (top controls + timer box +
+  info bar + header + card de raias + ações no card).
+- Botões Iniciar/Parar **mantidos separados** (2 botões, não toggle único)
+  — fiel ao mockup.
+- Timer display box **escuro (#0c101c)** dentro do card escuro — cria
+  contraste visual para o visor.
+- Status badge "Parado"/"Rodando" no timer box.
+- Tag central na row de atleta: mostra `00` (M2), countdown (M2 descanso)
+  ou número da rep (M1).
+
+### Arquivos
+- `index.html`, `styles.css`, `swimbase.js` (alterados)
+- `app.js` (APP_VERSION), `sw.js` (cache v41) (alterados)
+- `CHANGELOG.md` (v0.19.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `feat: modal cronometro SwimBase dark card fiel ao mockup com timer box e status badge`
+  → MINOR → **v0.19.0** → push origin master + tag.

@@ -304,24 +304,40 @@
   </dialog>
 
   <dialog id="sbChronoDialog" class="chrono-dialog">
-    <div class="timer-container">
-      <div class="sheet-grabber" aria-hidden="true"></div>
-      <div class="timer-controls">
-        <button id="sbMasterStartBtn" class="btn-pill btn-start">Iniciar</button>
-        <div id="sbMasterDisplay" class="timer-display">00:00:00</div>
-        <button id="sbMasterStopBtn" class="btn-pill btn-reset">Parar</button>
+    <div class="sb-chrono-top">
+      <button id="sbMasterStartBtn" class="sb-chrono-btn sb-chrono-btn-start" type="button">
+        <span class="sb-play-icon" aria-hidden="true"></span>
+        Iniciar
+      </button>
+      <div class="sb-timer-box">
+        <div class="sb-timer-header">
+          <div class="sb-clock-icon" aria-hidden="true"></div>
+          <div class="sb-timer-status">
+            <span class="sb-timer-status-title">Estado</span>
+            <span id="sbMasterStateBadge" class="sb-timer-status-badge">Parado</span>
+          </div>
+        </div>
+        <div id="sbMasterDisplay" class="sb-timer-digits">00'00"<span>00</span></div>
       </div>
-      <div class="timer-meta">
-        <div id="sbChronoTitle" class="chrono-title">Treino</div>
-        <div id="sbChronoNext" class="next-capture">Toque na raia para registrar</div>
-      </div>
+      <button id="sbMasterStopBtn" class="sb-chrono-btn sb-chrono-btn-stop" type="button">
+        <span class="sb-reset-icon" aria-hidden="true">&#x21bb;</span>
+        Parar
+      </button>
     </div>
-    <div class="chrono-scroll">
+    <div class="sb-chrono-info">
+      <span id="sbChronoTitle">Treino</span>
+      <span id="sbChronoInterval"></span>
+    </div>
+    <div class="sb-chrono-header">
+      <h2 id="sbChronoGroup">Série 1/1 · Rep 1/1</h2>
+      <p id="sbChronoNext">Toque na raia para registrar</p>
+    </div>
+    <div class="sb-chrono-card">
       <div id="sbChronoList" class="sb-chrono-list"></div>
-    </div>
-    <div class="action-footer">
-      <button id="sbChronoFinishBtn" class="btn-save">Finalizar</button>
-      <button id="sbChronoCloseBtn" class="btn-cancel">Fechar</button>
+      <div class="sb-chrono-actions">
+        <button id="sbChronoFinishBtn" class="sb-chrono-btn-save" type="button">Salvar</button>
+        <button id="sbChronoCloseBtn" class="sb-chrono-btn-cancel" type="button">Cancelar</button>
+      </div>
     </div>
   </dialog>
 

@@ -18,6 +18,31 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.0] - 2026-08-22
+### Changed
+- **Modal do cronômetro SwimBase reestilizado** (`index.html`, `styles.css`,
+  `swimbase.js`): nova anatomia fiel ao mockup — top controls com botão verde
+  (Iniciar) + timer box escuro (#0c101c, ícone de relógio, status badge
+  "Parado"/"Rodando", dígitos ciano com centésimos menores) + botão roxo
+  (Parar); barra de info (estilo + distância + turma à esquerda, intervalo à
+  direita); header centralizado (Série/Rep + hint); card de raias (`.sb-raia`)
+  com lane badge, nome, splits, tag e tempo; botões Salvar/Cancelar dentro do
+  card.
+  - Novos helpers `syncStateBadge(running)` (atualiza badge de status no timer
+    box) e `updateGroupHeader()` (atualiza Série/Rep/Passo no header, chamado
+    a cada tick).
+  - `startTreino` agora preenche `#sbChronoTitle` (nome do treino),
+    `#sbChronoInterval` (chip de intervalo por modo) e `#sbChronoGroup`
+    (Série/Rep iniciais).
+  - `updateRaiaRow` adaptado: usa `.sb-raia-left/center/right`; para M2, exibe
+    `.sb-rest-timer` (overlay vermelho, `pointer-events:none`) com contagem
+    5→1 + `.rest-alert` quando `waitMs ≤ 5000`; tag central mostra rep ou
+    countdown.
+  - `renderChronoModo1/2/3` reestruturados com row layout do mockup.
+  - Tema escuro `#sbChronoDialog` com paleta `--sb-bg:#0f151b`,
+    `--sb-cyan:#00ffaa`, `--sb-red:#e74c3c`. Override de alto contraste.
+  - `APP_VERSION` → `0.19.0`; cache → `pbtracker-v41`.
+
 ## [v0.16.0] - 2026-08-20
 ### Added
 - **Seleção do Modo do cronômetro no wizard de treino** (`swimbase.js`,
