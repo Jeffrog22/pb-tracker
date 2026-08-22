@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Modal cronômetro SwimBase dark card fiel ao mockup v0.19.0 -->
+<!-- última-sessão: 22/08/2026 — Fix5: lista compacta, overlay M2, btts toggle, info bar, remove série/rep v0.19.1 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.0
+- **Versão atual:** v0.19.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1949,3 +1949,53 @@ Regras:
   (após o done).
 - Commit `feat: modal cronometro SwimBase dark card fiel ao mockup com timer box e status badge`
   → MINOR → **v0.19.0** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Fix5: lista compacta, overlay M2, btts toggle, info bar, remove série/rep (v0.19.1)
+
+### O que foi feito
+- **Lista compacta de atletas** (Passo 2 do wizard): `atletaCheckbox` agora
+  renderiza `[☐] Nome   Categoria · Sexo` em linha enxuta; CSS
+  `.sb-atleta-check` sem background/borda/shadow, só `border-bottom` como
+  separador. Sexo visível ao lado da categoria.
+- **Overlay de descanso M2 corrigido**: adicionado `position: relative` a
+  `#sbChronoDialog .sb-raia` — `.sb-rest-timer` (absolute) fica confinado à
+  row do atleta em vez de fugir para o `<dialog>`.
+- **Botões Iniciar/Voltar + Parar/Zerar**: labels renomeados no HTML; toggle
+  dinâmico via `syncStartBtn(running)` e `syncStopBtn(enabled, text)`.
+  Rodando → "Voltar" (pausa) + "Parar/Zerar" (habilitado); Pausado →
+  "Iniciar/Voltar" (retoma) + "Zerar" (reseta). Novo `resetMaster()` limpa
+  tempos, splits, séries e ondas, re-renderiza a lista.
+- **Info bar do cronômetro**: M1 "Saída a cada: Xs" (inalterado), M2
+  "Tempo/Parcial: Xs descanso", M3 "Ondas: Xs descanso".
+- **Série/rep removida das rows** (M2/M3): `sb-raia-meta` removido dos
+  templates; `updateRaiaRow` M3 agora usa `lastEl` para exibir `waitLabel`
+  quando em descanso. Header do modal (`sbChronoGroup`) continua com a info.
+- **`app.js`**: `APP_VERSION` → `0.19.1`.
+- **`sw.js`**: cache `pbtracker-v41` → `pbtracker-v42`.
+
+### Decisões
+- Botão "Zerar" reseta **tudo** (tempos, splits, contadores de série/rep,
+  ondas) e volta ao estado inicial — fluxo limpo para recomeçar.
+- Sexo do atleta visível na lista compacta (antes só aparecia no card
+  expandido).
+- M3: `Onda N` aparece só no lane badge (não como meta duplicado);
+  `waitLabel` (ex.: "Descanso: 5s") vai no `lastEl`.
+
+### Arquivos
+- `swimbase.js` (stepAtletas, atletaCheckbox, startMaster, stopMaster,
+  resetMaster, syncStartBtn, syncStopBtn, startTreino, renderChronoModo2/3,
+  updateRaiaRow)
+- `styles.css` (.sb-atleta-check compacto, position: relative na raia)
+- `index.html` (labels dos botões)
+- `app.js` (APP_VERSION), `sw.js` (cache v42)
+- `CHANGELOG.md` (v0.19.1), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: lista compacta, overlay M2, botoes toggle, info bar e remove serie/rep do atleta`
+  → PATCH → **v0.19.1** → push origin master + tag.

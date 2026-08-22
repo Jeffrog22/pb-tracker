@@ -1417,34 +1417,36 @@ button:disabled {
 .sb-atleta-check {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: 0.6rem 0.7rem;
+  gap: 0.5rem;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
 }
 
+.sb-atleta-check:last-child {
+  border-bottom: none;
+}
+
 .sb-atleta-check input {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   min-height: 0;
   flex: 0 0 auto;
 }
 
-.sb-atleta-check span {
+.sb-atleta-info {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: baseline;
+  gap: 0.5rem;
   min-width: 0;
 }
 
-.sb-atleta-check strong {
-  font-size: 0.9rem;
+.sb-atleta-info strong {
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-.sb-atleta-check small {
+.sb-atleta-info small {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
@@ -2070,6 +2072,7 @@ body.high-contrast .mode-card {
   cursor: pointer;
   border: 1px solid transparent;
   box-shadow: none;
+  position: relative;
 }
 
 #sbChronoDialog .sb-raia.done {

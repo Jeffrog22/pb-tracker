@@ -136,7 +136,13 @@ export function initSwimBase(appApi) {
     ?.addEventListener("click", startMaster);
   document
     .getElementById("sbMasterStopBtn")
-    ?.addEventListener("click", stopMaster);
+    ?.addEventListener("click", () => {
+      if (tr.masterRunning) {
+        stopMaster();
+      } else {
+        resetMaster();
+      }
+    });
   document
     .getElementById("sbChronoFinishBtn")
     ?.addEventListener("click", finalizeTreino);
@@ -589,14 +595,14 @@ function stepAtletas() {
 
 function atletaCheckbox(atleta) {
   const checked = tr.atletas.includes(atleta.id) ? "checked" : "";
+  const cat = escapeHtml(categoriaDoAtleta(atleta));
+  const sexo = atleta.sexo ? ` · ${escapeHtml(atleta.sexo)}` : "";
   return `
     <label class="sb-atleta-check">
       <input type="checkbox" value="${escapeHtml(atleta.id)}" ${checked} />
-      <span>
+      <span class="sb-atleta-info">
         <strong>${escapeHtml(atleta.nome)}</strong>
-        <small>${escapeHtml(categoriaDoAtleta(atleta))}${
-          atleta.sexo ? ` · ${escapeHtml(atleta.sexo)}` : ""
-        }</small>
+        <small>${cat}${sexo}</small>
       </span>
     </label>
   `;
@@ -875,11 +881,11 @@ function startTreino() {
     if (tr.config.modo === 1) {
       chronoInterval.textContent = `Saída a cada: ${tr.config.tempoSaida}s`;
     } else if (tr.config.modo === 3) {
-      let txt = `Descanso ondas: ${tr.config.descansoOndas}s`;
+      let txt = `Ondas: ${tr.config.descansoOndas}s descanso`;
       if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
       chronoInterval.textContent = txt;
     } else {
-      let txt = `Descanso: ${tr.config.descanso}s`;
+      let txt = `Tempo/Parcial: ${tr.config.descanso}s descanso`;
       if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
       chronoInterval.textContent = txt;
     }
@@ -891,10 +897,8 @@ function startTreino() {
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
   syncStateBadge(false);
-  const startBtn = document.getElementById("sbMasterStartBtn");
-  const stopBtn = document.getElementById("sbMasterStopBtn");
-  if (startBtn) startBtn.disabled = false;
-  if (stopBtn) stopBtn.disabled = true;
+  syncStartBtn(false);
+  syncStopBtn(false, "Parar/Zerar");
 }
 
 function syncStateBadge(running) {
@@ -904,6 +908,25 @@ function syncStateBadge(running) {
     badge.style.backgroundColor = running ? "#1a3a2a" : "#2a1b2e";
     badge.style.color = running ? "#3fcb7a" : "#ff3366";
   }
+}
+
+function syncStartBtn(running) {
+  const btn = document.getElementById("sbMasterStartBtn");
+  if (!btn) return;
+  const label = btn.querySelector(".sb-chrono-btn-label") || btn;
+  const nodes = [...btn.childNodes];
+  const textNode = nodes.find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+  if (textNode) textNode.textContent = running ? " Voltar" : " Iniciar/Voltar";
+  btn.disabled = false;
+}
+
+function syncStopBtn(enabled, text) {
+  const btn = document.getElementById("sbMasterStopBtn");
+  if (!btn) return;
+  const nodes = [...btn.childNodes];
+  const textNode = nodes.find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+  if (textNode) textNode.textContent = ` ${text}`;
+  btn.disabled = !enabled;
 }
 
 function updateGroupHeader() {
@@ -1000,10 +1023,8 @@ function startMaster() {
     });
   }
   syncStateBadge(true);
-  const startBtn = document.getElementById("sbMasterStartBtn");
-  const stopBtn = document.getElementById("sbMasterStopBtn");
-  if (startBtn) startBtn.disabled = true;
-  if (stopBtn) stopBtn.disabled = false;
+  syncStartBtn(true);
+  syncStopBtn(false, "Parar/Zerar");
   startMasterTicker();
   api.logAction("Treino iniciado no SwimBase.");
 }
@@ -1019,11 +1040,53 @@ function stopMaster() {
   }
   stopMasterTicker();
   syncStateBadge(false);
-  const startBtn = document.getElementById("sbMasterStartBtn");
-  const stopBtn = document.getElementById("sbMasterStopBtn");
-  if (startBtn) startBtn.disabled = false;
-  if (stopBtn) stopBtn.disabled = true;
+  syncStartBtn(false);
+  syncStopBtn(true, "Zerar");
   api.logAction("Treino pausado no SwimBase.");
+}
+
+function resetMaster() {
+  stopMasterTicker();
+  tr.masterRunning = false;
+  tr.masterElapsedMs = 0;
+  tr.masterStartedAt = 0;
+  tr.sessionStartedAt = null;
+  tr.raias.forEach((raia) => {
+    raia.elapsedMs = 0;
+    raia.startedAt = 0;
+    raia.running = false;
+    raia.done = false;
+    raia.waiting = false;
+    raia.waitMs = 0;
+    raia.waitLabel = "";
+    raia.lastSplitMs = null;
+    raia.lastIsPr = false;
+    raia.tempos = [];
+    raia.splitIndex = 0;
+  });
+  if (tr.config.modo === 1 && tr.group) {
+    tr.group.serie = 1;
+    tr.group.rep = 1;
+    tr.group.phase = "run";
+    tr.group.countUpMs = 0;
+    tr.group.remainingMs = 0;
+  }
+  if (tr.config.modo === 3) {
+    tr.modo3Serie = 1;
+    tr.waves.forEach((w) => {
+      w.concluida = false;
+      w.emAndamento = false;
+      w.startedAt = 0;
+      w.terminouEm = 0;
+    });
+  }
+  const masterDisplay = document.getElementById("sbMasterDisplay");
+  if (masterDisplay) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(0));
+  syncStateBadge(false);
+  syncStartBtn(false);
+  syncStopBtn(false, "Parar/Zerar");
+  renderChronoList();
+  api.logAction("Treino zerado no SwimBase.");
 }
 
 function startMasterTicker() {
@@ -1248,7 +1311,6 @@ function renderChronoModo2(list) {
         <div class="sb-raia-body">
           <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
           <div class="sb-raia-splits" hidden></div>
-          <div class="sb-raia-meta">Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}</div>
           <div class="sb-raia-last">Toque para registrar</div>
         </div>
       </div>
@@ -1275,7 +1337,6 @@ function renderChronoModo3(list) {
           <div class="sb-raia-lane">${raia.onda}</div>
           <div class="sb-raia-body">
             <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
-            <div class="sb-raia-meta">Onda ${raia.onda}</div>
             <div class="sb-raia-last">Toque para registrar</div>
           </div>
         </div>
@@ -1355,14 +1416,16 @@ function updateRaiaRow(raia) {
         splitsEl.hidden = true;
       }
     }
-    if (metaEl) metaEl.textContent = raia.waiting ? raia.waitLabel : `Onda ${raia.onda}`;
-    if (lastEl)
-      lastEl.innerHTML =
-        raia.lastSplitMs != null
-          ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
-              raia.lastSplitMs
-            )}`
-          : "Toque para registrar";
+    if (lastEl) {
+      if (raia.waiting) lastEl.textContent = raia.waitLabel;
+      else
+        lastEl.innerHTML =
+          raia.lastSplitMs != null
+            ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
+                raia.lastSplitMs
+              )}`
+            : "Toque para registrar";
+    }
     return;
   }
 
@@ -1380,11 +1443,6 @@ function updateRaiaRow(raia) {
     } else {
       splitsEl.hidden = true;
     }
-  }
-  if (metaEl) {
-    metaEl.textContent = raia.waiting
-      ? raia.waitLabel
-      : `Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}`;
   }
   if (lastEl) {
     if (raia.waiting) lastEl.textContent = raia.waitLabel;

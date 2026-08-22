@@ -18,6 +18,29 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.1] - 2026-08-22
+### Changed
+- **Lista compacta de atletas** no Passo 2 do wizard de treino: cada atleta
+  é uma linha enxuta (`[☐] Nome   Categoria · Sexo`) sem card, borda ou
+  sombra — só separador entre linhas.
+- **Botões Iniciar/Parar** do cronômetro SwimBase renomeados para
+  **Iniciar/Voltar** e **Parar/Zerar** com toggle dinâmico: Rodando →
+  "Voltar" (pausa) + "Parar/Zerar" habilitado; Pausado → "Iniciar/Voltar"
+  (retoma) + "Zerar" (reseta tudo). Novo `resetMaster()` que limpa tempos,
+  splits, séries e ondas.
+- **Info bar do cronômetro** mostra o nome do modo + valor: M1
+  "Saída a cada: Xs", M2 "Tempo/Parcial: Xs descanso", M3
+  "Ondas: Xs descanso".
+- **Série/rep removida das rows do atleta** (M2/M3): a info já existe no
+  header do modal (`sbChronoGroup`). Em M3, `lastEl` agora exibe o
+  `waitLabel` quando em descanso.
+- `APP_VERSION` → `0.19.1`; cache → `pbtracker-v42`.
+
+### Fixed
+- **Overlay de descanso M2 sobreposto**: adicionado `position: relative` a
+  `#sbChronoDialog .sb-raia` — o `.sb-rest-timer` agora fica confinado à
+  row do atleta que está em descanso (antes fugia para o `<dialog>`).
+
 ## [v0.19.0] - 2026-08-22
 ### Changed
 - **Modal do cronômetro SwimBase reestilizado** (`index.html`, `styles.css`,
