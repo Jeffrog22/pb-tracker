@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.19.2";
+const APP_VERSION = "0.19.3";
 
 const state = {
   teamName: "",

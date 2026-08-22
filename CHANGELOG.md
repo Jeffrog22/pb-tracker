@@ -18,6 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.3] - 2026-08-22
+### Fixed
+- **Botões Iniciar/Voltar e Parar/Zerar não funcionavam**: `syncStartBtn` e
+  `syncStopBtn` buscavam text nodes em `childNodes` (frágil e sujeito a
+  falhar com whitespace/ícones). Agora usam spans dedicados
+  (`#sbStartBtnLabel`, `#sbStopBtnLabel`) no HTML — atualização direta e
+  confiável.
+- **M3: waves não iniciavam ao clicar Iniciar**: `startMaster` para M3 agora
+  recalcula `startedAt` de waves não-iniciadas baseado no novo
+  `masterStartedAt` (antes, waves retinham timestamps de um start anterior
+  e nunca iniciavam corretamente no resume).
+- **resetMaster M3**: propriedades de wave (`started`, `done`, `startedAt`,
+  `elapsedMs`, `countdownMs`) agora são resetadas corretamente (antes usava
+  nomes inexistentes como `concluida`/`emAndamento`).
+- `APP_VERSION` → `0.19.3`; cache → `pbtracker-v44`.
+
 ## [v0.19.2] - 2026-08-22
 ### Changed
 - **Novo fluxo do Modo 2** (`swimbase.js`): toque na linha agora

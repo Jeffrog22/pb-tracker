@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Novo fluxo M2: selecionar → iniciar → parar → atribuir v0.19.2 -->
+<!-- última-sessão: 22/08/2026 — Fix bots Iniciar/Parar + waves M3 v0.19.3 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.2
+- **Versão atual:** v0.19.3
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -2054,3 +2054,40 @@ Regras:
   (após o done).
 - Commit `fix: novo fluxo M2 - selecionar atleta, iniciar cronometro, parar e atribuir`
   → PATCH → **v0.19.2** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Fix bots Iniciar/Parar + waves M3 (v0.19.3)
+
+### O que foi feito
+- **HTML**: botões Iniciar/Voltar e Parar/Zerar ganharam spans dedicados
+  (`#sbStartBtnLabel`, `#sbStopBtnLabel`) para atualização de texto direta
+  e confiável.
+- **`syncStartBtn`/`syncStopBtn` reescritos**: agora usam
+  `document.getElementById("sbStartBtnLabel")` / `sbStopBtnLabel` em vez de
+  buscar text nodes em `childNodes` (que falhava com whitespace e ícones).
+- **`startMaster` M3**: waves não-iniciadas recebem `startedAt` recalculado
+  baseado no novo `masterStartedAt` ao dar resume — antes, waves retinham
+  timestamps de um start anterior e nunca iniciavam corretamente.
+- **`resetMaster` M3**: propriedades de wave agora são resetadas com os
+  nomes corretos (`started`, `done`, `startedAt`, `elapsedMs`, `countdownMs`)
+  — antes usava `concluida`/`emAndamento` (inexistentes).
+- `APP_VERSION` → `0.19.3`; cache → `pbtracker-v44`.
+
+### Decisões
+- Spans dedicados no HTML (não mais manipulação de text nodes) — padrão
+  mais robusto para botões com ícones.
+
+### Arquivos
+- `index.html` (#sbStartBtnLabel, #sbStopBtnLabel)
+- `swimbase.js` (syncStartBtn, syncStopBtn, startMaster M3, resetMaster M3)
+- `app.js` (APP_VERSION), `sw.js` (cache v44)
+- `CHANGELOG.md` (v0.19.3), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: corrige botoes Iniciar/Parar e waves M3 com spans dedicados`
+  → PATCH → **v0.19.3** → push origin master + tag.

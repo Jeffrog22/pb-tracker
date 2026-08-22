@@ -912,22 +912,17 @@ function syncStateBadge(running) {
 }
 
 function syncStartBtn(running) {
+  const label = document.getElementById("sbStartBtnLabel");
+  if (label) label.textContent = running ? "Voltar" : "Iniciar/Voltar";
   const btn = document.getElementById("sbMasterStartBtn");
-  if (!btn) return;
-  const label = btn.querySelector(".sb-chrono-btn-label") || btn;
-  const nodes = [...btn.childNodes];
-  const textNode = nodes.find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-  if (textNode) textNode.textContent = running ? " Voltar" : " Iniciar/Voltar";
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
 }
 
 function syncStopBtn(enabled, text) {
+  const label = document.getElementById("sbStopBtnLabel");
+  if (label) label.textContent = text;
   const btn = document.getElementById("sbMasterStopBtn");
-  if (!btn) return;
-  const nodes = [...btn.childNodes];
-  const textNode = nodes.find((n) => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-  if (textNode) textNode.textContent = ` ${text}`;
-  btn.disabled = !enabled;
+  if (btn) btn.disabled = !enabled;
 }
 
 function updateGroupHeader() {
@@ -1048,11 +1043,14 @@ function buildRaias() {
 
 function startMaster() {
   tr.masterRunning = true;
-  tr.masterStartedAt = Date.now() - tr.masterElapsedMs;
+  const now = Date.now();
+  tr.masterStartedAt = now - tr.masterElapsedMs;
   if (!tr.sessionStartedAt) tr.sessionStartedAt = new Date().toISOString();
   if (tr.config.modo === 3) {
     tr.waves.forEach((w) => {
-      w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
+      if (!w.started) {
+        w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
+      }
     });
   }
   syncStateBadge(true);
@@ -1105,10 +1103,11 @@ function resetMaster() {
   if (tr.config.modo === 3) {
     tr.modo3Serie = 1;
     tr.waves.forEach((w) => {
-      w.concluida = false;
-      w.emAndamento = false;
+      w.started = false;
+      w.done = false;
       w.startedAt = 0;
-      w.terminouEm = 0;
+      w.elapsedMs = 0;
+      w.countdownMs = 0;
     });
   }
   const masterDisplay = document.getElementById("sbMasterDisplay");
