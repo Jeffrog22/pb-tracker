@@ -873,7 +873,10 @@ function startTreino() {
     `${tr.config.estilo} ${tr.config.distancia}m · ${turmaNome()}`;
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
-  startMaster();
+  const startBtn = document.getElementById("sbMasterStartBtn");
+  const stopBtn = document.getElementById("sbMasterStopBtn");
+  if (startBtn) startBtn.disabled = false;
+  if (stopBtn) stopBtn.disabled = true;
 }
 
 function initGroupTimer() {
@@ -883,6 +886,7 @@ function initGroupTimer() {
     phase: "rep",
     remainingMs: tr.config.tempoSaida * 1000,
     countUpMs: 0,
+    repStartMs: 0,
   };
 }
 
@@ -1019,10 +1023,12 @@ function tickModo1() {
       g.rep = 1;
       g.remainingMs = tr.config.tempoSaida * 1000;
       g.countUpMs = 0;
+      g.repStartMs = tr.masterElapsedMs;
     } else if (g.rep < tr.config.repeticoes) {
       g.rep += 1;
       g.remainingMs = tr.config.tempoSaida * 1000;
       g.countUpMs = 0;
+      g.repStartMs = tr.masterElapsedMs;
     } else if (g.serie < tr.config.series) {
       g.serie += 1;
       g.rep = 1;
@@ -1051,20 +1057,16 @@ function updateModo1Ui() {
   const g = tr.group;
   if (!g) return;
   const countdown = document.getElementById("sbCountdown");
-  const countup = document.getElementById("sbCountUp");
   const counter = document.getElementById("sbGroupCounter");
   if (countdown) {
-    const remaining = Math.max(g.remainingMs, 0);
-    countdown.innerHTML = maskTimeHTML(msToDisplay(remaining));
-    countdown.classList.toggle("amber", g.phase === "rep" && remaining <= 10000 && remaining > 5000);
-    countdown.classList.toggle("red", g.phase === "rep" && remaining <= 5000);
+    if (g.phase === "done") {
+      countdown.innerHTML = "Concluído";
+    } else if (g.phase === "serieInt") {
+      countdown.innerHTML = maskTimeHTML(msToDisplay(Math.max(g.remainingMs, 0)));
+    } else {
+      countdown.innerHTML = maskTimeHTML(msToDisplay(g.countUpMs));
+    }
     countdown.classList.toggle("done", g.phase === "done");
-  }
-  if (countup) {
-    const showCountUp = g.phase === "rep" && g.countUpMs > 0;
-    countup.innerHTML = maskTimeHTML(msToDisplay(g.countUpMs));
-    countup.classList.toggle("active", showCountUp);
-    countup.hidden = !showCountUp;
   }
   if (counter) {
     counter.textContent =
@@ -1158,7 +1160,6 @@ function renderChronoList() {
 function renderChronoModo1(list) {
   list.innerHTML = `
     <div class="sb-countdown" id="sbCountdown">00:00:00</div>
-    <div class="sb-countup" id="sbCountUp">00:00:00</div>
     <div class="sb-group-counter" id="sbGroupCounter">Série 1/${tr.config.series} · Rep 1/${tr.config.repeticoes}</div>
     <div class="sb-modo1-raias">
       ${[...tr.raias.values()]
@@ -1191,6 +1192,7 @@ function renderChronoModo2(list) {
       <span class="sb-raia-lane">${raia.lane}</span>
       <span class="sb-raia-body">
         <span class="sb-raia-name">${escapeHtml(raia.nome)}</span>
+        <span class="sb-raia-splits"></span>
         <span class="sb-raia-meta">Rep ${raia.rep}/${tr.config.repeticoes} · Série ${raia.serie}/${tr.config.series}</span>
         <span class="sb-raia-last">Toque para registrar</span>
       </span>
@@ -1300,6 +1302,15 @@ function updateRaiaRow(raia) {
     else if (raia.waiting) timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
     else timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
   }
+  const splitsEl = row.querySelector(".sb-raia-splits");
+  if (splitsEl) {
+    if (raia.tempos.length > 0) {
+      splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
+      splitsEl.hidden = false;
+    } else {
+      splitsEl.hidden = true;
+    }
+  }
   if (metaEl) {
     metaEl.textContent = raia.waiting
       ? raia.waitLabel
@@ -1324,7 +1335,7 @@ async function recordSplit(atletaId) {
   if (tr.config.modo === 1) {
     const g = tr.group;
     if (!g || g.phase !== "rep") return;
-    splitMs = tr.masterElapsedMs;
+    splitMs = tr.masterElapsedMs - g.repStartMs;
     raia.serie = g.serie;
     raia.rep = g.rep;
   } else if (tr.config.modo === 3) {
