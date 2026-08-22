@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Fix5: lista compacta, overlay M2, btts toggle, info bar, remove série/rep v0.19.1 -->
+<!-- última-sessão: 22/08/2026 — Novo fluxo M2: selecionar → iniciar → parar → atribuir v0.19.2 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.1
+- **Versão atual:** v0.19.2
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -1999,3 +1999,58 @@ Regras:
   (após o done).
 - Commit `fix: lista compacta, overlay M2, botoes toggle, info bar e remove serie/rep do atleta`
   → PATCH → **v0.19.1** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Novo fluxo M2: selecionar → iniciar → parar → atribuir (v0.19.2)
+
+### O que foi feito
+- **Novo fluxo do Modo 2** (`swimbase.js`):
+  - Toque na linha **seleciona** o atleta (destaque `.selected` com borda
+    ciano), **não grava mais o tempo**.
+  - **Iniciar/Voltar** dispara o cronômetro mestre (um relógio único).
+  - **Parar/Zerar** para e **atribui o tempo ao atleta selecionado** via
+    nova `assignM2Time()`.
+  - Auto-seleciona o próximo pendente via `autoSelectNextM2()`.
+  - Atletas já cronometrados (`.done`) são ignorados ao tocar.
+- Novas funções: `selectM2Atleta(atletaId)`, `assignM2Time()`,
+  `autoSelectNextM2()`.
+- Estado: `tr.m2SelectedAtletaId` (novo campo no `tr`).
+- `startMaster` M2: não marca mais raias como `running` individualmente —
+  só inicia o relógio mestre.
+- `stopMaster` M2: chama `assignM2Time()` quando há atleta selecionado.
+- `tickModo2` simplificado (sem timers individuais, corpo vazio).
+- `updateRaiaRow` M2: mostra tempo registrado (✓), "Selecionado" ou
+  "Toque para selecionar". Rest timer overlay removido.
+- `recordSplit` M2 desativado (guard `if (modo === 2) return`).
+- `updateGroupHeader` M2: mostra `${done}/${total} concluídos`.
+- Hint M2: "Toque para selecionar · Iniciar para cronometrar".
+- **Lista de atletas (Passo 2)**: gap `0.2rem`, padding `2px 0`,
+  checkbox `16px`, fontes menores, gap info `0.3rem`.
+- CSS: `.sb-raia.selected` com borda ciano + fundo translúcido.
+- `APP_VERSION` → `0.19.2`; cache → `pbtracker-v43`.
+
+### Decisões
+- Toque = **só seleção**, nunca grava. Gravar é exclusivo do botão Parar.
+- Atletas com tempo já registrado são **ignorados** ao tocar (não podem
+  ser re-selecionados).
+- Auto-seleciona o próximo pendente após cada atribuição.
+- M2 sem descanso automático (o coach controla o início/fim).
+- `tickModo2` vazio — o display do master é atualizado pelo
+  `startMasterTicker`.
+
+### Arquivos
+- `swimbase.js` (selectM2Atleta, assignM2Time, autoSelectNextM2, startMaster,
+  stopMaster, resetMaster, resetTreinoSession, renderChronoModo2,
+  updateRaiaRow, recordSplit guard, tickModo2, updateGroupHeader, startTreino)
+- `styles.css` (.sb-atleta-grid compacto, .sb-raia.selected)
+- `app.js` (APP_VERSION), `sw.js` (cache v43)
+- `CHANGELOG.md` (v0.19.2), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: novo fluxo M2 - selecionar atleta, iniciar cronometro, parar e atribuir`
+  → PATCH → **v0.19.2** → push origin master + tag.

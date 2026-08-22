@@ -18,6 +18,27 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.2] - 2026-08-22
+### Changed
+- **Novo fluxo do Modo 2** (`swimbase.js`): toque na linha agora
+  **seleciona** o atleta (destaque com borda ciano), não grava mais o tempo.
+  Iniciar/Voltar dispara o cronômetro mestre; Parar/Zerar para e
+  **atribui o tempo ao atleta selecionado**. Auto-seleciona o próximo
+  pendente. Atletas já cronometrados são ignorados ao tocar.
+- Novas funções `selectM2Atleta`, `assignM2Time`, `autoSelectNextM2`.
+- `startMaster` M2: não marca mais raias como `running` individualmente —
+  só inicia o relógio mestre. `stopMaster` M2: chama `assignM2Time` quando
+  há atleta selecionado.
+- `tickModo2` simplificado (sem timers individuais). `updateRaiaRow` M2:
+  mostra tempo registrado (✓), "Selecionado" ou "Toque para selecionar".
+- `recordSplit` M2 desativado (guard no topo). Rest timer overlay M2
+  removido.
+- `updateGroupHeader` M2: mostra `${done}/${total} concluídos`.
+- Hint M2: "Toque para selecionar · Iniciar para cronometrar".
+- **Lista de atletas (Passo 2)**: gap `0.2rem`, padding `2px 0`,
+  checkbox `16px`, fontes `0.8rem`/`0.7rem`, gap info `0.3rem`.
+- `APP_VERSION` → `0.19.2`; cache → `pbtracker-v43`.
+
 ## [v0.19.1] - 2026-08-22
 ### Changed
 - **Lista compacta de atletas** no Passo 2 do wizard de treino: cada atleta

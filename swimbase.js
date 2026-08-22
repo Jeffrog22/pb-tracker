@@ -490,6 +490,7 @@ const tr = {
   masterStartedAt: 0,
   masterElapsedMs: 0,
   sessionStartedAt: null,
+  m2SelectedAtletaId: null,
 };
 
 async function renderSbTreino() {
@@ -870,7 +871,7 @@ function startTreino() {
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
           ? "Toque na linha do atleta para registrar"
-          : "Toque na raia para registrar";
+          : "Toque para selecionar · Iniciar para cronometrar";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
   if (chronoTitle) {
@@ -939,13 +940,9 @@ function updateGroupHeader() {
       ? "Concluído"
       : `Série ${g.serie}/${tr.config.series} · Rep ${g.rep}/${tr.config.repeticoes}`;
   } else if (modo === 2) {
-    let worst = null;
-    tr.raias.forEach((r) => { if (!r.done && !worst) worst = r; });
-    const sr = worst ? worst.serie : 1;
-    const rp = worst ? worst.rep : 1;
-    el.textContent = worst && worst.done
-      ? "Concluído"
-      : `Série ${sr}/${tr.config.series} · Rep ${rp}/${tr.config.repeticoes}`;
+    const done = [...tr.raias.values()].filter((r) => r.done).length;
+    const total = tr.raias.size;
+    el.textContent = done === total ? "Concluído" : `${done}/${total} concluídos`;
   } else if (modo === 3) {
     el.textContent = `Série ${tr.modo3Serie}/${tr.config.series}`;
   }
@@ -960,6 +957,50 @@ function initGroupTimer() {
     countUpMs: 0,
     repStartMs: 0,
   };
+}
+
+function selectM2Atleta(atletaId) {
+  const raia = tr.raias.get(atletaId);
+  if (!raia || raia.done) return;
+  tr.m2SelectedAtletaId = atletaId;
+  document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
+    row.classList.toggle("selected", row.dataset.id === atletaId);
+  });
+  const row = document.querySelector(`.sb-raia[data-id="${atletaId}"]`);
+  const lastEl = row?.querySelector(".sb-raia-last");
+  if (lastEl) lastEl.textContent = "Selecionado";
+}
+
+async function assignM2Time() {
+  const raia = tr.raias.get(tr.m2SelectedAtletaId);
+  if (!raia || raia.done) return;
+  const splitMs = tr.masterElapsedMs;
+  raia.tempos.push(msToDisplay(splitMs));
+  raia.lastSplitMs = splitMs;
+  raia.lastIsPr = false;
+  raia.done = true;
+  hapticFeedback(60);
+  await persistRegistro(raia);
+  const isPr = await checkPrAndFlag(raia, splitMs);
+  if (isPr) {
+    raia.lastIsPr = true;
+    hapticFeedback([80, 60, 160]);
+  }
+  updateRaiaRow(raia);
+  autoSelectNextM2();
+  api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)}.`);
+}
+
+function autoSelectNextM2() {
+  const next = [...tr.raias.values()].find((r) => !r.done);
+  if (next) {
+    selectM2Atleta(next.atletaId);
+  } else {
+    tr.m2SelectedAtletaId = null;
+    document.querySelectorAll("#sbChronoList .sb-raia.selected").forEach((row) => {
+      row.classList.remove("selected");
+    });
+  }
 }
 
 function initWaves() {
@@ -1009,14 +1050,6 @@ function startMaster() {
   tr.masterRunning = true;
   tr.masterStartedAt = Date.now() - tr.masterElapsedMs;
   if (!tr.sessionStartedAt) tr.sessionStartedAt = new Date().toISOString();
-  if (tr.config.modo === 2) {
-    tr.raias.forEach((raia) => {
-      if (!raia.done && !raia.running && !raia.waiting) {
-        raia.running = true;
-        raia.startedAt = Date.now() - raia.elapsedMs;
-      }
-    });
-  }
   if (tr.config.modo === 3) {
     tr.waves.forEach((w) => {
       w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
@@ -1030,13 +1063,10 @@ function startMaster() {
 }
 
 function stopMaster() {
+  const wasRunning = tr.masterRunning;
   tr.masterRunning = false;
-  if (tr.config.modo === 2) {
-    tr.raias.forEach((raia) => {
-      raia.running = false;
-      raia.waiting = false;
-      raia.waitLabel = "";
-    });
+  if (tr.config.modo === 2 && wasRunning && tr.m2SelectedAtletaId) {
+    assignM2Time();
   }
   stopMasterTicker();
   syncStateBadge(false);
@@ -1051,6 +1081,7 @@ function resetMaster() {
   tr.masterElapsedMs = 0;
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
+  tr.m2SelectedAtletaId = null;
   tr.raias.forEach((raia) => {
     raia.elapsedMs = 0;
     raia.startedAt = 0;
@@ -1100,30 +1131,14 @@ function startMasterTicker() {
     }
     if (tr.config.modo === 1) tickModo1();
     else if (tr.config.modo === 3) tickModo3(now);
-    else tickModo2(now);
+    else tickModo2();
     updateGroupHeader();
   }, 30);
 }
 
-function tickModo2(now) {
-  tr.raias.forEach((raia) => {
-    if (raia.done) return;
-    if (raia.running) {
-      raia.elapsedMs = now - raia.startedAt;
-    } else if (raia.waiting) {
-      raia.waitMs -= 30;
-      if (raia.waitMs <= 0) {
-        raia.waiting = false;
-        raia.waitLabel = "";
-        raia.running = true;
-        raia.startedAt = now;
-        raia.elapsedMs = 0;
-      } else {
-        raia.waitLabel = `Próxima em ${Math.ceil(raia.waitMs / 1000)}s`;
-      }
-    }
-    updateRaiaRow(raia);
-  });
+function tickModo2() {
+  /* M2 novo: cronômetro mestre controla tudo via startMasterTicker.
+     Sem timers individuais por atleta. */
 }
 
 function tickModo1() {
@@ -1311,16 +1326,16 @@ function renderChronoModo2(list) {
         <div class="sb-raia-body">
           <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
           <div class="sb-raia-splits" hidden></div>
-          <div class="sb-raia-last">Toque para registrar</div>
+          <div class="sb-raia-last">Toque para selecionar</div>
         </div>
       </div>
-      <div class="sb-raia-center"><span class="sb-raia-tag">00</span></div>
+      <div class="sb-raia-center"><span class="sb-raia-tag">—</span></div>
       <div class="sb-raia-right"><span class="sb-raia-time">00'00"00</span></div>
     </div>`
     )
     .join("");
   list.querySelectorAll(".sb-raia").forEach((btn) =>
-    btn.addEventListener("click", () => recordSplit(btn.dataset.id))
+    btn.addEventListener("click", () => selectM2Atleta(btn.dataset.id))
   );
   tr.raias.forEach(updateRaiaRow);
 }
@@ -1431,11 +1446,11 @@ function updateRaiaRow(raia) {
 
   /* Modo 2 */
   if (timeEl) {
-    if (raia.done) timeEl.textContent = "✓";
-    else if (raia.waiting) timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
-    else timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
+    timeEl.innerHTML = raia.lastSplitMs != null
+      ? maskTimeHTML(msToDisplay(raia.lastSplitMs))
+      : maskTimeHTML(msToDisplay(0));
   }
-  if (tagEl) tagEl.textContent = raia.waiting ? Math.ceil(raia.waitMs / 1000) : "00";
+  if (tagEl) tagEl.textContent = raia.done ? "✓" : "—";
   if (splitsEl) {
     if (raia.tempos.length > 0) {
       splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
@@ -1445,35 +1460,19 @@ function updateRaiaRow(raia) {
     }
   }
   if (lastEl) {
-    if (raia.waiting) lastEl.textContent = raia.waitLabel;
-    else if (raia.done) lastEl.textContent = "Concluído";
+    if (raia.done)
+      lastEl.innerHTML = raia.lastIsPr
+        ? `<span class="pr-badge">PR!</span> ${msToDisplay(raia.lastSplitMs)}`
+        : msToDisplay(raia.lastSplitMs);
+    else if (tr.m2SelectedAtletaId === raia.atletaId)
+      lastEl.textContent = "Selecionado";
     else
-      lastEl.innerHTML =
-        raia.lastSplitMs != null
-          ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
-              raia.lastSplitMs
-            )}`
-          : "Toque para registrar";
-  }
-  /* M2 rest timer overlay */
-  const existingTimer = row.querySelector(".sb-rest-timer");
-  if (raia.waiting && raia.waitMs > 0 && raia.waitMs <= 5000) {
-    row.classList.add("rest-alert");
-    if (existingTimer) {
-      existingTimer.textContent = Math.ceil(raia.waitMs / 1000);
-    } else {
-      const timer = document.createElement("span");
-      timer.className = "sb-rest-timer";
-      timer.textContent = Math.ceil(raia.waitMs / 1000);
-      row.appendChild(timer);
-    }
-  } else {
-    row.classList.remove("rest-alert");
-    if (existingTimer) existingTimer.remove();
+      lastEl.textContent = "Toque para selecionar";
   }
 }
 
 async function recordSplit(atletaId) {
+  if (tr.config.modo === 2) return;
   const raia = tr.raias.get(atletaId);
   if (!raia) return;
   const now = Date.now();
@@ -1699,6 +1698,7 @@ function resetTreinoSession() {
   tr.masterRunning = false;
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
+  tr.m2SelectedAtletaId = null;
 }
 
 /* ---- Análise (gráficos + PRs + registros + export) ---- */
