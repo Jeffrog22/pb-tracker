@@ -882,6 +882,7 @@ function initGroupTimer() {
     serie: 1,
     phase: "rep",
     remainingMs: tr.config.tempoSaida * 1000,
+    countUpMs: 0,
   };
 }
 
@@ -1017,19 +1018,24 @@ function tickModo1() {
       g.phase = "rep";
       g.rep = 1;
       g.remainingMs = tr.config.tempoSaida * 1000;
+      g.countUpMs = 0;
     } else if (g.rep < tr.config.repeticoes) {
       g.rep += 1;
       g.remainingMs = tr.config.tempoSaida * 1000;
+      g.countUpMs = 0;
     } else if (g.serie < tr.config.series) {
       g.serie += 1;
       g.rep = 1;
       g.phase = "serieInt";
       g.remainingMs = tr.config.intervaloSeries * 1000;
+      g.countUpMs = 0;
     } else {
       g.phase = "done";
     }
     hapticFeedback(60);
     flashGroupAdvance();
+  } else if (g.phase === "rep") {
+    g.countUpMs += 30;
   }
   updateModo1Ui();
 }
@@ -1045,6 +1051,7 @@ function updateModo1Ui() {
   const g = tr.group;
   if (!g) return;
   const countdown = document.getElementById("sbCountdown");
+  const countup = document.getElementById("sbCountUp");
   const counter = document.getElementById("sbGroupCounter");
   if (countdown) {
     const remaining = Math.max(g.remainingMs, 0);
@@ -1052,6 +1059,12 @@ function updateModo1Ui() {
     countdown.classList.toggle("amber", g.phase === "rep" && remaining <= 10000 && remaining > 5000);
     countdown.classList.toggle("red", g.phase === "rep" && remaining <= 5000);
     countdown.classList.toggle("done", g.phase === "done");
+  }
+  if (countup) {
+    const showCountUp = g.phase === "rep" && g.countUpMs > 0;
+    countup.innerHTML = maskTimeHTML(msToDisplay(g.countUpMs));
+    countup.classList.toggle("active", showCountUp);
+    countup.hidden = !showCountUp;
   }
   if (counter) {
     counter.textContent =
@@ -1145,6 +1158,7 @@ function renderChronoList() {
 function renderChronoModo1(list) {
   list.innerHTML = `
     <div class="sb-countdown" id="sbCountdown">00:00:00</div>
+    <div class="sb-countup" id="sbCountUp">00:00:00</div>
     <div class="sb-group-counter" id="sbGroupCounter">Série 1/${tr.config.series} · Rep 1/${tr.config.repeticoes}</div>
     <div class="sb-modo1-raias">
       ${[...tr.raias.values()]
@@ -1154,6 +1168,7 @@ function renderChronoModo1(list) {
           <span class="sb-raia-lane">${raia.lane}</span>
           <span class="sb-raia-body">
             <span class="sb-raia-name">${escapeHtml(raia.nome)}</span>
+            <span class="sb-raia-splits"></span>
             <span class="sb-raia-last">Toque para registrar</span>
           </span>
           <span class="sb-raia-time">—</span>
@@ -1244,6 +1259,15 @@ function updateRaiaRow(raia) {
     if (timeEl)
       timeEl.innerHTML =
         raia.lastSplitMs != null ? maskTimeHTML(msToDisplay(raia.lastSplitMs)) : "—";
+    const splitsEl = row.querySelector(".sb-raia-splits");
+    if (splitsEl) {
+      if (raia.tempos.length > 0) {
+        splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
+        splitsEl.hidden = false;
+      } else {
+        splitsEl.hidden = true;
+      }
+    }
     if (lastEl)
       lastEl.innerHTML =
         raia.lastSplitMs != null
