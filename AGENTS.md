@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Fix bots Iniciar/Parar + waves M3 v0.19.3 -->
+<!-- última-sessão: 22/08/2026 — Timer auto-stop ao concluir série + fix botoes + waves M3 v0.19.5 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.3
+- **Versão atual:** v0.19.5
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -2091,3 +2091,36 @@ Regras:
   (após o done).
 - Commit `fix: corrige botoes Iniciar/Parar e waves M3 com spans dedicados`
   → PATCH → **v0.19.3** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Timer auto-stop ao concluir série (v0.19.5)
+
+### O que foi feito
+- **Timer para automaticamente ao concluir série/treino** nos 3 modos:
+  - **M1** (`tickModo1`): quando `g.phase = "done"`, agora define
+    `tr.masterRunning = false`, chama `stopMasterTicker()`, atualiza badge
+    e botões (parado + "Zerar" habilitado).
+  - **M3** (`tickModo3`): quando última série e todas as waves `done` (sem
+    avanço de série), timer para e botão vira "Zerar".
+  - **M2** (`autoSelectNextM2`): quando não há próximo pendente (todos done),
+    timer para e botão vira "Zerar".
+- Antes, o ticker continuava rodando em background após a conclusão —
+  `tickModo1` retornava imediatamente, mas `masterRunning` continuava
+  `true`. O usuário era forçado a clicar Parar → Zerar duas vezes.
+- **v0.19.4** (commit anterior, CSS): `.sb-atleta-check` com `flex-direction:
+  row` — lista de atletas alinhada à esquerda.
+- `APP_VERSION` → `0.19.5`; cache → `pbtracker-v46`.
+
+### Arquivos
+- `swimbase.js` (tickModo1, tickModo3, autoSelectNextM2)
+- `app.js` (APP_VERSION), `sw.js` (cache v46)
+- `CHANGELOG.md` (v0.19.4 + v0.19.5), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: timer para automaticamente ao concluir serie nos 3 modos`
+  → PATCH → **v0.19.5** → push origin master + tag.

@@ -18,6 +18,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.5] - 2026-08-22
+### Fixed
+- **Timer para automaticamente ao concluir série/treino** nos 3 modos: M1
+  (`g.phase = "done"`), M2 (todos atletas `done` em `autoSelectNextM2`),
+  M3 (última série + todas waves `done`). Botão passa a mostrar "Zerar"
+  habilitado. Antes, o ticker continuava rodando em background.
+- `APP_VERSION` → `0.19.5`; cache → `pbtracker-v46`.
+
+## [v0.19.4] - 2026-08-22
+### Fixed
+- **Lista de atletas (Passo 2) centralizada**: `.sb-atleta-check` ganhou
+  `flex-direction: row` explícito para sobrescrever o `column` herdado da
+  regra global `label`. Cada linha agora mostra `[☐] Nome   Categoria · Sexo`
+  alinhada à esquerda.
+- `APP_VERSION` → `0.19.4`; cache → `pbtracker-v45`.
+
 ## [v0.19.3] - 2026-08-22
 ### Fixed
 - **Botões Iniciar/Voltar e Parar/Zerar não funcionavam**: `syncStartBtn` e

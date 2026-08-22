@@ -995,6 +995,11 @@ function autoSelectNextM2() {
     document.querySelectorAll("#sbChronoList .sb-raia.selected").forEach((row) => {
       row.classList.remove("selected");
     });
+    tr.masterRunning = false;
+    stopMasterTicker();
+    syncStateBadge(false);
+    syncStartBtn(false);
+    syncStopBtn(true, "Zerar");
   }
 }
 
@@ -1166,6 +1171,11 @@ function tickModo1() {
       g.countUpMs = 0;
     } else {
       g.phase = "done";
+      tr.masterRunning = false;
+      stopMasterTicker();
+      syncStateBadge(false);
+      syncStartBtn(false);
+      syncStopBtn(true, "Zerar");
     }
     hapticFeedback(60);
     flashGroupAdvance();
@@ -1264,6 +1274,12 @@ function tickModo3(now) {
     });
     hapticFeedback([80, 60, 160]);
     api.logAction(`SwimBase: série ${tr.modo3Serie}/${tr.config.series} das ondas iniciada.`);
+  } else if (tr.waves.every((w) => w.done)) {
+    tr.masterRunning = false;
+    stopMasterTicker();
+    syncStateBadge(false);
+    syncStartBtn(false);
+    syncStopBtn(true, "Zerar");
   }
   updateModo3Status();
 }
