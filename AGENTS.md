@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Split M2 funcional + label Iniciar/Split v0.19.6 -->
+<!-- última-sessão: 22/08/2026 — Fix cascata M2: split só pelo botão + seleção por toque v0.19.7 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.6
+- **Versão atual:** v0.19.7
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -2160,3 +2160,47 @@ Regras:
   (após o done).
 - Commit `fix: split M2 funcional e label do botao Iniciar/Split`
   → PATCH → **v0.19.6** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Fix cascata M2: split só pelo botão + seleção por toque (v0.19.7)
+
+### O que foi feito
+- **M2: split só pelo botão, seleção por toque**: fluxo refeito.
+  - `selectM2Atleta` voltou a ser **só seleção** — removeu o branch
+    `if (tr.masterRunning)` que gravava o split ao tocar.
+  - Nova função `recordM2Split()` — grava o split do atleta selecionado,
+    chamada pelo botão "Iniciar/Split" quando o cronômetro está rodando.
+  - Handler do `sbMasterStartBtn` bifurca: M2 + rodando → `recordM2Split()`;
+    caso contrário → `startMaster()`.
+- **Cascata de splits corrigida**: `autoSelectNextM2` agora **seleciona**
+  o próximo atleta visualmente (sets `m2SelectedAtletaId`, `.selected`,
+  label "Selecionado") **sem chamar `selectM2Atleta`** — antes, chamava
+  `selectM2Atleta` que gravava o tempo imediatamente (cascata: um toque
+  gravava todos).
+- **Label dinâmico**: `syncStartBtn` agora muestra "Iniciar" (parado) ou
+  "Split" (rodando) no M2; M1/M3 mantém "Iniciar"/"Parar".
+- Hint M2: "Toque para selecionar · Iniciar para começar".
+- `APP_VERSION` → `0.19.7`; cache → `pbtracker-v48`.
+
+### Fluxo M2 final
+1. Toque no atleta (parado) → seleciona (borda ciano)
+2. Clica "Iniciar" → cronômetro começa, label vira "Split"
+3. Clica "Split" → grava tempo do selecionado ✓, auto-seleciona próximo
+4. Clica "Split" → grava tempo do próximo ✓, avança
+5. Toque em outro atleta (rodando) → troca seleção (sem gravar)
+6. Todos done → timer para, label volta "Iniciar", "Zerar" habilitado
+
+### Arquivos
+- `swimbase.js` (selectM2Atleta, recordM2Split, autoSelectNextM2, handler
+  sbMasterStartBtn, syncStartBtn, hint M2)
+- `app.js` (APP_VERSION), `sw.js` (cache v48)
+- `CHANGELOG.md` (v0.19.7), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: cascata M2 - split so pelo botao e selecao por toque`
+  → PATCH → **v0.19.7** → push origin master + tag.

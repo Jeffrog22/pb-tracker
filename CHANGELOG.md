@@ -18,6 +18,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.7] - 2026-08-22
+### Fixed
+- **M2: split só pelo botão, seleção por toque**: fluxo refeito. Toque na
+  linha do atleta agora é **só seleção** (borda ciano). O botão
+  "Iniciar/Split" tem duas funções: (1) inicia o cronômetro quando parado,
+  (2) grava o split do atleta selecionado e autoavança quando rodando.
+  Label dinâmico: "Iniciar" (parado) → "Split" (rodando).
+- **Cascata de splits corrigida**: `autoSelectNextM2` agora só seleciona
+  o próximo atleta visualmente, sem chamar `selectM2Atleta` (antes gravava
+  o tempo de TODOS os atletas de uma vez).
+- **`recordM2Split` nova**: função dedicada a gravar o split do atleta
+  selecionado, chamada pelo botão "Split" (não mais pela linha).
+- Hint M2: "Toque para selecionar · Iniciar para começar".
+- `APP_VERSION` → `0.19.7`; cache → `pbtracker-v48`.
+
 ## [v0.19.6] - 2026-08-22
 ### Fixed
 - **M2 split funcional**: toque no atleta enquanto o cronômetro roda grava o
