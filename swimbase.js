@@ -871,7 +871,7 @@ function startTreino() {
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
           ? "Toque na linha do atleta para registrar"
-          : "Toque para selecionar · Iniciar para cronometrar";
+          : "Iniciar → toque nos atletas para registrar splits";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
   if (chronoTitle) {
@@ -913,7 +913,7 @@ function syncStateBadge(running) {
 
 function syncStartBtn(running) {
   const label = document.getElementById("sbStartBtnLabel");
-  if (label) label.textContent = running ? "Voltar" : "Iniciar/Voltar";
+  if (label) label.textContent = running ? "Parar" : "Iniciar/Split";
   const btn = document.getElementById("sbMasterStartBtn");
   if (btn) btn.disabled = false;
 }
@@ -957,6 +957,24 @@ function initGroupTimer() {
 function selectM2Atleta(atletaId) {
   const raia = tr.raias.get(atletaId);
   if (!raia || raia.done) return;
+
+  if (tr.masterRunning) {
+    const splitMs = tr.masterElapsedMs;
+    raia.tempos.push(msToDisplay(splitMs));
+    raia.lastSplitMs = splitMs;
+    raia.lastIsPr = false;
+    raia.done = true;
+    hapticFeedback(60);
+    persistRegistro(raia);
+    checkPrAndFlag(raia, splitMs).then((isPr) => {
+      if (isPr) { raia.lastIsPr = true; hapticFeedback([80, 60, 160]); }
+      updateRaiaRow(raia);
+    });
+    api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)}.`);
+    autoSelectNextM2();
+    return;
+  }
+
   tr.m2SelectedAtletaId = atletaId;
   document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
     row.classList.toggle("selected", row.dataset.id === atletaId);
@@ -964,26 +982,6 @@ function selectM2Atleta(atletaId) {
   const row = document.querySelector(`.sb-raia[data-id="${atletaId}"]`);
   const lastEl = row?.querySelector(".sb-raia-last");
   if (lastEl) lastEl.textContent = "Selecionado";
-}
-
-async function assignM2Time() {
-  const raia = tr.raias.get(tr.m2SelectedAtletaId);
-  if (!raia || raia.done) return;
-  const splitMs = tr.masterElapsedMs;
-  raia.tempos.push(msToDisplay(splitMs));
-  raia.lastSplitMs = splitMs;
-  raia.lastIsPr = false;
-  raia.done = true;
-  hapticFeedback(60);
-  await persistRegistro(raia);
-  const isPr = await checkPrAndFlag(raia, splitMs);
-  if (isPr) {
-    raia.lastIsPr = true;
-    hapticFeedback([80, 60, 160]);
-  }
-  updateRaiaRow(raia);
-  autoSelectNextM2();
-  api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)}.`);
 }
 
 function autoSelectNextM2() {
@@ -1066,11 +1064,7 @@ function startMaster() {
 }
 
 function stopMaster() {
-  const wasRunning = tr.masterRunning;
   tr.masterRunning = false;
-  if (tr.config.modo === 2 && wasRunning && tr.m2SelectedAtletaId) {
-    assignM2Time();
-  }
   stopMasterTicker();
   syncStateBadge(false);
   syncStartBtn(false);

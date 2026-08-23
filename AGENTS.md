@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Timer auto-stop ao concluir série + fix botoes + waves M3 v0.19.5 -->
+<!-- última-sessão: 22/08/2026 — Split M2 funcional + label Iniciar/Split v0.19.6 -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.5
+- **Versão atual:** v0.19.6
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -2124,3 +2124,39 @@ Regras:
   (após o done).
 - Commit `fix: timer para automaticamente ao concluir serie nos 3 modos`
   → PATCH → **v0.19.5** → push origin master + tag.
+
+---
+
+## Sessão: 22/08/2026 — Split M2 funcional + label Iniciar/Split (v0.19.6)
+
+### O que foi feito
+- **M2 split funcional**: `selectM2Atleta` agora grava o tempo do atleta
+  quando o cronômetro está rodando (`tr.masterRunning`). Fluxo: toque no
+  atleta → `splitMs = tr.masterElapsedMs`, push em `raia.tempos`, `done = true`,
+  `persistRegistro`, `checkPrAndFlag`, `autoSelectNextM2`. Timer continua
+  rodando — próximo atleta é auto-selecionado.
+- **Label do botão Iniciar**: `#sbStartBtnLabel` no HTML de "Iniciar/Voltar"
+  para **"Iniciar/Split"**. `syncStartBtn(running)` atualizado: rodando →
+  "Parar", parado → "Iniciar/Split".
+- **`assignM2Time` removida** (linha 969–987): toda lógica migrou para
+  `selectM2Atleta` — antes, o tempo só era gravado ao Parar; agora grava ao
+  tocar durante execução.
+- **`stopMaster` simplificado**: removida a chamada condicional a
+  `assignM2Time` e a variável `wasRunning` — o botão só para o timer.
+- **Hint M2**: "Iniciar → toque nos atletas para registrar splits".
+- `APP_VERSION` → `0.19.6`; cache → `pbtracker-v47`.
+
+### Arquivos
+- `index.html` (`#sbStartBtnLabel`)
+- `swimbase.js` (`selectM2Atleta`, `syncStartBtn`, `stopMaster`, remove
+  `assignM2Time`, hint M2)
+- `app.js` (APP_VERSION), `sw.js` (cache v47)
+- `CHANGELOG.md` (v0.19.6), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`
+  (após o done).
+- Commit `fix: split M2 funcional e label do botao Iniciar/Split`
+  → PATCH → **v0.19.6** → push origin master + tag.

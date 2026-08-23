@@ -18,6 +18,19 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [v0.19.6] - 2026-08-22
+### Fixed
+- **M2 split funcional**: toque no atleta enquanto o cronômetro roda grava o
+  tempo atual (split) e avança para o próximo automaticamente. Timer continua
+  rodando entre splits. Fluxo: Iniciar → toque nos atletas → Parar/Zerar.
+- **Label do botão Iniciar**: "Iniciar/Voltar" → **"Iniciar/Split"** (reflete
+  a ação de gravar split ao tocar). Quando rodando, vira "Parar".
+- **`assignM2Time` removida**: lógica migrou para `selectM2Atleta` (gravava
+  só ao Parar, agora grava ao tocar durante execução).
+- **`stopMaster` simplificado**: sem mais chamada a `assignM2Time`.
+- Hint M2: "Iniciar → toque nos atletas para registrar splits".
+- `APP_VERSION` → `0.19.6`; cache → `pbtracker-v47`.
+
 ## [v0.19.5] - 2026-08-22
 ### Fixed
 - **Timer para automaticamente ao concluir série/treino** nos 3 modos: M1
