@@ -140,15 +140,34 @@ export function initSwimBase(appApi) {
         startMaster();
       }
     });
-  document
-    .getElementById("sbMasterStopBtn")
-    ?.addEventListener("click", () => {
-      if (tr.masterRunning) {
+
+  const stopBtn = document.getElementById("sbMasterStopBtn");
+  if (stopBtn) {
+    let holdTimer = null;
+    let holdTriggered = false;
+    stopBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      holdTriggered = false;
+      holdTimer = setTimeout(() => {
+        holdTriggered = true;
+        resetMaster();
+      }, 3000);
+    });
+    stopBtn.addEventListener("pointerup", () => {
+      clearTimeout(holdTimer);
+      if (holdTriggered) return;
+      if (tr.config.modo === 2 && tr.masterRunning) {
+        recordM2Final();
+      } else if (tr.masterRunning) {
         stopMaster();
       } else {
         resetMaster();
       }
     });
+    stopBtn.addEventListener("pointercancel", () => {
+      clearTimeout(holdTimer);
+    });
+  }
   document
     .getElementById("sbChronoFinishBtn")
     ?.addEventListener("click", finalizeTreino);
@@ -877,7 +896,7 @@ function startTreino() {
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
           ? "Toque na linha do atleta para registrar"
-          : "Toque para selecionar · Iniciar para começar";
+          : "Iniciar para começar · Split para volta · Parar para finalizar";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
   if (chronoTitle) {
@@ -892,7 +911,7 @@ function startTreino() {
       if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
       chronoInterval.textContent = txt;
     } else {
-      let txt = `Tempo/Parcial: ${tr.config.descanso}s descanso`;
+      let txt = `Descanso: ${tr.config.descanso}s · ${tr.config.repeticoes} reps`;
       if (tr.config.series > 1) txt += ` · Intervalo: ${tr.config.intervaloSeries}s`;
       chronoInterval.textContent = txt;
     }
@@ -919,15 +938,14 @@ function syncStateBadge(running) {
 
 function syncStartBtn(running) {
   const label = document.getElementById("sbStartBtnLabel");
-  if (label) {
-    if (tr.config.modo === 2) {
-      label.textContent = running ? "Split" : "Iniciar";
-    } else {
-      label.textContent = running ? "Parar" : "Iniciar";
-    }
-  }
   const btn = document.getElementById("sbMasterStartBtn");
-  if (btn) btn.disabled = false;
+  if (tr.config.modo === 2) {
+    if (label) label.textContent = running ? "Split" : "Iniciar";
+    if (btn) btn.disabled = false;
+  } else {
+    if (label) label.textContent = running ? "Parar" : "Iniciar";
+    if (btn) btn.disabled = false;
+  }
 }
 
 function syncStopBtn(enabled, text) {
@@ -968,7 +986,7 @@ function initGroupTimer() {
 
 function selectM2Atleta(atletaId) {
   const raia = tr.raias.get(atletaId);
-  if (!raia || raia.done) return;
+  if (!raia || raia.done || raia.waiting) return;
   tr.m2SelectedAtletaId = atletaId;
   document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
     row.classList.toggle("selected", row.dataset.id === atletaId);
@@ -976,28 +994,65 @@ function selectM2Atleta(atletaId) {
   const row = document.querySelector(`.sb-raia[data-id="${atletaId}"]`);
   const lastEl = row?.querySelector(".sb-raia-last");
   if (lastEl) lastEl.textContent = "Selecionado";
+  if (tr.config.modo === 2 && tr.masterRunning) {
+    syncStopBtn(true, "Parar");
+  }
 }
 
 function recordM2Split() {
   const raia = tr.raias.get(tr.m2SelectedAtletaId);
-  if (!raia || raia.done || !tr.masterRunning) return;
-  const splitMs = tr.masterElapsedMs;
+  if (!raia || raia.done || raia.waiting || !tr.masterRunning || !raia.startedAt) return;
+  const splitMs = Date.now() - raia.startedAt;
+  raia.currentSplits.push(splitMs);
+  hapticFeedback(40);
+  updateRaiaRow(raia);
+  api.logAction(`SwimBase M2 volta: ${raia.nome} — ${msToDisplay(splitMs)}.`);
+}
+
+function recordM2Final() {
+  const raia = tr.raias.get(tr.m2SelectedAtletaId);
+  if (!raia || raia.done || raia.waiting || !tr.masterRunning || !raia.startedAt) return;
+  const splitMs = Date.now() - raia.startedAt;
   raia.tempos.push(msToDisplay(splitMs));
   raia.lastSplitMs = splitMs;
   raia.lastIsPr = false;
-  raia.done = true;
+  raia.currentSplits = [];
   hapticFeedback(60);
+
+  if (raia.rep < tr.config.repeticoes) {
+    raia.rep += 1;
+    raia.waiting = true;
+    raia.waitMs = tr.config.descanso * 1000;
+    raia.restAlert = false;
+    raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
+    raia.startedAt = 0;
+  } else {
+    raia.done = true;
+    raia.waitLabel = "Concluído";
+    raia.startedAt = 0;
+  }
+
   persistRegistro(raia);
   checkPrAndFlag(raia, splitMs).then((isPr) => {
     if (isPr) { raia.lastIsPr = true; hapticFeedback([80, 60, 160]); }
     updateRaiaRow(raia);
   });
-  api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)}.`);
-  autoSelectNextM2();
+  api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)} (rep ${raia.rep - (raia.done ? 0 : 1)}/${tr.config.repeticoes}).`);
+
+  const allFinished = [...tr.raias.values()].every((r) => r.done || r.waiting);
+  if (allFinished) {
+    tr.masterRunning = false;
+    stopMasterTicker();
+    syncStateBadge(false);
+    syncStartBtn(false);
+    syncStopBtn(true, "Zerar");
+  } else {
+    autoSelectNextM2();
+  }
 }
 
 function autoSelectNextM2() {
-  const next = [...tr.raias.values()].find((r) => !r.done);
+  const next = [...tr.raias.values()].find((r) => !r.done && !r.waiting && r.startedAt > 0);
   if (next) {
     tr.m2SelectedAtletaId = next.atletaId;
     document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
@@ -1006,16 +1061,20 @@ function autoSelectNextM2() {
     const row = document.querySelector(`.sb-raia[data-id="${next.atletaId}"]`);
     const lastEl = row?.querySelector(".sb-raia-last");
     if (lastEl) lastEl.textContent = "Selecionado";
+    if (tr.config.modo === 2 && tr.masterRunning) syncStopBtn(true, "Parar");
   } else {
     tr.m2SelectedAtletaId = null;
     document.querySelectorAll("#sbChronoList .sb-raia.selected").forEach((row) => {
       row.classList.remove("selected");
     });
-    tr.masterRunning = false;
-    stopMasterTicker();
-    syncStateBadge(false);
-    syncStartBtn(false);
-    syncStopBtn(true, "Zerar");
+    const anyResting = [...tr.raias.values()].some((r) => r.waiting);
+    if (!anyResting) {
+      tr.masterRunning = false;
+      stopMasterTicker();
+      syncStateBadge(false);
+      syncStartBtn(false);
+      syncStopBtn(true, "Zerar");
+    }
   }
 }
 
@@ -1053,6 +1112,8 @@ function buildRaias() {
       waiting: false,
       waitMs: 0,
       waitLabel: "",
+      restAlert: false,
+      currentSplits: [],
       lastSplitMs: null,
       lastIsPr: false,
       done: false,
@@ -1067,6 +1128,13 @@ function startMaster() {
   const now = Date.now();
   tr.masterStartedAt = now - tr.masterElapsedMs;
   if (!tr.sessionStartedAt) tr.sessionStartedAt = new Date().toISOString();
+  if (tr.config.modo === 2) {
+    tr.raias.forEach((raia) => {
+      if (!raia.done && !raia.waiting && raia.startedAt === 0) {
+        raia.startedAt = now;
+      }
+    });
+  }
   if (tr.config.modo === 3) {
     tr.waves.forEach((w) => {
       if (!w.started) {
@@ -1076,7 +1144,11 @@ function startMaster() {
   }
   syncStateBadge(true);
   syncStartBtn(true);
-  syncStopBtn(false, "Parar/Zerar");
+  if (tr.config.modo === 2) {
+    syncStopBtn(!!tr.m2SelectedAtletaId, "Parar");
+  } else {
+    syncStopBtn(false, "Parar");
+  }
   startMasterTicker();
   api.logAction("Treino iniciado no SwimBase.");
 }
@@ -1105,6 +1177,8 @@ function resetMaster() {
     raia.waiting = false;
     raia.waitMs = 0;
     raia.waitLabel = "";
+    raia.restAlert = false;
+    raia.currentSplits = [];
     raia.lastSplitMs = null;
     raia.lastIsPr = false;
     raia.tempos = [];
@@ -1153,8 +1227,36 @@ function startMasterTicker() {
 }
 
 function tickModo2() {
-  /* M2 novo: cronômetro mestre controla tudo via startMasterTicker.
-     Sem timers individuais por atleta. */
+  const now = Date.now();
+  tr.raias.forEach((raia) => {
+    if (raia.done) return;
+    if (raia.waiting) {
+      raia.waitMs = Math.max(0, raia.waitMs - 30);
+      if (raia.waitMs <= 0) {
+        raia.waiting = false;
+        raia.restAlert = false;
+        raia.waitLabel = "";
+        raia.startedAt = 0;
+        updateRaiaRow(raia);
+        if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
+          tr.m2SelectedAtletaId = raia.atletaId;
+          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
+            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
+          });
+          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
+          const lastEl = row?.querySelector(".sb-raia-last");
+          if (lastEl) lastEl.textContent = "Pronto";
+          if (tr.masterRunning) syncStopBtn(true, "Parar");
+        }
+      } else {
+        raia.restAlert = raia.waitMs <= 5000;
+        raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
+        updateRaiaRow(raia);
+      }
+    } else if (raia.startedAt > 0 && tr.masterRunning) {
+      updateRaiaRow(raia);
+    }
+  });
 }
 
 function tickModo1() {
@@ -1472,12 +1574,26 @@ function updateRaiaRow(raia) {
   }
 
   /* Modo 2 */
+  row.classList.toggle("rest-alert", !!raia.restAlert);
   if (timeEl) {
-    timeEl.innerHTML = raia.lastSplitMs != null
-      ? maskTimeHTML(msToDisplay(raia.lastSplitMs))
-      : maskTimeHTML(msToDisplay(0));
+    if (raia.waiting) {
+      const secs = Math.ceil(raia.waitMs / 1000);
+      timeEl.innerHTML = raia.restAlert
+        ? `<span class="rest-countdown">${secs}</span>`
+        : maskTimeHTML(msToDisplay(raia.waitMs));
+    } else if (raia.startedAt > 0 && tr.masterRunning) {
+      timeEl.innerHTML = maskTimeHTML(msToDisplay(Date.now() - raia.startedAt));
+    } else if (raia.lastSplitMs != null) {
+      timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.lastSplitMs));
+    } else {
+      timeEl.innerHTML = maskTimeHTML(msToDisplay(0));
+    }
   }
-  if (tagEl) tagEl.textContent = raia.done ? "✓" : "—";
+  if (tagEl) {
+    if (raia.done) tagEl.textContent = "✓";
+    else if (raia.waiting) tagEl.textContent = `${raia.rep - 1}/${tr.config.repeticoes}`;
+    else tagEl.textContent = `Rep ${raia.rep}/${tr.config.repeticoes}`;
+  }
   if (splitsEl) {
     if (raia.tempos.length > 0) {
       splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
@@ -1487,14 +1603,19 @@ function updateRaiaRow(raia) {
     }
   }
   if (lastEl) {
-    if (raia.done)
+    if (raia.done) {
       lastEl.innerHTML = raia.lastIsPr
         ? `<span class="pr-badge">PR!</span> ${msToDisplay(raia.lastSplitMs)}`
-        : msToDisplay(raia.lastSplitMs);
-    else if (tr.m2SelectedAtletaId === raia.atletaId)
+        : raia.tempos.map((t) => t).join(" / ");
+    } else if (raia.waiting) {
+      lastEl.textContent = raia.waitLabel;
+    } else if (tr.m2SelectedAtletaId === raia.atletaId) {
       lastEl.textContent = "Selecionado";
-    else
+    } else if (raia.startedAt > 0 && tr.masterRunning) {
+      lastEl.textContent = `Rep ${raia.rep}/${tr.config.repeticoes}`;
+    } else {
       lastEl.textContent = "Toque para selecionar";
+    }
   }
 }
 

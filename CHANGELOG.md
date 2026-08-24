@@ -18,6 +18,26 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [0.20.0] - 2026-08-23
+### Added
+- **M2 multi-rep**: atletas agora realizam N repetições com descanso individual (configurável)
+- **Relógio individual por atleta**: cada linha exibe o tempo individual do atleta nadando
+- **Countdown de descanso individual**: cada atleta tem sua contagem regressiva de descanso
+- **Alerta visual 5s**: borda vermelha pulsante + contagem visual nos últimos 5 segundos do descanso
+- **Split intermediário**: botão Iniciar/Split grava volta/passagem quando prova >25m
+- **Parar grava tempo final**: botão Parar grava o tempo do atleta selecionado e inicia descanso
+- **Hold Parar 3s**: pressionar e segurar o botão Parar por 3 segundos reseta tudo
+- **Auto-seleção pós-descanso**: atleta é automaticamente selecionado quando o descanso termina
+
+### Changed
+- **M2 fluxo refeito**: Iniciar → nadar → Split (volta) → Parar (final + descanso) → Iniciar (próxima rep)
+- **Botão Parar habilitado durante nadada**: Parar só fica ativo quando há atleta selecionado nadando
+- **Hint M2 atualizado**: "Iniciar para começar · Split para volta · Parar para finalizar"
+- **Info bar M2**: mostra descanso e número de repetições
+
+### Fixed
+- Botão Parar agora inicia descanso individual ao invés de pausar o relógio em M2
+
 ## [v0.19.7] - 2026-08-22
 ### Fixed
 - **M2: split só pelo botão, seleção por toque**: fluxo refeito. Toque na
