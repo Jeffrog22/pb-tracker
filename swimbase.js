@@ -516,8 +516,6 @@ const tr = {
   masterElapsedMs: 0,
   sessionStartedAt: null,
   m2SelectedAtletaId: null,
-  m2SyncActive: false,
-  m2SyncMs: 0,
 };
 
 async function renderSbTreino() {
@@ -1177,8 +1175,6 @@ function resetMaster() {
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
-  tr.m2SyncActive = false;
-  tr.m2SyncMs = 0;
   tr.raias.forEach((raia) => {
     raia.elapsedMs = 0;
     raia.startedAt = 0;
@@ -1240,79 +1236,48 @@ function startMasterTicker() {
 function tickModo2() {
   const now = Date.now();
 
-  if (tr.m2SyncActive) {
-    tr.m2SyncMs = Math.max(0, tr.m2SyncMs - 30);
-    let allDone = true;
-    tr.raias.forEach((raia) => {
-      if (!raia.waiting) return;
-      raia.waitMs = tr.m2SyncMs;
-      raia.restAlert = tr.m2SyncMs <= 5000;
-      raia.waitLabel = `Descanso ${Math.ceil(tr.m2SyncMs / 1000)}s`;
-      updateRaiaRow(raia);
-      if (tr.m2SyncMs > 0) allDone = false;
-    });
-    if (allDone) {
-      tr.m2SyncActive = false;
-      tr.raias.forEach((raia) => {
-        if (!raia.waiting) return;
-        raia.waiting = false;
-        raia.frozen = false;
-        raia.restAlert = false;
-        raia.waitLabel = "";
-        raia.startedAt = 0;
-        updateRaiaRow(raia);
-        if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
-          tr.m2SelectedAtletaId = raia.atletaId;
-          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
-            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
-          });
-          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
-          const lastEl = row?.querySelector(".sb-raia-last");
-          if (lastEl) lastEl.textContent = "Pronto";
-          if (tr.masterRunning) syncStopBtn(true, "Parar");
-        }
-      });
-      const allFinished = [...tr.raias.values()].every((r) => r.done || r.waiting);
-      if (allFinished) {
-        tr.masterRunning = false;
-        syncStateBadge(false);
-        syncStartBtn(false);
-        syncStopBtn(true, "Zerar");
-        updateGroupHeader();
-      }
-    }
-    return;
-  }
-
   tr.raias.forEach((raia) => {
     if (raia.done) return;
     if (raia.waiting) {
-      if (!raia.frozen) {
-        raia.waitMs = Math.max(0, raia.waitMs - 30);
-      }
-      if (!raia.frozen && raia.waitMs <= 10000) {
-        raia.frozen = true;
-        raia.restAlert = true;
-      }
-      if (raia.frozen) {
-        raia.restAlert = true;
-        raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
-        updateRaiaRow(raia);
-      } else if (raia.waitMs <= 0) {
-        raia.waiting = false;
-        raia.restAlert = false;
-        raia.waitLabel = "";
-        raia.startedAt = 0;
-        updateRaiaRow(raia);
-        if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
-          tr.m2SelectedAtletaId = raia.atletaId;
-          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
-            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
+      if (raia.frozen) return;
+      raia.waitMs = Math.max(0, raia.waitMs - 30);
+      if (raia.waitMs <= 0) {
+        const othersResting = [...tr.raias.values()].filter(
+          (r) => r.waiting && r !== raia && r.waitMs > 0
+        );
+        if (othersResting.length > 0 && othersResting.some((r) => r.waitMs <= 10000)) {
+          raia.frozen = true;
+          raia.waitMs = 0;
+          raia.restAlert = true;
+          raia.waitLabel = "Aguardando...";
+          updateRaiaRow(raia);
+        } else {
+          raia.waiting = false;
+          raia.frozen = false;
+          raia.restAlert = false;
+          raia.waitLabel = "";
+          raia.startedAt = 0;
+          updateRaiaRow(raia);
+          if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
+            tr.m2SelectedAtletaId = raia.atletaId;
+            document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
+              row.classList.toggle("selected", row.dataset.id === raia.atletaId);
+            });
+            const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
+            const lastEl = row?.querySelector(".sb-raia-last");
+            if (lastEl) lastEl.textContent = "Pronto";
+            if (tr.masterRunning) syncStopBtn(true, "Parar");
+          }
+          tr.raias.forEach((r) => {
+            if (r.waiting && r.frozen) {
+              r.waiting = false;
+              r.frozen = false;
+              r.restAlert = false;
+              r.waitLabel = "";
+              r.startedAt = 0;
+              updateRaiaRow(r);
+            }
           });
-          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
-          const lastEl = row?.querySelector(".sb-raia-last");
-          if (lastEl) lastEl.textContent = "Pronto";
-          if (tr.masterRunning) syncStopBtn(true, "Parar");
         }
       } else {
         raia.restAlert = raia.waitMs <= 5000;
@@ -1323,12 +1288,6 @@ function tickModo2() {
       updateRaiaRow(raia);
     }
   });
-
-  const resting = [...tr.raias.values()].filter((r) => r.waiting);
-  if (resting.length > 0 && resting.every((r) => r.frozen)) {
-    tr.m2SyncActive = true;
-    tr.m2SyncMs = Math.min(...resting.map((r) => r.waitMs));
-  }
 }
 
 function tickModo1() {
