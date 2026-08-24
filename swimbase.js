@@ -134,7 +134,7 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbMasterStartBtn")
     ?.addEventListener("click", () => {
-      if (tr.config.modo === 2 && tr.masterRunning) {
+      if (tr.config.modo === 2 && tr.masterRunning && tr.config.distancia >= 50) {
         recordM2Split();
       } else {
         startMaster();
@@ -942,7 +942,8 @@ function syncStartBtn(running) {
   if (tr.config.modo === 2) {
     const sel = tr.raias.get(tr.m2SelectedAtletaId);
     const frozen = sel && sel.waiting && sel.frozen;
-    if (label) label.textContent = running ? "Split" : "Iniciar";
+    const canSplit = running && tr.config.distancia >= 50;
+    if (label) label.textContent = canSplit ? "Split" : "Iniciar";
     if (btn) btn.disabled = frozen;
   } else {
     if (label) label.textContent = running ? "Parar" : "Iniciar";
@@ -1002,6 +1003,7 @@ function selectM2Atleta(atletaId) {
 }
 
 function recordM2Split() {
+  if (tr.config.distancia < 50) return;
   const raia = tr.raias.get(tr.m2SelectedAtletaId);
   if (!raia || raia.done || raia.waiting || !tr.masterRunning || !raia.startedAt) return;
   const splitMs = Date.now() - raia.startedAt;
@@ -1281,7 +1283,16 @@ function tickModo2() {
               updateRaiaRow(r);
             }
           });
-          syncStartBtn(tr.masterRunning);
+          const anyResting = [...tr.raias.values()].some((r) => r.waiting);
+          if (!anyResting && tr.masterRunning) {
+            tr.masterRunning = false;
+            stopMasterTicker();
+            syncStateBadge(false);
+            syncStartBtn(false);
+            syncStopBtn(true, "Zerar");
+          } else {
+            syncStartBtn(tr.masterRunning);
+          }
         }
       } else {
         raia.restAlert = raia.waitMs <= 5000;
