@@ -516,6 +516,8 @@ const tr = {
   masterElapsedMs: 0,
   sessionStartedAt: null,
   m2SelectedAtletaId: null,
+  m2SyncActive: false,
+  m2SyncMs: 0,
 };
 
 async function renderSbTreino() {
@@ -1024,6 +1026,7 @@ function recordM2Final() {
     raia.waiting = true;
     raia.waitMs = tr.config.descanso * 1000;
     raia.restAlert = false;
+    raia.frozen = false;
     raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
     raia.startedAt = 0;
   } else {
@@ -1117,6 +1120,7 @@ function buildRaias() {
       waitMs: 0,
       waitLabel: "",
       restAlert: false,
+      frozen: false,
       currentSplits: [],
       lastSplitMs: null,
       lastIsPr: false,
@@ -1173,6 +1177,8 @@ function resetMaster() {
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
+  tr.m2SyncActive = false;
+  tr.m2SyncMs = 0;
   tr.raias.forEach((raia) => {
     raia.elapsedMs = 0;
     raia.startedAt = 0;
@@ -1182,6 +1188,7 @@ function resetMaster() {
     raia.waitMs = 0;
     raia.waitLabel = "";
     raia.restAlert = false;
+    raia.frozen = false;
     raia.currentSplits = [];
     raia.lastSplitMs = null;
     raia.lastIsPr = false;
@@ -1232,11 +1239,66 @@ function startMasterTicker() {
 
 function tickModo2() {
   const now = Date.now();
+
+  if (tr.m2SyncActive) {
+    tr.m2SyncMs = Math.max(0, tr.m2SyncMs - 30);
+    let allDone = true;
+    tr.raias.forEach((raia) => {
+      if (!raia.waiting) return;
+      raia.waitMs = tr.m2SyncMs;
+      raia.restAlert = tr.m2SyncMs <= 5000;
+      raia.waitLabel = `Descanso ${Math.ceil(tr.m2SyncMs / 1000)}s`;
+      updateRaiaRow(raia);
+      if (tr.m2SyncMs > 0) allDone = false;
+    });
+    if (allDone) {
+      tr.m2SyncActive = false;
+      tr.raias.forEach((raia) => {
+        if (!raia.waiting) return;
+        raia.waiting = false;
+        raia.frozen = false;
+        raia.restAlert = false;
+        raia.waitLabel = "";
+        raia.startedAt = 0;
+        updateRaiaRow(raia);
+        if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
+          tr.m2SelectedAtletaId = raia.atletaId;
+          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
+            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
+          });
+          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
+          const lastEl = row?.querySelector(".sb-raia-last");
+          if (lastEl) lastEl.textContent = "Pronto";
+          if (tr.masterRunning) syncStopBtn(true, "Parar");
+        }
+      });
+      const allFinished = [...tr.raias.values()].every((r) => r.done || r.waiting);
+      if (allFinished) {
+        tr.masterRunning = false;
+        syncStateBadge(false);
+        syncStartBtn(false);
+        syncStopBtn(true, "Zerar");
+        updateGroupHeader();
+      }
+    }
+    return;
+  }
+
   tr.raias.forEach((raia) => {
     if (raia.done) return;
     if (raia.waiting) {
-      raia.waitMs = Math.max(0, raia.waitMs - 30);
-      if (raia.waitMs <= 0) {
+      if (!raia.frozen) {
+        raia.waitMs = Math.max(0, raia.waitMs - 30);
+      }
+      if (!raia.frozen && raia.waitMs <= 10000) {
+        raia.frozen = true;
+        raia.restAlert = true;
+      }
+      if (raia.frozen) {
+        raia.restAlert = true;
+        raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
+        updateRaiaRow(raia);
+      } else if (raia.waitMs <= 0) {
         raia.waiting = false;
         raia.restAlert = false;
         raia.waitLabel = "";
@@ -1261,6 +1323,12 @@ function tickModo2() {
       updateRaiaRow(raia);
     }
   });
+
+  const resting = [...tr.raias.values()].filter((r) => r.waiting);
+  if (resting.length > 0 && resting.every((r) => r.frozen)) {
+    tr.m2SyncActive = true;
+    tr.m2SyncMs = Math.min(...resting.map((r) => r.waitMs));
+  }
 }
 
 function tickModo1() {
@@ -1599,8 +1667,12 @@ function updateRaiaRow(raia) {
     else tagEl.textContent = `Rep ${raia.rep}/${tr.config.repeticoes}`;
   }
   if (splitsEl) {
-    if (raia.tempos.length > 0) {
-      splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
+    const allTempos = [
+      ...raia.tempos.map((t) => maskTimeHTML(t)),
+      ...raia.currentSplits.map((s) => maskTimeHTML(msToDisplay(s))),
+    ];
+    if (allTempos.length > 0) {
+      splitsEl.innerHTML = allTempos.join("/");
       splitsEl.hidden = false;
     } else {
       splitsEl.hidden = true;
