@@ -1618,6 +1618,8 @@ function updateRaiaRow(raia) {
         : maskTimeHTML(msToDisplay(raia.waitMs));
     } else if (raia.startedAt > 0 && tr.masterRunning) {
       timeEl.innerHTML = maskTimeHTML(msToDisplay(Date.now() - raia.startedAt));
+    } else if (!raia.done && raia.startedAt === 0) {
+      timeEl.textContent = "Pronto";
     } else if (raia.lastSplitMs != null) {
       timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.lastSplitMs));
     } else {
