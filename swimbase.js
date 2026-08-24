@@ -1049,6 +1049,7 @@ function recordM2Final() {
       stopMasterTicker();
     }
     syncStopBtn(true, "Zerar");
+    updateGroupHeader();
   } else {
     autoSelectNextM2();
   }
