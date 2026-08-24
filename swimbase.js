@@ -1040,11 +1040,14 @@ function recordM2Final() {
   api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)} (rep ${raia.rep - (raia.done ? 0 : 1)}/${tr.config.repeticoes}).`);
 
   const allFinished = [...tr.raias.values()].every((r) => r.done || r.waiting);
+  const anyResting = [...tr.raias.values()].some((r) => r.waiting);
   if (allFinished) {
     tr.masterRunning = false;
-    stopMasterTicker();
     syncStateBadge(false);
     syncStartBtn(false);
+    if (!anyResting) {
+      stopMasterTicker();
+    }
     syncStopBtn(true, "Zerar");
   } else {
     autoSelectNextM2();
