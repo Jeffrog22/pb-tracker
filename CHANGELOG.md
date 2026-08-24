@@ -18,6 +18,55 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [0.20.7] - 2026-08-24
+### Fixed
+- **Relógio para quando todos são liberados**: ao liberar atletas congelados,
+  se ninguém está mais descansando (`!anyResting`), o relógio mestre para
+  automaticamente e o botão vira "Iniciar".
+- **Split só para dist ≥ 50m**: `recordM2Split` retorna imediatamente se
+  `tr.config.distancia < 50`. `syncStartBtn` mostra "Iniciar" (não "Split")
+  quando distância < 50m. Handler do botão ignora Split para < 50m.
+
+## [0.20.6] - 2026-08-24
+### Fixed
+- **Atletas liberados de frozen mostram "Pronto"**: `updateRaiaRow` M2 agora
+  exibe "Pronto" no `timeEl` quando `!done && startedAt === 0` (atleta
+  liberado, pronto para próxima rep). Antes, caía no branch `lastSplitMs`
+  e mostrava o tempo da rep anterior.
+
+## [0.20.5] - 2026-08-24
+### Fixed
+- **Bloquear Iniciar para atletas congelados**: `syncStartBtn` desabilita o
+  botão quando o atleta selecionado tem `waiting && frozen`.
+- **Limpa seleção ao congelar**: se o atleta selecionado é congelado,
+  `m2SelectedAtletaId` é limpo (botão fica desabilitado).
+- **Autoseleciona último liberado**: ao liberar congelados pelo último atleta
+  que termina descanso, o último é autoselecionado (não os congelados).
+
+## [0.20.4] - 2026-08-24
+### Fixed
+- **Sync descanso M2 corrigido**: congela atleta em 0s quando outro tem
+  ≤10s restantes. Libera atleta independentemente quando todos os outros
+  têm >10s. Quando último atleta termina, libera todos os congelados
+  junto. Removida sync global anterior (congelava em <10s, incorreto).
+
+## [0.20.3] - 2026-08-24
+### Fixed
+- **Voltagens do Split visíveis e descansos sincronizados**: atletas dentro
+  de ≤10s de diferença são sincronizados (congelados juntos, liberados
+  juntos). Header do cronômetro atualiza contador de concluídos.
+
+## [0.20.2] - 2026-08-24
+### Fixed
+- **Header M2 atualiza contador**: `updateGroupHeader` agora é chamado
+  corretamente após mudanças de estado no M2 (atualiza concluídos).
+
+## [0.20.1] - 2026-08-24
+### Fixed
+- **Countdown de descanso M2 não congela mais ao final da repetição**:
+  o ticker continua processando o descanso mesmo quando `masterRunning`
+  é setado para `false` pelo `allFinished`.
+
 ## [0.20.0] - 2026-08-23
 ### Added
 - **M2 multi-rep**: atletas agora realizam N repetições com descanso individual (configurável)

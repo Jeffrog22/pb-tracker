@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.19.7
+- **Versão atual:** v0.20.7
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -148,6 +148,14 @@ Regras:
   `swimbase-registros-<YYYYMMDD>.xlsx` / `swimbase-prs-<YYYYMMDD>.xlsx`.
 - **Categoria automática** por idade (`categoriaPorIdade`/`calcularCategoria`):
   tabela Pré-Mirim → M80+; a hint é atualizada no `#sbAtletaNasc` (change).
+- **M2 sync de descanso (≤10s)**: atletas com diferença ≤10s no descanso são
+  sincronizados — congelados em 0s quando outro tem ≤10s, liberados juntos
+  quando o último termina. `tickModo2` gerencia `raia.frozen`/`raia.waiting`.
+  Relógio mestre para automaticamente quando todos são liberados (`!anyResting`).
+  Botão "Iniciar" disponível para próxima rep.
+- **M2 split só ≥ 50m**: `recordM2Split` retorna se `tr.config.distancia < 50`.
+  `syncStartBtn` mostra "Iniciar" (não "Split") para dist < 50m. Split
+  intermédiario só faz sentido em provas com mais de uma volta.
 
 ---
 
@@ -2204,3 +2212,90 @@ Regras:
   (após o done).
 - Commit `fix: cascata M2 - split so pelo botao e selecao por toque`
   → PATCH → **v0.19.7** → push origin master + tag.
+
+---
+
+## Sessão: 23/08/2026 — M2 multi-rep: descanso individual, relógio por atleta e hold Parar 3s (v0.20.0)
+
+### O que foi feito
+- **M2 multi-rep completo**: atletas agora realizam N repetições (configurável)
+  com descanso individual. Cada atleta tem seu próprio timer de descanso.
+- **Relógio individual por atleta**: cada linha exibe o tempo individual
+  do atleta nadando (não mais o relógio compartilhado).
+- **Countdown de descanso individual**: cada atleta tem sua contagem
+  regressiva de descanso com alerta visual 5s (borda vermelha pulsante).
+- **Split intermediário**: botão Iniciar/Split grava volta/passagem
+  quando prova >25m.
+- **Parar grava tempo final**: botão Parar grava o tempo do atleta
+  selecionado e inicia descanso individual.
+- **Hold Parar 3s**: pressionar e segurar o botão Parar por 3 segundos
+  reseta tudo (via `pointerdown`/`pointerup` com `setTimeout(3000)`).
+- **Auto-seleção pós-descanso**: atleta é automaticamente selecionado
+  quando o descanso termina.
+- **`tempos` armazena display strings**: `raia.tempos` guarda `msToDisplay()`
+  para consistência com `parseTimeToMs()` do exporter. `currentSplits`
+  armazena raw ms.
+
+### Fluxo M2 atual
+1. Toque no atleta (parado) → seleciona (borda ciano)
+2. Clica "Iniciar" → cronômetro começa, label vira "Split"
+3. Clica "Split" → grava volta do selecionado ✓, auto-seleciona próximo
+4. Clica "Parar" → grava tempo final + inicia descanso individual
+5. Hold Parar 3s → reseta tudo
+6. Descanso termina → atleta autoselecionado, label "Pronto"
+
+### Arquivos
+- `swimbase.js` (M2 multi-rep completo, `currentSplits`, `tempos` como display)
+- `index.html`, `styles.css` (alterados)
+- `app.js` (APP_VERSION), `sw.js` (cache v48→v49)
+- `CHANGELOG.md` (v0.20.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Commit `feat: M2 multi-rep com descanso individual, relogio por atleta e hold Parar 3s`
+  → MINOR → **v0.20.0** → push origin master + tag.
+
+---
+
+## Sessão: 24/08/2026 — Fix cascata M2: sync, congelamento, botões e display (v0.20.1–v0.20.7)
+
+### O que foi feito (7 commits em sequência)
+- **v0.20.1**: countdown de descanso M2 não congela mais ao final da
+  repetição — ticker continua processando descanso mesmo com `masterRunning = false`.
+- **v0.20.2**: header M2 atualiza contador de concluídos ao final da
+  repetição (`updateGroupHeader` chamado corretamente).
+- **v0.20.3**: voltagens do Split visíveis e descansos sincronizados
+  em ≤10s — atletas com diferença ≤10s são congelados/liberados juntos.
+  Nova `tickModo2` com sync global (`m2SyncActive`/`m2SyncMs`).
+- **v0.20.4**: sync descanso M2 corrigido — congela em 0s quando outro tem
+  ≤10s, libera independentemente quando >10s, último libera todos os
+  congelados. Removida sync global anterior.
+- **v0.20.5**: bloquear Iniciar para atletas congelados (`syncStartBtn`
+  desabilita quando `waiting && frozen`), limpa seleção ao congelar,
+  autoseleciona último liberado.
+- **v0.20.6**: `updateRaiaRow` M2 exibe "Pronto" no `timeEl` quando
+  `!done && startedAt === 0` — antes mostrava tempo da rep anterior.
+- **v0.20.7**: relógio mestre para quando todos são liberados
+  (`!anyResting && masterRunning` → `stopMasterTicker`), split só para
+  dist ≥ 50m (`recordM2Split` retorna se `< 50`), `syncStartBtn` mostra
+  "Iniciar" (não "Split") para < 50m.
+
+### Fluxo M2 final
+1. Toque no atleta (parado) → seleciona (borda ciano)
+2. Clica "Iniciar" → cronômetro começa
+3. Clica "Split" → grava volta (se dist ≥ 50m), auto-seleciona próximo
+4. Clica "Parar" → grava tempo final + inicia descanso individual
+5. Descanso termina → libera atleta (mostra "Pronto")
+6. Congelados (≤10s diff) → liberados quando último termina
+7. Todos liberados → relógio para, botão vira "Iniciar"
+
+### Arquivos
+- `swimbase.js` (tickModo2 sync, recordM2Final, syncStartBtn, updateRaiaRow)
+- `app.js` (APP_VERSION), `sw.js` (cache v49→v52)
+- `CHANGELOG.md` (v0.20.1–v0.20.7), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros (a cada commit)
+- Commits `fix:` → PATCH → **v0.20.1** a **v0.20.7** → push origin master + tag.
