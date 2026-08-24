@@ -940,8 +940,10 @@ function syncStartBtn(running) {
   const label = document.getElementById("sbStartBtnLabel");
   const btn = document.getElementById("sbMasterStartBtn");
   if (tr.config.modo === 2) {
+    const sel = tr.raias.get(tr.m2SelectedAtletaId);
+    const frozen = sel && sel.waiting && sel.frozen;
     if (label) label.textContent = running ? "Split" : "Iniciar";
-    if (btn) btn.disabled = false;
+    if (btn) btn.disabled = frozen;
   } else {
     if (label) label.textContent = running ? "Parar" : "Iniciar";
     if (btn) btn.disabled = false;
@@ -1250,6 +1252,9 @@ function tickModo2() {
           raia.waitMs = 0;
           raia.restAlert = true;
           raia.waitLabel = "Aguardando...";
+          if (tr.m2SelectedAtletaId === raia.atletaId) {
+            tr.m2SelectedAtletaId = null;
+          }
           updateRaiaRow(raia);
         } else {
           raia.waiting = false;
@@ -1258,16 +1263,14 @@ function tickModo2() {
           raia.waitLabel = "";
           raia.startedAt = 0;
           updateRaiaRow(raia);
-          if (!tr.m2SelectedAtletaId || tr.raias.get(tr.m2SelectedAtletaId)?.done) {
-            tr.m2SelectedAtletaId = raia.atletaId;
-            document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
-              row.classList.toggle("selected", row.dataset.id === raia.atletaId);
-            });
-            const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
-            const lastEl = row?.querySelector(".sb-raia-last");
-            if (lastEl) lastEl.textContent = "Pronto";
-            if (tr.masterRunning) syncStopBtn(true, "Parar");
-          }
+          tr.m2SelectedAtletaId = raia.atletaId;
+          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
+            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
+          });
+          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
+          const lastEl = row?.querySelector(".sb-raia-last");
+          if (lastEl) lastEl.textContent = "Pronto";
+          if (tr.masterRunning) syncStopBtn(true, "Parar");
           tr.raias.forEach((r) => {
             if (r.waiting && r.frozen) {
               r.waiting = false;
@@ -1278,6 +1281,7 @@ function tickModo2() {
               updateRaiaRow(r);
             }
           });
+          syncStartBtn(tr.masterRunning);
         }
       } else {
         raia.restAlert = raia.waitMs <= 5000;
