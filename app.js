@@ -399,7 +399,7 @@ function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("./sw.js")
+      .register(`./sw.js?v=${APP_VERSION}`)
       .then((registration) => {
         swRegistration = registration;
         setupServiceWorkerUpdateFlow(registration);
