@@ -134,7 +134,8 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbMasterStartBtn")
     ?.addEventListener("click", () => {
-      if (tr.config.modo === 2 && tr.masterRunning && tr.config.distancia >= 50) {
+      const sel = tr.raias.get(tr.m2SelectedAtletaId);
+      if (tr.config.modo === 2 && tr.masterRunning && tr.config.distancia >= 50 && sel?.startedAt) {
         recordM2Split();
       } else {
         startMaster();
@@ -942,7 +943,7 @@ function syncStartBtn(running) {
   if (tr.config.modo === 2) {
     const sel = tr.raias.get(tr.m2SelectedAtletaId);
     const frozen = sel && sel.waiting && sel.frozen;
-    const canSplit = running && tr.config.distancia >= 50;
+    const canSplit = running && tr.config.distancia >= 50 && sel?.startedAt;
     if (label) label.textContent = canSplit ? "Split" : "Iniciar";
     if (btn) btn.disabled = frozen;
   } else {
@@ -1263,7 +1264,7 @@ function tickModo2() {
           raia.frozen = false;
           raia.restAlert = false;
           raia.waitLabel = "";
-          raia.startedAt = tr.masterRunning ? Date.now() : 0;
+          raia.startedAt = 0;
           updateRaiaRow(raia);
           tr.m2SelectedAtletaId = raia.atletaId;
           document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
@@ -1271,7 +1272,7 @@ function tickModo2() {
           });
           const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
           const lastEl = row?.querySelector(".sb-raia-last");
-          if (lastEl) lastEl.textContent = tr.masterRunning ? "Selecionado" : "Pronto";
+          if (lastEl) lastEl.textContent = "Pronto";
           if (tr.masterRunning) syncStopBtn(true, "Parar");
           tr.raias.forEach((r) => {
             if (r.waiting && r.frozen) {
@@ -1279,7 +1280,7 @@ function tickModo2() {
               r.frozen = false;
               r.restAlert = false;
               r.waitLabel = "";
-              r.startedAt = tr.masterRunning ? Date.now() : 0;
+              r.startedAt = 0;
               updateRaiaRow(r);
             }
           });

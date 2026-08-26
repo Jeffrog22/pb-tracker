@@ -18,14 +18,14 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
-## [0.20.8] - 2026-08-25
+## [0.20.9] - 2026-08-25
 ### Fixed
 - **Iniciar liberado para atletas fora do intervalo M2**: ao liberar atleta
-  do descanso com relógio mestre rodando, `startedAt` agora recebe
-  `Date.now()` em vez de 0 — o botão "Split" funciona imediatamente.
-  Correção aplicada tanto no release direto quanto no unfreeze de atletas
-  congelados em `tickModo2()`. `lastEl` exibe "Selecionado" (mestre
-  rodando) ou "Pronto" (mestre parado).
+  do descanso com relógio mestre rodando, `startedAt` continua em 0
+  (atleta não começa nadar sozinho). `syncStartBtn` agora só mostra
+  "Split" se o atleta selecionado já tem `startedAt > 0` — caso
+  contrário mostra "Iniciar", que chama `startMaster()` e atribui
+  `startedAt` para todos os prontos.
 
 ## [0.20.7] - 2026-08-24
 ### Fixed
