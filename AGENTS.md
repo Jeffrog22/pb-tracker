@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.20.7
+- **Versão atual:** v0.20.8
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -152,7 +152,9 @@ Regras:
   sincronizados — congelados em 0s quando outro tem ≤10s, liberados juntos
   quando o último termina. `tickModo2` gerencia `raia.frozen`/`raia.waiting`.
   Relógio mestre para automaticamente quando todos são liberados (`!anyResting`).
-  Botão "Iniciar" disponível para próxima rep.
+  Botão "Iniciar" disponível para próxima rep. Atletas liberados com mestre
+  rodando recebem `startedAt = Date.now()` (não 0) — botão "Split" funciona
+  imediatamente.
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `tr.config.distancia < 50`.
   `syncStartBtn` mostra "Iniciar" (não "Split") para dist < 50m. Split
   intermédiario só faz sentido em provas com mais de uma volta.
@@ -2299,3 +2301,37 @@ Regras:
 - `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
   0 erros (a cada commit)
 - Commits `fix:` → PATCH → **v0.20.1** a **v0.20.7** → push origin master + tag.
+
+---
+
+## Sessão: 25/08/2026 — Fix M2: startedAt ao liberar atleta do descanso com mestre rodando (v0.20.8)
+
+### O que foi feito
+- **Bug corrigido**: ao liberar atleta do descanso em `tickModo2()` com
+  relógio mestre rodando, `startedAt` recebia `0` — o botão "Split" aparecia
+  habilitado mas `recordM2Split()` retornava sem fazer nada (`!raia.startedAt`).
+- **Correção (3 pontos em `tickModo2()`):**
+  - **Release direto** (linha 1266): `raia.startedAt = tr.masterRunning ? Date.now() : 0`
+    — atleta liberado com mestre rodando começa a nadar imediatamente.
+  - **Unfreeze loop** (linha 1282): `r.startedAt = tr.masterRunning ? Date.now() : 0`
+    — atletas congelados descongelados também recebem `startedAt` correto.
+  - **`lastEl`** (linha 1274): exibe `"Selecionado"` quando mestre rodando,
+    `"Pronto"` quando parado (antes era sempre "Pronto").
+
+### Fluxo M2 corrigido
+1. Atleta A termina descanso, B ainda descansando (>10s) → A liberado
+2. `startedAt = Date.now()` (mestre rodando) → display mostra tempo correndo
+3. Botão "Split" funciona → `recordM2Split()` grava volta corretamente
+4. Se mestre parado → `startedAt = 0` → "Iniciar" chama `startMaster()`
+
+### Arquivos
+- `swimbase.js` (tickModo2: release + unfreeze + lastEl)
+- `app.js` (APP_VERSION → 0.20.8), `sw.js` (cache v52 → v53)
+- `CHANGELOG.md` (v0.20.8), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: startedAt ao liberar atleta do descanso com mestre rodando no M2`
+  → PATCH → **v0.20.8** → push origin master + tag.

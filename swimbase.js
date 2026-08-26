@@ -1263,7 +1263,7 @@ function tickModo2() {
           raia.frozen = false;
           raia.restAlert = false;
           raia.waitLabel = "";
-          raia.startedAt = 0;
+          raia.startedAt = tr.masterRunning ? Date.now() : 0;
           updateRaiaRow(raia);
           tr.m2SelectedAtletaId = raia.atletaId;
           document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
@@ -1271,7 +1271,7 @@ function tickModo2() {
           });
           const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
           const lastEl = row?.querySelector(".sb-raia-last");
-          if (lastEl) lastEl.textContent = "Pronto";
+          if (lastEl) lastEl.textContent = tr.masterRunning ? "Selecionado" : "Pronto";
           if (tr.masterRunning) syncStopBtn(true, "Parar");
           tr.raias.forEach((r) => {
             if (r.waiting && r.frozen) {
@@ -1279,7 +1279,7 @@ function tickModo2() {
               r.frozen = false;
               r.restAlert = false;
               r.waitLabel = "";
-              r.startedAt = 0;
+              r.startedAt = tr.masterRunning ? Date.now() : 0;
               updateRaiaRow(r);
             }
           });
