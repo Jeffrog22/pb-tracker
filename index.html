@@ -148,8 +148,12 @@
         <div class="panel">
           <div class="section-head">
             <h3>Atletas</h3>
-            <button id="sbAddAtletaBtn" class="primary" type="button">Novo atleta</button>
+            <div class="section-actions">
+              <button id="sbImportCsvBtn" class="ghost" type="button">Importar CSV</button>
+              <button id="sbAddAtletaBtn" class="primary" type="button">Novo atleta</button>
+            </div>
           </div>
+          <input id="sbImportCsvInput" type="file" accept=".csv,text/csv" hidden />
           <div class="sb-turma-row">
             <select id="sbTurmaSelect" aria-label="Selecionar turma"></select>
             <button id="sbAddTurmaBtn" class="ghost" type="button">Nova turma</button>

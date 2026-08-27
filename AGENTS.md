@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.20.9
+- **Versão atual:** v0.21.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -2340,3 +2340,48 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: botao Iniciar liberado para atletas fora do intervalo M2`
   → PATCH → **v0.20.9** → push origin master + tag.
+
+---
+
+## Sessão: 27/08/2026 — Importação de turmas/atoletas via CSV no SwimBase (v0.21.0)
+
+### O que foi feito
+- **Botão "Importar CSV"** na tela de Atletas do SwimBase (`#screenSbAtletas`):
+  novo `#sbImportCsvBtn` (ghost) na `.section-head` ao lado de "Novo atleta";
+  `#sbImportCsvInput` (input `type="file"` oculto, `accept=".csv"`).
+- **`importTurmasFromCsv(text)`** (`swimbase.js`):
+  - Parse de CSV com separador `;`, BOM UTF-8, aspas duplas (escape `""`).
+  - Header obrigatório com coluna `Turma`; demais colunas opcionais:
+    `Dias` (`seg,ter,qua,qui,sex`), `Horario` (`HH:MM`), `Duracao` (min),
+    `Atleta`, `Nascimento` (`YYYY-MM-DD`), `Sexo` (`M`/`F`).
+  - Turma é mantida entre linhas (preenche só na 1ª linha do grupo;
+    linhas seguintes herdam).
+  - `findOrCreateTurma`: busca por nome normalizado; se não existe, cria
+    com `putAll`; se existe, reaproveita (atualiza dias/horário/duração
+    só se a turma não tinha definido).
+  - Atletas duplicados (mesmo nome normalizado + mesma turma) são ignorados.
+  - `putAll` para bulk insert (turmas e atletas separadamente).
+  - Feedback: `alert("Importado com sucesso: X turmas e Y atletas.")`.
+- **Bind no `initSwimBase`**: `#sbImportCsvBtn` dispara `csvInput.click()`;
+  `csvInput.change` lê o arquivo via `file.text()` e chama `importTurmasFromCsv`.
+- **`putAll` adicionado** ao import de `db.js` em `swimbase.js`.
+- **`sw.js`**: cache `pbtracker-v54` → **`pbtracker-v55`**.
+
+### Decisões (consultas do usuário)
+- Template CSV fornecido diretamente no chat (sem botão de download no app).
+- Formato: separador `;` (consistente com exports existentes).
+- Turmas existentes reaproveitadas; atletas duplicados ignorados.
+- Sem validação de dias/horário obrigatórios (tudo opcional exceto nome
+  da turma e, para atletas, o nome).
+
+### Arquivos
+- `index.html` (botão + input oculto), `swimbase.js` (import + binds + helpers)
+- `app.js` (APP_VERSION → 0.21.0), `sw.js` (cache v55)
+- `CHANGELOG.md` (v0.21.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: importacao de turmas e atletas via CSV no SwimBase`
+  → MINOR → **v0.21.0** → push origin master + tag.

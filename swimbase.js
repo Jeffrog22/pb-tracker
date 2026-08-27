@@ -1,6 +1,6 @@
 // swimbase.js — SwimBase (Tier 2): treino, atletas, turmas, PRs e análise.
 // MVP = Fase 1 do PDR-SwimBase.md. Cresce por slices (B1 → B5).
-import { STORES, getAll, get, put, remove } from "./db.js";
+import { STORES, getAll, get, put, putAll, remove } from "./db.js";
 import {
   attachClockMask,
   escapeHtml,
@@ -92,6 +92,22 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbAddTurmaBtn")
     ?.addEventListener("click", () => openTurmaDialog());
+  const csvBtn = document.getElementById("sbImportCsvBtn");
+  const csvInput = document.getElementById("sbImportCsvInput");
+  if (csvBtn && csvInput) {
+    csvBtn.addEventListener("click", () => csvInput.click());
+    csvInput.addEventListener("change", async () => {
+      const file = csvInput.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        await importTurmasFromCsv(text);
+      } catch {
+        alert("Erro ao ler o arquivo CSV.");
+      }
+      csvInput.value = "";
+    });
+  }
   document
     .getElementById("sbCloseAtletaDialog")
     ?.addEventListener("click", () => document.getElementById("sbAtletaDialog").close());
@@ -475,6 +491,173 @@ async function saveTurma(event) {
   renderTurmaSelects();
   renderAtletasList();
   api.logAction(`Turma salva: ${nome}.`);
+}
+
+function parseCsvLine(line) {
+  const cells = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ";") {
+        cells.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  cells.push(current);
+  return cells.map((c) => c.trim());
+}
+
+function parseDias(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter((d) => ["seg", "ter", "qua", "qui", "sex", "sab", "dom"].includes(d));
+}
+
+function findOrCreateTurma(nome, turmaMap, turmasNovas) {
+  const norm = normalizeText(nome);
+  if (turmaMap.has(norm)) return turmaMap.get(norm);
+  const existing = sw.turmas.find((t) => normalizeText(t.nome) === norm);
+  if (existing) {
+    turmaMap.set(norm, existing);
+    return existing;
+  }
+  const now = new Date().toISOString();
+  const turma = {
+    id: uid("turma"),
+    nome,
+    dias: [],
+    horario: "",
+    duracao: null,
+    professorId: api.state.activeProfile?.id || null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  turmaMap.set(norm, turma);
+  turmasNovas.push(turma);
+  return turma;
+}
+
+async function importTurmasFromCsv(text) {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length < 2) {
+    alert("O arquivo CSV está vazio ou não possui dados.");
+    return;
+  }
+  const header = parseCsvLine(lines[0]);
+  const colTurma = header.findIndex((h) => /^turma$/i.test(h));
+  const colDias = header.findIndex((h) => /^dias$/i.test(h));
+  const colHorario = header.findIndex((h) => /^horario$/i.test(h));
+  const colDuracao = header.findIndex((h) => /^duracao$/i.test(h));
+  const colAtleta = header.findIndex((h) => /^atleta$/i.test(h));
+  const colNasc = header.findIndex((h) => /^nascimento$/i.test(h));
+  const colSexo = header.findIndex((h) => /^sexo$/i.test(h));
+  if (colTurma === -1) {
+    alert("Cabeçalho inválido. É necessária a coluna 'Turma'.");
+    return;
+  }
+
+  const turmaMap = new Map();
+  const turmasNovas = [];
+  const atletasNovos = [];
+  let turmasCount = 0;
+  let atletasCount = 0;
+  let currentTurma = null;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCsvLine(lines[i]);
+    const turmaNome = (cells[colTurma] || "").trim();
+    const atletaNome = colAtleta !== -1 ? (cells[colAtleta] || "").trim() : "";
+
+    if (turmaNome) {
+      currentTurma = findOrCreateTurma(turmaNome, turmaMap, turmasNovas);
+      turmasCount++;
+      if (colDias !== -1) {
+        const dias = parseDias(cells[colDias]);
+        if (dias.length && !currentTurma.dias.length) currentTurma.dias = dias;
+      }
+      if (colHorario !== -1) {
+        const hor = (cells[colHorario] || "").trim();
+        if (hor && /^\d{2}:\d{2}$/.test(hor) && !currentTurma.horario) {
+          const [hh, mm] = hor.split(":").map(Number);
+          if (hh <= 23 && mm <= 59) currentTurma.horario = hor;
+        }
+      }
+      if (colDuracao !== -1) {
+        const dur = (cells[colDuracao] || "").trim();
+        if (dur && Number(dur) >= 1 && currentTurma.duracao == null) {
+          currentTurma.duracao = Number(dur);
+        }
+      }
+    }
+
+    if (!atletaNome || !currentTurma) continue;
+    const nasc = colNasc !== -1 ? (cells[colNasc] || "").trim() : "";
+    const sexo = colSexo !== -1 ? (cells[colSexo] || "").trim().toUpperCase() : "";
+    const dup = sw.atletas.find(
+      (a) => normalizeText(a.nome) === normalizeText(atletaNome) && a.turmaId === currentTurma.id
+    );
+    const dupNovo = atletasNovos.find(
+      (a) => normalizeText(a.nome) === normalizeText(atletaNome) && a.turmaId === currentTurma.id
+    );
+    if (dup || dupNovo) continue;
+    const now = new Date().toISOString();
+    atletasNovos.push({
+      id: uid("atleta"),
+      nome: atletaNome,
+      nomeNormalized: normalizeText(atletaNome),
+      dataNascimento: nasc || "",
+      categoria: calcularCategoria(nasc || ""),
+      sexo: ["M", "F"].includes(sexo) ? sexo : "",
+      turmaId: currentTurma.id,
+      observacoes: "",
+      status: "ativo",
+      professorId: api.state.activeProfile?.id || null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    atletasCount++;
+  }
+
+  if (!turmasNovas.length && !atletasNovos.length) {
+    alert("Nenhum dado novo para importar.");
+    return;
+  }
+
+  if (turmasNovas.length) await putAll(STORES.GROUPS, turmasNovas);
+  if (atletasNovos.length) await putAll(STORES.ATHLETES, atletasNovos);
+  sw.turmas = await getAll(STORES.GROUPS);
+  sw.atletas = await getAll(STORES.ATHLETES);
+  renderTurmaSelects();
+  renderAtletasList();
+  const parts = [];
+  if (turmasNovas.length) parts.push(`${turmasNovas.length} turma${turmasNovas.length > 1 ? "s" : ""}`);
+  if (atletasCount) parts.push(`${atletasCount} atleta${atletasCount > 1 ? "s" : ""}`);
+  alert(`Importado com sucesso: ${parts.join(" e ")}.`);
+  api.logAction(`CSV importado: ${parts.join(", ")}.`);
 }
 
 /* ---- Placeholders (B3/B5 preenchem) ---- */

@@ -18,6 +18,15 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [0.21.0] - 2026-08-27
+### Added
+- **Importação de turmas e atletas via CSV** no SwimBase: novo botão
+  "Importar CSV" na tela de Atletas que aceita arquivo `.csv` com turmas
+  e atletas prontos. Formato: separador `;`, colunas `Turma;Dias;Horario;
+  Duracao;Atleta;Nascimento;Sexo`. Turmas existentes (mesmo nome) são
+  reutilizadas; atletas duplicados (mesmo nome + turma) são ignorados.
+  Feedback com contagem de turmas/atletas importados.
+
 ## [0.20.9] - 2026-08-25
 ### Fixed
 - **Iniciar liberado para atletas fora do intervalo M2**: ao liberar atleta
