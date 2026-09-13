@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.21.0";
+const APP_VERSION = "0.22.0";
 
 const state = {
   teamName: "",
@@ -126,6 +126,8 @@ function init() {
   loadProfiles();
   loadHighContrast();
   bindHighContrast();
+  loadDarkMode();
+  bindDarkMode();
   bindOnlineStatus();
   renderVersionTags();
   renderNav();
@@ -319,6 +321,33 @@ function bindHighContrast() {
   const toggle = document.getElementById("highContrastToggle");
   if (!toggle) return;
   toggle.addEventListener("change", () => applyHighContrast(toggle.checked));
+}
+
+function loadDarkMode() {
+  let enabled = false;
+  try {
+    enabled = window.localStorage.getItem("pbtracker_dark_mode") === "1";
+  } catch (e) {
+    enabled = false;
+  }
+  const toggle = document.getElementById("darkModeToggle");
+  if (toggle) toggle.checked = enabled;
+  applyDarkMode(enabled);
+}
+
+function applyDarkMode(enabled) {
+  document.body.classList.toggle("dark", enabled);
+  try {
+    window.localStorage.setItem("pbtracker_dark_mode", enabled ? "1" : "0");
+  } catch (e) {
+    // ignore storage failures
+  }
+}
+
+function bindDarkMode() {
+  const toggle = document.getElementById("darkModeToggle");
+  if (!toggle) return;
+  toggle.addEventListener("change", () => applyDarkMode(toggle.checked));
 }
 
 function bindOnlineStatus() {

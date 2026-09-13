@@ -1115,8 +1115,8 @@ function syncStateBadge(running) {
   const badge = document.getElementById("sbMasterStateBadge");
   if (badge) {
     badge.textContent = running ? "Rodando" : "Parado";
-    badge.style.backgroundColor = running ? "#1a3a2a" : "#2a1b2e";
-    badge.style.color = running ? "#3fcb7a" : "#ff3366";
+    badge.classList.toggle("running", running);
+    badge.classList.toggle("stopped", !running);
   }
 }
 

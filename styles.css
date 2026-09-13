@@ -1,45 +1,138 @@
+/* ============================================================
+   PBTracker — Design System (identidade visual unificada)
+   Fonte: Inter · Paleta: Blue primary · Dark mode via body.dark
+   ============================================================ */
+
 :root {
-  /* Cores Principais */
-  --bg-main: #f2f2f2;
-  --bg-card: #ffffff;
-  --bg-header-timer: #081017;
+  /* --- Paleta Primary (Azul) --- */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
 
-  /* Cores de Ação */
-  --btn-start: #2e7152;
-  --btn-reset: #b82683;
-  --btn-save: #ff8253;
+  /* --- Semantic aliases (consistência com JS) --- */
+  --btn-start: var(--primary-600);
+  --btn-reset: #dc2626;
+  --btn-save: var(--primary-600);
   --timer-digits: #00ffd1;
-  --badge-bg: #eae8f5;
+  --badge-bg: var(--primary-100);
 
-  /* Tipografia & Bordas */
-  --text-dark: #1a1a1a;
-  --text-muted: #666666;
-  --border-light: #e0e0e0;
-  --radius-pill: 20px;
+  /* --- Fundo (light mode) --- */
+  --bg-main: #f9fafb;
+  --bg-card: #ffffff;
+  --bg-header-timer: #0f172a;
+
+  /* --- Texto (light mode) --- */
+  --text-dark: #1f2937;
+  --text-body: #4b5563;
+  --text-muted: #6b7280;
+  --text-muted2: #9ca3af;
+
+  /* --- Bordas --- */
+  --border-light: #e5e7eb;
+  --border-input: #d1d5db;
+
+  /* --- Status --- */
+  --ok: #16a34a;
+  --danger: #dc2626;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --error-ink: #991b1b;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-ink: #166534;
+
+  /* --- Sombras --- */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+  /* --- Border radius --- */
+  --radius-pill: 9999px;
   --radius-card: 12px;
+  --radius-md: 6px;
 
-  /* Cores derivadas (estados) */
-  --ok: #0f9d58;
-  --danger: #c90f5d;
-  --error-bg: #fdeaf1;
-  --error-border: #e8a9c2;
-  --error-ink: #8c1745;
-  --success-bg: #e8f8ef;
-  --success-border: #9fd4b7;
-  --success-ink: #186e41;
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-soft: 0 3px 12px rgba(8, 16, 23, 0.06);
+  /* --- Fonte --- */
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* ============================================================
+   DARK MODE — sobrescreve tokens via body.dark
+   ============================================================ */
+body.dark {
+  --bg-main: #030712;
+  --bg-card: #1f2937;
+  --bg-header-timer: #0f172a;
+  --text-dark: #f9fafb;
+  --text-body: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-muted2: #6b7280;
+  --border-light: #374151;
+  --border-input: #4b5563;
+  --badge-bg: rgba(37, 99, 235, 0.15);
+  --ok: #22c55e;
+  --danger: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.1);
+  --error-border: rgba(239, 68, 68, 0.3);
+  --error-ink: #fca5a5;
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-border: rgba(34, 197, 94, 0.3);
+  --success-ink: #86efac;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================
+   ALTO CONTRASTE (beira de piscina)
+   ============================================================ */
+body.high-contrast {
+  --bg-main: #000;
+  --bg-card: #000;
+  --bg-header-timer: #000;
+  --text-dark: #ffffff;
+  --text-body: #ffffff;
+  --text-muted: #ffd700;
+  --text-muted2: #ffd700;
+  --border-light: #3a3a3a;
+  --border-input: #555;
+  --badge-bg: #101010;
+  --timer-digits: #ffff00;
+  --ok: #00ff88;
+  --danger: #ff4444;
+  --shadow-card: none;
+  --shadow-soft: none;
+  background: #000;
+  color: #fff;
+}
+
+body.high-contrast .timer-display,
+body.high-contrast .sb-raia-time {
+  color: #ffff00;
+}
+
+body.high-contrast .mode-card {
+  background: #000;
+  border-color: #3a3a3a;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   color: var(--text-dark);
   background-color: var(--bg-main);
 }
@@ -48,7 +141,24 @@ body {
   padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 
-/* --- Aviso Desktop --- */
+/* --- Dark mode: inputs globais --- */
+body.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+body.dark select,
+body.dark textarea {
+  background-color: var(--bg-card);
+  color: var(--text-dark);
+  border-color: var(--border-input);
+}
+
+body.dark input[type="checkbox"],
+body.dark input[type="radio"],
+body.dark input[type="range"] {
+  accent-color: var(--primary-400);
+}
+
+/* ============================================================
+   DESKTOP NOTICE
+   ============================================================ */
 .desktop-notice {
   display: none;
   min-height: 100vh;
@@ -66,25 +176,16 @@ body {
   box-shadow: var(--shadow-card);
 }
 
-.desktop-card h2 {
-  margin: 0 0 0.4rem;
-}
-
-.desktop-card p {
-  margin: 0.28rem 0;
-  color: var(--text-muted);
-}
+.desktop-card h2 { margin: 0 0 0.4rem; }
+.desktop-card p { margin: 0.28rem 0; color: var(--text-muted); }
 
 body.desktop-blocked .app-shell,
-body.desktop-blocked .chrono-dialog {
-  display: none;
-}
+body.desktop-blocked .chrono-dialog { display: none; }
+body.desktop-blocked .desktop-notice { display: flex; }
 
-body.desktop-blocked .desktop-notice {
-  display: flex;
-}
-
-/* --- Shell / Topbar --- */
+/* ============================================================
+   SHELL / TOPBAR
+   ============================================================ */
 .app-shell {
   max-width: 1240px;
   margin: 0 auto;
@@ -110,48 +211,28 @@ body.desktop-blocked .desktop-notice {
   flex-wrap: wrap;
 }
 
-#refreshAppBtn {
-  padding: 0.38rem 0.62rem;
-  font-size: 0.8rem;
-  min-height: auto;
-}
+.topbar h1 { margin: 0; font-size: 1.35rem; }
+.topbar p { margin: 0.12rem 0 0; font-size: 0.86rem; color: var(--text-muted); }
 
-.topbar-actions #exportBtn {
-  padding: 0.38rem 0.62rem;
-  font-size: 0.8rem;
-  min-height: auto;
-}
+#refreshAppBtn { padding: 0.38rem 0.62rem; font-size: 0.8rem; min-height: auto; }
+.topbar-actions #exportBtn { padding: 0.38rem 0.62rem; font-size: 0.8rem; min-height: auto; }
 
 .icon-btn {
   width: 40px;
   height: 40px;
   min-height: 40px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.icon-btn svg {
-  width: 21px;
-  height: 21px;
-}
-
-.topbar h1 {
-  margin: 0;
-  font-size: 1.35rem;
-}
-
-.topbar p {
-  margin: 0.12rem 0 0;
-  font-size: 0.86rem;
-  color: var(--text-muted);
-}
+.icon-btn svg { width: 21px; height: 21px; }
 
 .badge {
   background-color: var(--badge-bg);
-  color: #554f68;
+  color: var(--primary-700);
   font-size: 0.75rem;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
@@ -160,15 +241,15 @@ body.desktop-blocked .desktop-notice {
   border: 1px solid transparent;
 }
 
-/* --- Telas --- */
-.screen {
-  display: none;
-  margin-top: 0.9rem;
+body.dark .badge {
+  color: var(--primary-300);
 }
 
-.screen.active {
-  display: block;
-}
+/* ============================================================
+   TELAS
+   ============================================================ */
+.screen { display: none; margin-top: 0.9rem; }
+.screen.active { display: block; }
 
 .panel {
   background-color: var(--bg-card);
@@ -178,15 +259,9 @@ body.desktop-blocked .desktop-notice {
   box-shadow: var(--shadow-card);
 }
 
-.panel.mini {
-  margin-top: 0.7rem;
-}
+.panel.mini { margin-top: 0.7rem; }
 
-h2,
-h3,
-h4 {
-  margin: 0 0 0.6rem;
-}
+h2, h3, h4 { margin: 0 0 0.6rem; }
 
 .muted {
   margin: 0 0 0.8rem;
@@ -208,31 +283,28 @@ label {
   font-size: 0.86rem;
 }
 
-input,
-select,
-button {
-  font: inherit;
-}
+input, select, button { font: inherit; }
 
-input,
-select {
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
+input, select {
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.55rem;
   background: var(--bg-card);
   color: var(--text-dark);
 }
 
-input:focus,
-select:focus {
-  outline: 2px solid var(--timer-digits);
-  outline-offset: -1px;
-  border-color: var(--bg-header-timer);
+input:focus, select:focus {
+  outline: none;
+  ring: 2px solid var(--primary-500);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px var(--primary-200);
 }
 
-.file-upload input {
-  padding: 0.46rem;
+body.dark input:focus, body.dark select:focus {
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
 }
+
+.file-upload input { padding: 0.46rem; }
 
 .actions-row {
   display: flex;
@@ -241,37 +313,72 @@ select:focus {
   flex-wrap: wrap;
 }
 
-/* --- Botões (pill) --- */
+/* ============================================================
+   BOTÕES
+   ============================================================ */
 button {
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   padding: 0.42rem 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
-  background: #eef1f5;
+  background: var(--bg-card);
+  color: var(--text-dark);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+body.dark button {
+  background: var(--bg-card);
+  border-color: var(--border-light);
   color: var(--text-dark);
 }
 
+button:hover {
+  background: var(--primary-50);
+}
+
+body.dark button:hover {
+  background: rgba(37, 99, 235, 0.15);
+}
+
 button.primary {
-  background-color: var(--btn-start);
+  background-color: var(--primary-600);
   color: #ffffff;
-  border-color: var(--btn-start);
+  border-color: var(--primary-600);
+}
+
+button.primary:hover {
+  background-color: var(--primary-700);
 }
 
 button.danger {
-  background-color: var(--btn-reset);
+  background-color: var(--danger);
   color: #ffffff;
-  border-color: var(--btn-reset);
+  border-color: var(--danger);
+}
+
+button.danger:hover {
+  opacity: 0.9;
 }
 
 button.ghost {
-  background: #f4f7fd;
+  background: transparent;
+  border-color: transparent;
+}
+
+button.ghost:hover {
+  background: var(--primary-50);
+}
+
+body.dark button.ghost:hover {
+  background: rgba(37, 99, 235, 0.15);
 }
 
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-pill {
@@ -279,7 +386,7 @@ button:disabled {
   border-radius: var(--radius-pill);
   padding: 8px 16px;
   color: #fff;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -287,15 +394,8 @@ button:disabled {
   gap: 6px;
 }
 
-.btn-start {
-  background-color: var(--btn-start);
-  color: #fff;
-}
-
-.btn-reset {
-  background-color: var(--btn-reset);
-  color: #fff;
-}
+.btn-start { background-color: var(--btn-start); color: #fff; }
+.btn-reset { background-color: var(--btn-reset); color: #fff; }
 
 .btn-save {
   background-color: var(--btn-save);
@@ -303,45 +403,36 @@ button:disabled {
   border: none;
   padding: 10px 28px;
   border-radius: var(--radius-pill);
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .btn-cancel {
   background-color: transparent;
-  border: 1px solid var(--text-dark);
+  border: 1px solid var(--border-input);
   color: var(--text-dark);
   padding: 10px 24px;
   border-radius: var(--radius-pill);
 }
 
-/* --- Status --- */
+/* ============================================================
+   STATUS
+   ============================================================ */
 .status {
   margin-top: 0.65rem;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   padding: 0.5rem 0.6rem;
   font-weight: 600;
   font-size: 0.86rem;
 }
 
-.status.neutral {
-  background: var(--badge-bg);
-  border-color: #d5d0e8;
-}
+.status.neutral { background: var(--badge-bg); border-color: var(--border-light); }
+.status.error { background: var(--error-bg); border-color: var(--error-border); color: var(--error-ink); }
+.status.success { background: var(--success-bg); border-color: var(--success-border); color: var(--success-ink); }
 
-.status.error {
-  background: var(--error-bg);
-  border-color: var(--error-border);
-  color: var(--error-ink);
-}
-
-.status.success {
-  background: var(--success-bg);
-  border-color: var(--success-border);
-  color: var(--success-ink);
-}
-
-/* --- Perfil (login/cadastro) --- */
+/* ============================================================
+   PERFIL (login/cadastro)
+   ============================================================ */
 .profile-list {
   display: grid;
   gap: 0.55rem;
@@ -354,10 +445,14 @@ button:disabled {
   gap: 0.45rem;
   width: 100%;
   text-align: left;
-  background: #f4f7fd;
+  background: var(--primary-50);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-card);
   padding: 0.4rem 0.4rem 0.4rem 0.75rem;
+}
+
+body.dark .profile-item {
+  background: rgba(37, 99, 235, 0.1);
 }
 
 .profile-item-main {
@@ -381,23 +476,16 @@ button:disabled {
   height: 36px;
   min-height: 36px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
-  background: #ffffff;
+  background: var(--bg-card);
   color: var(--text-muted);
   font-size: 1.1rem;
   line-height: 1;
 }
 
-.profile-item-name {
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.profile-item-team {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
+.profile-item-name { font-weight: 700; font-size: 0.9rem; }
+.profile-item-team { font-size: 0.78rem; color: var(--text-muted); }
 
 .profile-divider {
   display: flex;
@@ -427,63 +515,57 @@ button:disabled {
   gap: 0.4rem;
   margin-bottom: 0.7rem;
   background: var(--badge-bg);
-  border: 1px solid #d5d0e8;
-  color: #554f68;
+  border: 1px solid var(--primary-200);
+  color: var(--primary-700);
   border-radius: var(--radius-pill);
   padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
   font-weight: 700;
 }
 
+body.dark .profile-chip {
+  border-color: rgba(96, 165, 250, 0.3);
+  color: var(--primary-300);
+}
+
 .version-tag-inline {
   margin-left: 0.25rem;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-muted2);
   white-space: nowrap;
 }
 
-/* --- Filtro de Provas --- */
-.proof-list {
-  display: grid;
-  gap: 0.65rem;
-}
+/* ============================================================
+   FILTRO DE PROVAS
+   ============================================================ */
+.proof-list { display: grid; gap: 0.65rem; }
 
-.filter-head,
-.filter-foot {
+.filter-head, .filter-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
 }
 
-.filter-foot {
-  justify-content: flex-end;
-  margin-top: 0.7rem;
-}
+.filter-foot { justify-content: flex-end; margin-top: 0.7rem; }
 
 .go-icon-btn {
   width: 44px;
   height: 44px;
   min-height: 44px;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  background-color: var(--btn-start);
+  background-color: var(--primary-600);
   color: #ffffff;
-  border-color: var(--btn-start);
+  border-color: var(--primary-600);
 }
 
-.go-icon-btn svg {
-  width: 21px;
-  height: 21px;
-}
-
-.go-icon-btn:disabled {
-  opacity: 0.35;
-}
+.go-icon-btn svg { width: 21px; height: 21px; }
+.go-icon-btn:disabled { opacity: 0.35; }
 
 .proof-row {
   border: 1px solid var(--border-light);
@@ -507,7 +589,7 @@ button:disabled {
 }
 
 .proof-name input[type="checkbox"] {
-  accent-color: var(--btn-start);
+  accent-color: var(--primary-600);
   width: 18px;
   height: 18px;
 }
@@ -520,20 +602,33 @@ button:disabled {
   font-size: 0.84rem;
 }
 
-.proof-details.open {
-  display: block;
-}
+.proof-details.open { display: block; overflow-x: auto; }
 
 .details-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.details-table th,
-.details-table td {
+.details-table th, .details-table td {
   border-bottom: 1px solid var(--border-light);
   padding: 0.34rem 0.3rem;
   text-align: left;
+}
+
+.details-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.details-table tbody tr:hover td {
+  background: var(--primary-50);
+}
+
+body.dark .details-table tbody tr:hover td {
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .details-table tbody tr.timed-row td {
@@ -548,15 +643,17 @@ button:disabled {
   height: 16px;
   min-height: 16px;
   padding: 0;
-  border-radius: 999px;
-  background: #f4f7fd;
-  color: var(--btn-start);
+  border-radius: var(--radius-pill);
+  background: var(--primary-50);
+  color: var(--primary-600);
   border-color: var(--border-light);
 }
 
-.eye-btn svg {
-  width: 11px;
-  height: 11px;
+.eye-btn svg { width: 11px; height: 11px; }
+
+body.dark .eye-btn {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--primary-400);
 }
 
 .partials-inline {
@@ -569,16 +666,11 @@ button:disabled {
   white-space: nowrap;
 }
 
-.cc-mini {
-  font-size: 0.7em;
-  font-weight: 700;
-}
+.cc-mini { font-size: 0.7em; font-weight: 700; }
 
-.proof-details.open {
-  overflow-x: auto;
-}
-
-/* --- Controle --- */
+/* ============================================================
+   CONTROLE
+   ============================================================ */
 .section-head {
   display: flex;
   align-items: center;
@@ -594,18 +686,9 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.event-block {
-  margin-bottom: 0.9rem;
-}
-
-.event-block h3 {
-  font-size: 0.95rem;
-  margin: 0 0 0.4rem;
-}
-
-.series-block {
-  margin-bottom: 0.7rem;
-}
+.event-block { margin-bottom: 0.9rem; }
+.event-block h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
+.series-block { margin-bottom: 0.7rem; }
 
 .series-head {
   display: flex;
@@ -615,9 +698,7 @@ button:disabled {
   margin-bottom: 0.45rem;
 }
 
-.series-head h4 {
-  margin: 0;
-}
+.series-head h4 { margin: 0; }
 
 /* --- Cartões de Atletas --- */
 .athletes-card {
@@ -628,9 +709,7 @@ button:disabled {
   box-shadow: var(--shadow-card);
 }
 
-.athletes-card h4 {
-  margin: 0 0 0.4rem;
-}
+.athletes-card h4 { margin: 0 0 0.4rem; }
 
 .athlete-row {
   border-bottom: 1px solid var(--border-light);
@@ -653,16 +732,8 @@ button:disabled {
   margin-bottom: 8px;
 }
 
-.athlete-head {
-  flex: 1 1 55%;
-  min-width: 160px;
-}
-
-.athlete-name {
-  font-weight: 700;
-  font-size: 0.9rem;
-  line-height: 1.16;
-}
+.athlete-head { flex: 1 1 55%; min-width: 160px; }
+.athlete-name { font-weight: 700; font-size: 0.9rem; line-height: 1.16; }
 
 .athlete-meta {
   display: flex;
@@ -672,31 +743,23 @@ button:disabled {
   color: var(--text-muted);
 }
 
-.athlete-meta strong {
-  color: var(--text-dark);
-  font-weight: 700;
-}
+.athlete-meta strong { color: var(--text-dark); font-weight: 700; }
+.athlete-meta .split-title { font-size: 0.66rem; margin-bottom: 1px; }
 
-.athlete-meta .split-title {
-  font-size: 0.66rem;
-  margin-bottom: 1px;
-}
-
-.tagline {
-  display: flex;
-  gap: 0.3rem;
-  margin-top: 0.3rem;
-  flex-wrap: wrap;
-}
+.tagline { display: flex; gap: 0.3rem; margin-top: 0.3rem; flex-wrap: wrap; }
 
 .tag {
   background: var(--badge-bg);
-  color: #554f68;
-  border-radius: 999px;
+  color: var(--primary-700);
+  border-radius: var(--radius-pill);
   padding: 0.1rem 0.4rem;
   font-size: 0.68rem;
   font-weight: 600;
   border: 1px solid transparent;
+}
+
+body.dark .tag {
+  color: var(--primary-300);
 }
 
 /* --- Grid de Tempos / Parciais --- */
@@ -715,8 +778,8 @@ button:disabled {
 }
 
 .partial-input {
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
   padding: 6px 12px;
   text-align: center;
   font-family: "Courier New", Courier, monospace;
@@ -728,40 +791,36 @@ button:disabled {
 }
 
 .partial-input:focus {
-  border-color: var(--btn-start);
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px var(--primary-200);
+}
+
+body.dark .partial-input:focus {
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
 }
 
 .current-value {
   font-family: "Courier New", Courier, monospace;
   font-size: 0.9rem;
   font-weight: 700;
-  background-color: #f6f7f9;
+  background-color: var(--primary-50);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   padding: 6px 12px;
   text-align: center;
 }
 
-.improved {
-  color: var(--ok);
-  font-weight: 700;
-  margin-left: 0.3rem;
-  font-size: 0.78rem;
+body.dark .current-value {
+  background: rgba(37, 99, 235, 0.1);
 }
 
-.neutral-diff {
-  color: #6f83a3;
-  margin-left: 0.3rem;
-  font-size: 0.78rem;
-}
+.improved { color: var(--ok); font-weight: 700; margin-left: 0.3rem; font-size: 0.78rem; }
+.neutral-diff { color: var(--text-muted2); margin-left: 0.3rem; font-size: 0.78rem; }
+.worse { color: var(--danger); margin-left: 0.3rem; font-size: 0.78rem; }
 
-.worse {
-  color: #a14c64;
-  margin-left: 0.3rem;
-  font-size: 0.78rem;
-}
-
-/* --- Dialog do Cronômetro (bottom sheet) --- */
+/* ============================================================
+   DIALOG DO CRONÔMETRO (bottom sheet)
+   ============================================================ */
 .chrono-dialog {
   width: 100%;
   max-width: 760px;
@@ -783,16 +842,16 @@ button:disabled {
 }
 
 @keyframes chronoSheetUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 .chrono-dialog::backdrop {
-  background: rgba(4, 22, 43, 0.45);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+body.dark .chrono-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .sheet-grabber {
@@ -848,23 +907,15 @@ button:disabled {
   column-gap: 0.75rem;
 }
 
-.chrono-title,
-.next-capture {
+.chrono-title, .next-capture {
   font-weight: 500;
   font-size: 0.75rem;
   color: #ffffff;
   opacity: 0.75;
 }
 
-.chrono-title {
-  text-align: left;
-  min-width: 0;
-}
-
-.next-capture {
-  text-align: right;
-  margin-left: auto;
-}
+.chrono-title { text-align: left; min-width: 0; }
+.next-capture { text-align: right; margin-left: auto; }
 
 .timer-container .next-capture.warning-note {
   background: transparent;
@@ -882,9 +933,7 @@ button:disabled {
   font-weight: 700;
 }
 
-.pending-wrap {
-  margin: 0 12px;
-}
+.pending-wrap { margin: 0 12px; }
 
 .pending-head {
   position: sticky;
@@ -898,9 +947,7 @@ button:disabled {
   background: var(--bg-card);
 }
 
-.pending-head h4 {
-  margin: 0;
-}
+.pending-head h4 { margin: 0; }
 
 .pending-list-table {
   width: 100%;
@@ -908,8 +955,7 @@ button:disabled {
   font-size: 0.85rem;
 }
 
-.pending-list-table th,
-.pending-list-table td {
+.pending-list-table th, .pending-list-table td {
   border-bottom: 1px solid var(--border-light);
   padding: 0.34rem 0.28rem;
   text-align: left;
@@ -920,11 +966,11 @@ button:disabled {
   font-weight: 700;
 }
 
-.stop-capture-row {
-  background: #fff2f2;
-}
+.stop-capture-row { background: rgba(239, 68, 68, 0.06); }
 
-/* --- Paleta de balizas + drag-and-drop (registros pendentes) --- */
+body.dark .stop-capture-row { background: rgba(239, 68, 68, 0.12); }
+
+/* --- Paleta de balizas + drag-and-drop --- */
 .lane-palette {
   display: inline-flex;
   justify-content: flex-end;
@@ -959,9 +1005,7 @@ button:disabled {
   border-style: dashed;
 }
 
-.baliza-toggle.dragging {
-  opacity: 0.35;
-}
+.baliza-toggle.dragging { opacity: 0.35; }
 
 .baliza-toggle.ghost {
   position: fixed;
@@ -971,9 +1015,9 @@ button:disabled {
   min-height: 40px;
   transform: translate(-50%, -50%) scale(1.15);
   pointer-events: none;
-  border-color: var(--btn-start);
+  border-color: var(--primary-600);
   border-style: solid;
-  background: var(--lane-color, #eef6f1);
+  background: var(--lane-color, var(--primary-50));
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
@@ -990,7 +1034,7 @@ button:disabled {
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   border: 1.5px dashed var(--border-light);
-  background: #fafbfd;
+  background: var(--primary-50);
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-muted);
@@ -1001,9 +1045,11 @@ button:disabled {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
+body.dark .lane-dropzone { background: rgba(37, 99, 235, 0.08); }
+
 .lane-dropzone.filled {
   border-style: solid;
-  background: var(--lane-color, #fafbfd);
+  background: var(--lane-color, var(--primary-50));
   color: var(--text-dark);
   cursor: pointer;
 }
@@ -1021,6 +1067,10 @@ button:disabled {
   box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35);
 }
 
+body.dark .lane-dropzone.drop-active {
+  background: rgba(255, 215, 0, 0.1);
+}
+
 .lane-dropzone.drop-pair {
   border-color: var(--timer-digits);
   border-style: solid;
@@ -1035,21 +1085,13 @@ button:disabled {
   -webkit-overflow-scrolling: touch;
 }
 
-.chrono-dialog .action-footer {
-  margin: 8px 12px 10px;
-}
+.chrono-dialog .action-footer { margin: 8px 12px 10px; }
+.chrono-dialog .action-footer .btn-save { padding: 6px 16px; font-size: 0.8rem; }
+.chrono-dialog .action-footer .btn-cancel { padding: 6px 16px; font-size: 0.8rem; }
 
-.chrono-dialog .action-footer .btn-save {
-  padding: 6px 16px;
-  font-size: 0.8rem;
-}
-
-.chrono-dialog .action-footer .btn-cancel {
-  padding: 6px 16px;
-  font-size: 0.8rem;
-}
-
-/* --- Dialog de Configurações --- */
+/* ============================================================
+   DIALOG DE CONFIGURAÇÕES
+   ============================================================ */
 .settings-dialog {
   width: min(420px, 94vw);
   border: none;
@@ -1065,7 +1107,11 @@ button:disabled {
 }
 
 .settings-dialog::backdrop {
-  background: rgba(4, 22, 43, 0.45);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+body.dark .settings-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .settings-head {
@@ -1077,10 +1123,7 @@ button:disabled {
   border-bottom: 1px solid var(--border-light);
 }
 
-.settings-head h3 {
-  margin: 0;
-  font-size: 1rem;
-}
+.settings-head h3 { margin: 0; font-size: 1rem; }
 
 .settings-body {
   display: flex;
@@ -1089,14 +1132,18 @@ button:disabled {
   padding: 16px;
 }
 
-/* --- Footer de Ações --- */
+/* ============================================================
+   FOOTER DE AÇÕES
+   ============================================================ */
 .action-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
-/* --- Bottom Navigation --- */
+/* ============================================================
+   BOTTOM NAVIGATION
+   ============================================================ */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -1110,6 +1157,11 @@ button:disabled {
   justify-content: space-around;
   align-items: center;
   z-index: 50;
+}
+
+body.dark .bottom-nav {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
 }
 
 .nav-item {
@@ -1128,67 +1180,48 @@ button:disabled {
   font-weight: 600;
   cursor: pointer;
   height: 100%;
+  transition: color 0.15s ease;
 }
 
-.nav-item svg {
-  width: 22px;
-  height: 22px;
-}
+.nav-item svg { width: 22px; height: 22px; }
 
 .nav-item.active {
-  color: var(--btn-start);
+  color: var(--primary-600);
   font-weight: 700;
 }
 
-/* --- Responsivo --- */
+body.dark .nav-item.active {
+  color: var(--primary-400);
+}
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
 @media (max-width: 920px) {
-  .athlete-main,
-  .chrono-head {
-    grid-template-columns: 1fr;
-  }
+  .athlete-main, .chrono-head { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
-  .app-shell {
-    padding: 0.55rem;
-  }
-
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .panel {
-    padding: 0.7rem;
-  }
-
-  .partials-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+  .app-shell { padding: 0.55rem; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .panel { padding: 0.7rem; }
+  .partials-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (pointer: coarse) {
-  input,
-  select,
-  button {
-    min-height: 42px;
-  }
-
-  .partials-grid .partial-input {
-    min-height: 0;
-  }
-
+  input, select, button { min-height: 42px; }
+  .partials-grid .partial-input { min-height: 0; }
   .partials-grid .current-value {
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
-
-  .nav-item {
-    min-height: auto;
-  }
+  .nav-item { min-height: auto; }
 }
 
-/* --- SwimBase: seleção de modo --- */
+/* ============================================================
+   SWIMBASE — SELEÇÃO DE MODO
+   ============================================================ */
 .mode-card {
   display: flex;
   flex-direction: column;
@@ -1205,29 +1238,27 @@ button:disabled {
   text-align: left;
   cursor: pointer;
   font-size: 0.95rem;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
 }
 
-.mode-card strong {
-  font-size: 1.05rem;
-  color: var(--text-dark);
-}
-
-.mode-card span {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
+.mode-card strong { font-size: 1.05rem; color: var(--text-dark); }
+.mode-card span { color: var(--text-muted); font-size: 0.82rem; line-height: 1.35; }
 
 .mode-card-accent {
-  border-color: var(--timer-digits);
-  background: linear-gradient(180deg, #ffffff, #eefaf9);
+  border-color: var(--primary-300);
+  background: linear-gradient(180deg, var(--bg-card), var(--primary-50));
 }
 
-.mode-card:active {
-  transform: scale(0.985);
+body.dark .mode-card-accent {
+  background: linear-gradient(180deg, var(--bg-card), rgba(37, 99, 235, 0.1));
+  border-color: rgba(96, 165, 250, 0.3);
 }
 
-/* --- SwimBase: atletas e turmas --- */
+.mode-card:active { transform: scale(0.985); }
+
+/* ============================================================
+   SWIMBASE — ATLETAS E TURMAS
+   ============================================================ */
 .sb-turma-row {
   display: flex;
   gap: 0.5rem;
@@ -1235,10 +1266,7 @@ button:disabled {
   margin-bottom: 0.6rem;
 }
 
-.sb-turma-row select {
-  flex: 1;
-  min-width: 0;
-}
+.sb-turma-row select { flex: 1; min-width: 0; }
 
 .sb-list {
   display: flex;
@@ -1274,15 +1302,8 @@ button:disabled {
   cursor: pointer;
 }
 
-.sb-athlete-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.sb-athlete-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
+.sb-athlete-name { font-weight: 700; font-size: 0.95rem; }
+.sb-athlete-meta { font-size: 0.75rem; color: var(--text-muted); }
 
 .sb-athlete-delete {
   width: 44px;
@@ -1301,10 +1322,15 @@ button:disabled {
   width: min(92vw, 420px);
   max-height: 90dvh;
   box-shadow: var(--shadow-soft);
+  background: var(--bg-card);
 }
 
 .sb-dialog::backdrop {
   background: rgba(0, 0, 0, 0.4);
+}
+
+body.dark .sb-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .sb-dialog-head {
@@ -1315,9 +1341,7 @@ button:disabled {
   border-bottom: 1px solid var(--border-light);
 }
 
-.sb-dialog-head h3 {
-  margin: 0;
-}
+.sb-dialog-head h3 { margin: 0; }
 
 .sb-dialog-body {
   padding: 1rem;
@@ -1367,15 +1391,23 @@ button:disabled {
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .sb-day-chip.active {
   background: var(--badge-bg);
-  border-color: #d5d0e8;
-  color: #554f68;
+  border-color: var(--primary-300);
+  color: var(--primary-700);
 }
 
-/* --- SwimBase: wizard de treino (Modo 2) --- */
+body.dark .sb-day-chip.active {
+  border-color: rgba(96, 165, 250, 0.4);
+  color: var(--primary-300);
+}
+
+/* ============================================================
+   SWIMBASE — WIZARD DE TREINO
+   ============================================================ */
 .sb-steps {
   display: flex;
   gap: 0.4rem;
@@ -1388,24 +1420,29 @@ button:disabled {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-muted);
-  background: #ececec;
+  background: var(--primary-50);
   border-radius: var(--radius-pill);
   padding: 0.4rem 0.3rem;
+  transition: background-color 0.15s ease;
+}
+
+body.dark .sb-step {
+  background: rgba(37, 99, 235, 0.1);
 }
 
 .sb-step.active {
   background: var(--badge-bg);
-  color: #554f68;
-  border: 1px solid #d5d0e8;
+  color: var(--primary-700);
+  border: 1px solid var(--primary-300);
 }
 
-.sb-step-body {
-  margin-bottom: 0.8rem;
+body.dark .sb-step.active {
+  color: var(--primary-300);
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
-.sb-step-nav {
-  margin-top: 0.4rem;
-}
+.sb-step-body { margin-bottom: 0.8rem; }
+.sb-step-nav { margin-top: 0.4rem; }
 
 .sb-atleta-grid {
   display: flex;
@@ -1424,15 +1461,14 @@ button:disabled {
   cursor: pointer;
 }
 
-.sb-atleta-check:last-child {
-  border-bottom: none;
-}
+.sb-atleta-check:last-child { border-bottom: none; }
 
 .sb-atleta-check input {
   width: 16px;
   height: 16px;
   min-height: 0;
   flex: 0 0 auto;
+  accent-color: var(--primary-600);
 }
 
 .sb-atleta-info {
@@ -1442,15 +1478,8 @@ button:disabled {
   min-width: 0;
 }
 
-.sb-atleta-info strong {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.sb-atleta-info small {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
+.sb-atleta-info strong { font-size: 0.8rem; font-weight: 600; }
+.sb-atleta-info small { font-size: 0.7rem; color: var(--text-muted); }
 
 .sb-grid-2 {
   display: grid;
@@ -1458,7 +1487,9 @@ button:disabled {
   gap: 0.6rem;
 }
 
-/* --- SwimBase: raias do cronômetro de treino --- */
+/* ============================================================
+   SWIMBASE — RAIAS DO CRONÔMETRO
+   ============================================================ */
 .sb-chrono-list {
   display: flex;
   flex-direction: column;
@@ -1478,6 +1509,7 @@ button:disabled {
   color: var(--text-dark);
   text-align: left;
   cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .sb-raia-lane {
@@ -1488,10 +1520,14 @@ button:disabled {
   align-items: center;
   justify-content: center;
   background: var(--badge-bg);
-  color: #554f68;
+  color: var(--primary-700);
   border-radius: 50%;
   font-weight: 800;
   font-size: 0.95rem;
+}
+
+body.dark .sb-raia-lane {
+  color: var(--primary-300);
 }
 
 .sb-raia-body {
@@ -1518,15 +1554,8 @@ button:disabled {
   line-height: 1.3;
 }
 
-.sb-raia-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.sb-raia-last {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
+.sb-raia-meta { font-size: 0.75rem; color: var(--text-muted); }
+.sb-raia-last { font-size: 0.72rem; color: var(--text-muted); }
 
 .sb-raia-time {
   flex: 0 0 auto;
@@ -1536,15 +1565,12 @@ button:disabled {
   color: var(--text-dark);
 }
 
-.sb-raia.done {
-  opacity: 0.55;
-}
+.sb-raia.done { opacity: 0.55; }
+.sb-raia.done .sb-raia-time { color: var(--ok); }
 
-.sb-raia.done .sb-raia-time {
-  color: var(--ok);
-}
-
-/* --- SwimBase: Modos do cronômetro (passo 3) --- */
+/* ============================================================
+   SWIMBASE — MODOS DO CRONÔMETRO (passo 3)
+   ============================================================ */
 .sb-modo-grid {
   display: flex;
   flex-direction: column;
@@ -1567,28 +1593,27 @@ button:disabled {
   text-align: left;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: transform 0.1s ease, border-color 0.15s ease;
 }
 
-.sb-modo-card strong {
-  font-size: 0.98rem;
-}
-
-.sb-modo-card span {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
+.sb-modo-card strong { font-size: 0.98rem; }
+.sb-modo-card span { color: var(--text-muted); font-size: 0.8rem; line-height: 1.35; }
 
 .sb-modo-card.active {
-  border-color: var(--timer-digits);
-  background: linear-gradient(180deg, #ffffff, #eefaf9);
+  border-color: var(--primary-400);
+  background: linear-gradient(180deg, var(--bg-card), var(--primary-50));
 }
 
-.sb-modo-card:active {
-  transform: scale(0.985);
+body.dark .sb-modo-card.active {
+  background: linear-gradient(180deg, var(--bg-card), rgba(37, 99, 235, 0.12));
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
-/* --- SwimBase: Modo 1 (Saída a Cada) --- */
+.sb-modo-card:active { transform: scale(0.985); }
+
+/* ============================================================
+   SWIMBASE — MODO 1 (SAÍDA A CADA)
+   ============================================================ */
 .sb-countdown {
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
   font-size: clamp(2.4rem, 12vw, 4rem);
@@ -1602,28 +1627,18 @@ button:disabled {
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.sb-countdown.amber {
-  border-color: #e6a23c;
-  color: #d68910;
-}
-
-.sb-countdown.red {
-  border-color: #e74c3c;
-  color: #e74c3c;
-}
-
-.sb-countdown.done {
-  border-color: var(--ok);
-  color: var(--ok);
-}
-
-.sb-countdown.flash {
-  animation: sbCountdownFlash 0.4s ease;
-}
+.sb-countdown.amber { border-color: #f59e0b; color: #f59e0b; }
+.sb-countdown.red { border-color: var(--danger); color: var(--danger); }
+.sb-countdown.done { border-color: var(--ok); color: var(--ok); }
+.sb-countdown.flash { animation: sbCountdownFlash 0.4s ease; }
 
 @keyframes sbCountdownFlash {
   0% { background: rgba(255, 255, 255, 0.9); }
   100% { background: transparent; }
+}
+
+body.dark .sb-countdown.flash {
+  0% { background: rgba(255, 255, 255, 0.1); }
 }
 
 .sb-group-counter {
@@ -1634,7 +1649,9 @@ button:disabled {
   margin-bottom: 0.6rem;
 }
 
-/* --- SwimBase: Modo 3 (Largada em Ondas) --- */
+/* ============================================================
+   SWIMBASE — MODO 3 (LARGADA EM ONDAS)
+   ============================================================ */
 .sb-wave-status {
   display: flex;
   flex-wrap: wrap;
@@ -1647,23 +1664,32 @@ button:disabled {
   font-weight: 700;
   padding: 0.25rem 0.55rem;
   border-radius: var(--radius-pill);
-  background: #ececec;
+  background: var(--primary-50);
   color: var(--text-muted);
 }
 
+body.dark .sb-wave-pill { background: rgba(37, 99, 235, 0.1); }
+
 .sb-wave-pill.running {
   background: var(--badge-bg);
-  color: #554f68;
-  border: 1px solid #d5d0e8;
+  color: var(--primary-700);
+  border: 1px solid var(--primary-300);
+}
+
+body.dark .sb-wave-pill.running {
+  color: var(--primary-300);
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
 .sb-wave-pill.done {
-  background: #e6f6ef;
+  background: var(--success-bg);
   color: var(--ok);
-  border: 1px solid #b8e4cf;
+  border: 1px solid var(--success-border);
 }
 
-/* --- SwimBase: distribuição manual de ondas --- */
+/* ============================================================
+   SWIMBASE — DISTRIBUIÇÃO MANUAL DE ONDAS
+   ============================================================ */
 .sb-dist-head {
   display: flex;
   justify-content: space-between;
@@ -1672,9 +1698,7 @@ button:disabled {
   margin: 0.8rem 0 0.4rem;
 }
 
-.sb-dist-head .muted {
-  font-size: 0.75rem;
-}
+.sb-dist-head .muted { font-size: 0.75rem; }
 
 .sb-wave-chips {
   display: flex;
@@ -1695,17 +1719,20 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.sb-wave-chip small {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
+.sb-wave-chip small { font-size: 0.7rem; color: var(--text-muted); }
 
 .sb-wave-chip.active {
-  border-color: var(--timer-digits);
+  border-color: var(--primary-400);
   background: var(--badge-bg);
-  color: #554f68;
+  color: var(--primary-700);
+}
+
+body.dark .sb-wave-chip.active {
+  color: var(--primary-300);
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
 .sb-onda-list {
@@ -1743,10 +1770,12 @@ button:disabled {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-muted);
-  background: #ececec;
+  background: var(--primary-50);
   padding: 0.15rem 0.5rem;
   border-radius: var(--radius-pill);
 }
+
+body.dark .sb-onda-badge { background: rgba(37, 99, 235, 0.1); }
 
 .sb-onda-athlete.unassigned {
   opacity: 0.6;
@@ -1754,10 +1783,12 @@ button:disabled {
 }
 
 .sb-onda-athlete.unassigned .sb-onda-badge {
-  color: #d68910;
+  color: #f59e0b;
 }
 
-/* --- SwimBase: PR badge, toggle de contraste, tema alto contraste --- */
+/* ============================================================
+   SWIMBASE — PR BADGE, TOGGLE, ALTO CONTRASTE
+   ============================================================ */
 .pr-badge {
   display: inline-block;
   background: #ffd700;
@@ -1771,15 +1802,9 @@ button:disabled {
 }
 
 @keyframes prPulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.25);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
 }
 
 .settings-toggle {
@@ -1792,35 +1817,16 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-.settings-toggle input {
+.settings-toggle input[type="checkbox"] {
   width: 22px;
   height: 22px;
   min-height: 0;
+  accent-color: var(--primary-600);
 }
 
-body.high-contrast {
-  --bg-main: #000;
-  --bg-card: #000;
-  --text-dark: #ffffff;
-  --text-muted: #ffd700;
-  --border-light: #3a3a3a;
-  --badge-bg: #101010;
-  --timer-digits: #ffff00;
-  background: #000;
-  color: #fff;
-}
-
-body.high-contrast .timer-display,
-body.high-contrast .sb-raia-time {
-  color: #ffff00;
-}
-
-body.high-contrast .mode-card {
-  background: #000;
-  border-color: #3a3a3a;
-}
-
-/* --- SwimBase: Análise (gráfico + tabelas) --- */
+/* ============================================================
+   SWIMBASE — ANÁLISE (GRÁFICO + TABELAS)
+   ============================================================ */
 .sb-chart {
   display: block;
   width: 100%;
@@ -1841,8 +1847,7 @@ body.high-contrast .mode-card {
   font-size: 0.82rem;
 }
 
-.sb-table th,
-.sb-table td {
+.sb-table th, .sb-table td {
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid var(--border-light);
   text-align: left;
@@ -1852,16 +1857,26 @@ body.high-contrast .mode-card {
 .sb-table th {
   color: var(--text-muted);
   font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sb-table tbody tr:hover td {
+  background: var(--primary-50);
+}
+
+body.dark .sb-table tbody tr:hover td {
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .mono {
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
 }
 
-/* ========================================================
-   #sbChronoDialog — tema escuro (SwimBase)
-   Fiel ao mockup: top controls + timer box + info + card
-   ======================================================== */
+/* ============================================================
+   #sbChronoDialog — TEMA ESCURO (SwimBase)
+   ============================================================ */
 #sbChronoDialog {
   --sb-bg: #0f151b;
   --sb-surface: #1a242e;
@@ -1873,8 +1888,8 @@ body.high-contrast .mode-card {
   --sb-muted: #8aa4ba;
   --sb-green: #3fcb7a;
   --sb-amber: #f5b342;
-  --sb-blue: #2e7db6;
-  --sb-red: #e74c3c;
+  --sb-blue: var(--primary-500);
+  --sb-red: var(--danger);
   --sb-cyan: #00ffaa;
   background: var(--sb-bg);
   color: var(--sb-text);
@@ -1896,7 +1911,7 @@ body.high-contrast .mode-card {
   background: rgba(4, 22, 43, 0.65);
 }
 
-/* --- Top controls: button + timer box + button --- */
+/* --- Top controls --- */
 .sb-chrono-top {
   display: flex;
   align-items: flex-start;
@@ -1919,13 +1934,8 @@ body.high-contrast .mode-card {
   white-space: nowrap;
 }
 
-.sb-chrono-btn-start {
-  background-color: var(--btn-start);
-}
-
-.sb-chrono-btn-stop {
-  background-color: var(--btn-reset);
-}
+.sb-chrono-btn-start { background-color: var(--ok); }
+.sb-chrono-btn-stop { background-color: var(--sb-red); }
 
 .sb-play-icon {
   width: 0;
@@ -1980,9 +1990,7 @@ body.high-contrast .mode-card {
   left: 5px;
 }
 
-.sb-timer-status {
-  text-align: right;
-}
+.sb-timer-status { text-align: right; }
 
 .sb-timer-status-title {
   color: var(--sb-cyan);
@@ -1991,14 +1999,23 @@ body.high-contrast .mode-card {
 }
 
 .sb-timer-status-badge {
-  background-color: #2a1b2e;
-  color: #ff3366;
   font-size: 9px;
   padding: 1px 6px;
   border-radius: 8px;
   display: inline-block;
   font-weight: bold;
   margin-left: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sb-timer-status-badge.running {
+  background-color: rgba(63, 203, 122, 0.15);
+  color: var(--sb-green);
+}
+
+.sb-timer-status-badge.stopped {
+  background-color: rgba(255, 51, 102, 0.15);
+  color: #ff3366;
 }
 
 .sb-timer-digits {
@@ -2010,9 +2027,7 @@ body.high-contrast .mode-card {
   line-height: 1.1;
 }
 
-.sb-timer-digits span {
-  font-size: 28px;
-}
+.sb-timer-digits span { font-size: 28px; }
 
 /* --- Info bar --- */
 .sb-chrono-info {
@@ -2053,6 +2068,12 @@ body.high-contrast .mode-card {
   margin: 0 14px 14px;
 }
 
+body.dark .sb-chrono-card {
+  background-color: var(--sb-surface);
+  border-color: var(--sb-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .sb-chrono-list {
   display: flex;
   flex-direction: column;
@@ -2076,9 +2097,12 @@ body.high-contrast .mode-card {
   position: relative;
 }
 
-#sbChronoDialog .sb-raia.done {
-  opacity: 0.55;
+body.dark #sbChronoDialog .sb-raia {
+  background-color: var(--sb-surface2);
+  color: var(--sb-text);
 }
+
+#sbChronoDialog .sb-raia.done { opacity: 0.55; }
 
 #sbChronoDialog .sb-raia.selected {
   border-color: var(--sb-cyan) !important;
@@ -2107,6 +2131,11 @@ body.high-contrast .mode-card {
   flex-shrink: 0;
 }
 
+body.dark #sbChronoDialog .sb-raia-lane {
+  background-color: var(--sb-surface3);
+  color: var(--sb-muted);
+}
+
 .sb-raia-body {
   display: flex;
   flex-direction: column;
@@ -2122,6 +2151,8 @@ body.high-contrast .mode-card {
   text-overflow: ellipsis;
 }
 
+body.dark #sbChronoDialog .sb-raia-name { color: var(--sb-text); }
+
 .sb-raia-splits {
   font-size: 11px;
   color: #666;
@@ -2131,26 +2162,17 @@ body.high-contrast .mode-card {
   line-height: 1.3;
 }
 
-.sb-raia-splits:empty {
-  display: none;
-}
+body.dark #sbChronoDialog .sb-raia-splits { color: var(--sb-muted); }
 
-.sb-raia-meta {
-  font-size: 11px;
-  color: #666;
-  margin-top: 2px;
-}
+.sb-raia-splits:empty { display: none; }
 
-.sb-raia-last {
-  font-size: 11px;
-  color: #666;
-  margin-top: 2px;
-}
+.sb-raia-meta { font-size: 11px; color: #666; margin-top: 2px; }
+.sb-raia-last { font-size: 11px; color: #666; margin-top: 2px; }
 
-.sb-raia-center {
-  flex: 0 0 auto;
-  margin: 0 12px;
-}
+body.dark #sbChronoDialog .sb-raia-meta,
+body.dark #sbChronoDialog .sb-raia-last { color: var(--sb-muted); }
+
+.sb-raia-center { flex: 0 0 auto; margin: 0 12px; }
 
 .sb-raia-tag {
   border: 1px solid #d0d0d0;
@@ -2163,9 +2185,12 @@ body.high-contrast .mode-card {
   white-space: nowrap;
 }
 
-.sb-raia-right {
-  flex: 0 0 auto;
+body.dark .sb-raia-tag {
+  background: var(--sb-surface3);
+  border-color: var(--sb-border);
 }
+
+.sb-raia-right { flex: 0 0 auto; }
 
 .sb-raia-time {
   font-family: "Courier New", Courier, monospace;
@@ -2174,9 +2199,9 @@ body.high-contrast .mode-card {
   color: #333;
 }
 
-#sbChronoDialog .sb-raia.done .sb-raia-time {
-  color: var(--sb-green);
-}
+body.dark #sbChronoDialog .sb-raia-time { color: var(--sb-text); }
+
+#sbChronoDialog .sb-raia.done .sb-raia-time { color: var(--sb-green); }
 
 #sbChronoDialog .sb-raia .pr-badge {
   background: #ffd700;
@@ -2192,7 +2217,7 @@ body.high-contrast .mode-card {
 }
 
 .sb-chrono-btn-save {
-  background-color: var(--btn-save);
+  background-color: var(--ok);
   color: white;
   border: none;
   padding: 8px 24px;
@@ -2200,12 +2225,15 @@ body.high-contrast .mode-card {
   font-weight: bold;
   font-size: 14px;
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
+
+.sb-chrono-btn-save:hover { opacity: 0.9; }
 
 .sb-chrono-btn-cancel {
   background-color: transparent;
-  color: #333;
-  border: 1px solid #333;
+  color: var(--sb-text);
+  border: 1px solid var(--sb-border);
   padding: 8px 18px;
   border-radius: 16px;
   font-weight: bold;
@@ -2228,24 +2256,10 @@ body.high-contrast .mode-card {
   background: #0c101c;
 }
 
-#sbChronoDialog .sb-countdown.amber {
-  border-color: var(--sb-amber);
-  color: var(--sb-amber);
-}
-
-#sbChronoDialog .sb-countdown.red {
-  border-color: var(--sb-red);
-  color: var(--sb-red);
-}
-
-#sbChronoDialog .sb-countdown.done {
-  border-color: var(--sb-green);
-  color: var(--sb-green);
-}
-
-#sbChronoDialog .sb-countdown.flash {
-  animation: sbCountdownFlash 0.4s ease;
-}
+#sbChronoDialog .sb-countdown.amber { border-color: var(--sb-amber); color: var(--sb-amber); }
+#sbChronoDialog .sb-countdown.red { border-color: var(--sb-red); color: var(--sb-red); }
+#sbChronoDialog .sb-countdown.done { border-color: var(--sb-green); color: var(--sb-green); }
+#sbChronoDialog .sb-countdown.flash { animation: sbCountdownFlash 0.4s ease; }
 
 @keyframes sbCountdownFlash {
   0% { background: rgba(0, 255, 170, 0.25); }
@@ -2259,6 +2273,8 @@ body.high-contrast .mode-card {
   color: #555;
   margin-bottom: 12px;
 }
+
+body.dark #sbChronoDialog .sb-group-counter { color: var(--sb-muted); }
 
 /* --- M3: wave status pills --- */
 #sbChronoDialog .sb-wave-status {
@@ -2277,16 +2293,21 @@ body.high-contrast .mode-card {
   color: #8899a6;
 }
 
+body.dark #sbChronoDialog .sb-wave-pill {
+  background: var(--sb-surface3);
+  color: var(--sb-muted);
+}
+
 #sbChronoDialog .sb-wave-pill.running {
-  background: #d4e8f7;
-  color: #2e7db6;
-  border: 1px solid #2e7db6;
+  background: rgba(63, 203, 122, 0.12);
+  color: var(--sb-green);
+  border: 1px solid var(--sb-green);
 }
 
 #sbChronoDialog .sb-wave-pill.done {
-  background: #d5f5e3;
-  color: #27ae60;
-  border: 1px solid #27ae60;
+  background: rgba(63, 203, 122, 0.15);
+  color: var(--sb-green);
+  border: 1px solid var(--sb-green);
 }
 
 /* --- M2: rest timer overlay --- */
@@ -2301,18 +2322,18 @@ body.high-contrast .mode-card {
   color: var(--sb-red);
   pointer-events: none;
   z-index: 2;
-  text-shadow: 0 0 12px rgba(231, 76, 60, 0.5);
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
 }
 
 #sbChronoDialog .sb-raia.rest-alert {
   border-color: var(--sb-red) !important;
-  background: rgba(231, 76, 60, 0.12) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
   animation: restPulse 1s ease-in-out infinite;
 }
 
 @keyframes restPulse {
-  0%, 100% { background: rgba(231, 76, 60, 0.08); }
-  50% { background: rgba(231, 76, 60, 0.18); }
+  0%, 100% { background: rgba(239, 68, 68, 0.08); }
+  50% { background: rgba(239, 68, 68, 0.18); }
 }
 
 .rest-countdown {
@@ -2343,7 +2364,7 @@ body.high-contrast .mode-card {
   font-size: 1.1rem;
 }
 
-/* --- High contrast override --- */
+/* --- High contrast override for chrono --- */
 body.high-contrast #sbChronoDialog {
   --sb-bg: #000;
   --sb-surface: #0a0a0a;
@@ -2365,17 +2386,9 @@ body.high-contrast #sbChronoDialog .sb-timer-box {
   border: 2px solid #3a3a3a;
 }
 
-body.high-contrast #sbChronoDialog .sb-timer-digits {
-  color: #ffff00;
-}
-
-body.high-contrast #sbChronoDialog .sb-timer-status-title {
-  color: #ffff00;
-}
-
-body.high-contrast #sbChronoDialog .sb-clock-icon {
-  background-color: #ffff00;
-}
+body.high-contrast #sbChronoDialog .sb-timer-digits { color: #ffff00; }
+body.high-contrast #sbChronoDialog .sb-timer-status-title { color: #ffff00; }
+body.high-contrast #sbChronoDialog .sb-clock-icon { background-color: #ffff00; }
 
 body.high-contrast #sbChronoDialog .sb-chrono-card {
   background: #111;
@@ -2387,37 +2400,87 @@ body.high-contrast #sbChronoDialog .sb-raia {
   color: #fff;
 }
 
-body.high-contrast #sbChronoDialog .sb-raia-name {
-  color: #fff;
-}
-
-body.high-contrast #sbChronoDialog .sb-raia-time {
-  color: #ffff00;
-}
-
-body.high-contrast #sbChronoDialog .sb-chrono-btn-save {
-  color: #000;
-}
+body.high-contrast #sbChronoDialog .sb-raia-name { color: #fff; }
+body.high-contrast #sbChronoDialog .sb-raia-time { color: #ffff00; }
+body.high-contrast #sbChronoDialog .sb-chrono-btn-save { color: #000; }
 
 body.high-contrast #sbChronoDialog .sb-chrono-btn-cancel {
   color: #fff;
   border-color: #fff;
 }
 
-/* ========================================================
-   Fim #sbChronoDialog
-   ======================================================== */
-
-/* --- Indicador offline no topbar --- */
+/* ============================================================
+   INDICADOR OFFLINE
+   ============================================================ */
 .offline-badge {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: #c0392b;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+}
+
+/* ============================================================
+   ANIMAÇÕES GLOBAIS
+   ============================================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake { animation: shake 0.3s ease-in-out; }
+
+/* ============================================================
+   SWIMBASE — STATUS BADGES (timer)
+   ============================================================ */
+.timer-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: bold;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.timer-badge.running {
+  background-color: rgba(63, 203, 122, 0.15);
+  color: #3fcb7a;
+}
+
+.timer-badge.stopped {
+  background-color: rgba(255, 51, 102, 0.15);
+  color: #ff3366;
+}
+
+/* ============================================================
+   TOAST (notificações)
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 100;
+  animation: toastIn 0.25s ease;
+}
+
+.toast.success { background: var(--ok); }
+.toast.error { background: var(--danger); }
+
+body.dark .toast { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

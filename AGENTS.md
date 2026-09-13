@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.21.0
+- **Versão atual:** v0.22.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v33` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v56` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2385,3 +2385,63 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: importacao de turmas e atletas via CSV no SwimBase`
   → MINOR → **v0.21.0** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Design System unificado: paleta azul, dark mode, Inter (v0.22.0)
+
+### O que foi feito
+- **`styles.css` reescrito** (~1500 linhas) seguindo o Design System extraído do
+  app Chamadas:
+  - **Paleta Primary**: azul `#2563eb` (primary-600) substituiu o verde `#2e7152`;
+    tokens `--primary-50..900` + semantic aliases (`--btn-start: var(--primary-600)`,
+    `--btn-reset: #dc2626`, `--btn-save: var(--primary-600)`).
+  - **Dark mode global**: `body.dark` sobrescreve todos os tokens CSS
+    (`--bg-main: #030712`, `--bg-card: #1f2937`, `--text-dark: #f9fafb`,
+    `--border-light: #374151`, etc.). Toggle no dialog de Configurações.
+  - **Fonte Inter**: `--font-sans: Inter, system-ui, ...` com `-webkit-font-smoothing: antialiased`.
+  - **Border radius**: `--radius-md: 6px` (botões/inputs) e `--radius-card: 12px` (cards),
+    `--radius-pill: 9999px` (pills/badges). Botões e inputs migraram de `pill` para `md`.
+  - **Componentes padronizados**: botões (`.primary`/`.ghost`/`.danger` com transitions),
+    inputs (focus ring `primary-200/500`), status badges (`.status.neutral/error/success`),
+    tabelas (header uppercase `0.04em`, hover `primary-50`), modais (overlay
+    `bg-black/40`, backdrop dark `bg-black/60`), bottom-nav (`.nav-item.active`
+    `primary-600`), tags/chips (`primary-100/700`), profile-chip (`primary-200/700`).
+  - **Alto contraste migrado**: mantém `body.high-contrast` com tokens CSS
+    sobrescritos (mesmo padrão do dark mode).
+  - **Cronômetro SwimBase integrado**: `#sbChronoDialog` mantém seus tokens `--sb-*`
+    mas herda `--sb-blue: var(--primary-500)` e `--sb-red: var(--danger)`. Rows com
+    dark mode (`body.dark #sbChronoDialog .sb-raia`). Status badge usa classes
+    `.running`/`.stopped` em vez de inline styles.
+  - **Animações**: `@keyframes shake` + `.animate-shake`, `toastIn`, `chronoSheetUp`,
+    `prPulse`, `countdownPop`, `restPulse`.
+  - **Novo `.toast`**: fixed bottom-right, `.success` (green-600) / `.error` (red-600).
+  - **CSS global dark inputs**: `body.dark input/select/textarea` herdam fundo/borda/texto
+    dos tokens; checkboxes/radios usam `accent-color: var(--primary-400)`.
+- **`index.html`**: `<meta name="theme-color" content="#2563eb">` (era `#03192f`);
+  toggle "Modo escuro" (`#darkModeToggle`) no dialog de Configurações.
+- **`app.js`**: `APP_VERSION` → **`0.22.0`**; novas funções `loadDarkMode()` /
+  `applyDarkMode(enabled)` / `bindDarkMode()` seguindo o padrão do alto contraste;
+  chamadas em `init()`.
+- **`swimbase.js`**: `syncStateBadge(running)` agora usa classes `.running`/`.stopped`
+  em vez de inline styles (`backgroundColor`/`color`).
+- **`sw.js`**: cache `pbtracker-v55` → **`pbtracker-v56`**.
+
+### Decisões (consultas do usuário)
+- Primary = **azul** (padrão do DS), não verde.
+- Dark mode = **app inteiro** (Balizamento + SwimBase).
+- Cronômetro SwimBase = **integrado ao DS** (mantém escuro próprio, herda tokens).
+- Alto contraste = **migrado para DS** (mesma estrutura de tokens).
+- Fonte = **Inter via system-ui** (usa se disponível, fallback senão).
+
+### Arquivos
+- `styles.css` (reescrito ~1500 linhas), `index.html` (theme-color + toggle),
+  `app.js` (dark mode + APP_VERSION), `swimbase.js` (status badge classes),
+  `sw.js` (cache v56)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: design system unificado - paleta azul, dark mode, fonte inter e componentes padronizados`
+  → MINOR → **v0.22.0** → push origin master + tag.
