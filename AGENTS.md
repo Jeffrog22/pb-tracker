@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.23.2
+- **Versão atual:** v0.24.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v59` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v60` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2557,3 +2557,47 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: sincroniza relogio contínuo para iniciar no botao Iniciar`
   → PATCH → **v0.23.2** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Custom HUD: drag and drop dos botões de trigger (v0.24.0)
+
+### O que foi feito
+- **Botoes de trigger flutuantes** no cronometro SwimBase: Iniciar/Split e
+  Parar/Zerar sao agora **elementos arrastaveis** dentro de um `#sbHudLayer`
+  (container absoluto com z-index alto) que cobre todo o dialog. Os botoes
+  ficam **por cima** do conteudo (timer, atletas, etc).
+- **Drag com pointer events**: `initHudDrag()` configura `pointerdown/move/up`
+  em cada `.sb-hud-btn`. O botao captura o ponteiro (`setPointerCapture`),
+  calcula offset relativo ao `#sbHudLayer`, move via `left/top` inline e
+  classe `.dragging` (shadow + opacity). `pointerup` salva a posicao.
+- **Persistencia em localStorage**: `pbtracker_chrono_hud` armazena
+  `{ start: { left, top, right }, stop: { left, top, right } }`.
+  `loadHudPositions()` / `saveHudPositions()` / `resetHudPositions()`.
+  Posicoes default: Iniciar `left:14px top:14px`, Parar `right:14px top:14px`.
+- **`sb-chrono-top` simplificado**: so o `sb-timer-box` centralizado
+  (`justify-content: center`), sem os botoes.
+- **`index.html`**: novo `#sbHudLayer` com os 2 botoes, antes do
+  `.sb-chrono-top`.
+- **`styles.css`**: `.sb-hud-layer` (absolute, z-index 10, pointer-events none),
+  `.sb-hud-btn` (absolute, grab cursor, touch-action none, drag styles),
+  `.sb-chrono-top` simplificado.
+- **`app.js`**: `APP_VERSION` → `0.24.0`.
+- **`sw.js`**: cache `pbtracker-v59` → `pbtracker-v60`.
+
+### Decisões (consultas do usuário)
+- **Float sobre o conteudo** (nao empurra conteudo para baixo).
+- **Persistencia em localStorage** (posicao salva entre sessoes).
+- **Drag and drop** (nao presets, nao grid, nao modo edicao).
+
+### Arquivos
+- `index.html` (botoes no HUD layer), `styles.css` (HUD layer + drag),
+  `swimbase.js` (initHudDrag + persistencia + defaults)
+- `app.js` (APP_VERSION), `sw.js` (cache v60)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: Custom HUD - drag and drop dos botoes de trigger no cronometro`
+  → MINOR → **v0.24.0** → push origin master + tag.

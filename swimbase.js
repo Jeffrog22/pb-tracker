@@ -1068,6 +1068,102 @@ function turmaNome() {
   return turma ? turma.nome : "";
 }
 
+const HUD_KEY = "pbtracker_chrono_hud";
+const HUD_DEFAULTS = {
+  start: { left: "14px", top: "14px" },
+  stop: { right: "14px", top: "14px" },
+};
+
+function loadHudPositions() {
+  try { return JSON.parse(localStorage.getItem(HUD_KEY)) || null; } catch { return null; }
+}
+
+function saveHudPositions() {
+  const layer = document.getElementById("sbHudLayer");
+  if (!layer) return;
+  const btns = layer.querySelectorAll(".sb-hud-btn");
+  const pos = {};
+  btns.forEach((btn) => {
+    const id = btn.id === "sbMasterStartBtn" ? "start" : "stop";
+    pos[id] = { left: btn.style.left, top: btn.style.top, right: btn.style.right };
+  });
+  localStorage.setItem(HUD_KEY, JSON.stringify(pos));
+}
+
+function resetHudPositions() {
+  localStorage.removeItem(HUD_KEY);
+  const startBtn = document.getElementById("sbMasterStartBtn");
+  const stopBtn = document.getElementById("sbMasterStopBtn");
+  if (startBtn) { startBtn.style.left = HUD_DEFAULTS.start.left; startBtn.style.top = HUD_DEFAULTS.start.top; startBtn.style.right = "auto"; }
+  if (stopBtn) { stopBtn.style.right = HUD_DEFAULTS.stop.right; stopBtn.style.top = HUD_DEFAULTS.stop.top; stopBtn.style.left = "auto"; }
+}
+
+function applyHudPositions(pos) {
+  const startBtn = document.getElementById("sbMasterStartBtn");
+  const stopBtn = document.getElementById("sbMasterStopBtn");
+  if (pos?.start) {
+    if (startBtn) { startBtn.style.left = pos.start.left || ""; startBtn.style.top = pos.start.top || ""; startBtn.style.right = pos.start.right || "auto"; }
+  } else if (startBtn) {
+    startBtn.style.left = HUD_DEFAULTS.start.left; startBtn.style.top = HUD_DEFAULTS.start.top; startBtn.style.right = "auto";
+  }
+  if (pos?.stop) {
+    if (stopBtn) { stopBtn.style.left = pos.stop.left || "auto"; stopBtn.style.top = pos.stop.top || ""; stopBtn.style.right = pos.stop.right || ""; }
+  } else if (stopBtn) {
+    stopBtn.style.right = HUD_DEFAULTS.stop.right; stopBtn.style.top = HUD_DEFAULTS.stop.top; stopBtn.style.left = "auto";
+  }
+}
+
+let hudDragging = null;
+let hudStartX = 0;
+let hudStartY = 0;
+let hudOrigLeft = 0;
+let hudOrigTop = 0;
+
+function initHudDrag() {
+  const layer = document.getElementById("sbHudLayer");
+  if (!layer) return;
+  const saved = loadHudPositions();
+  applyHudPositions(saved);
+
+  layer.querySelectorAll(".sb-hud-btn").forEach((btn) => {
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.setPointerCapture(e.pointerId);
+      btn.classList.add("dragging");
+      hudDragging = btn;
+      hudStartX = e.clientX;
+      hudStartY = e.clientY;
+      const rect = btn.getBoundingClientRect();
+      const layerRect = layer.getBoundingClientRect();
+      hudOrigLeft = rect.left - layerRect.left;
+      hudOrigTop = rect.top - layerRect.top;
+    });
+
+    btn.addEventListener("pointermove", (e) => {
+      if (hudDragging !== btn) return;
+      const dx = e.clientX - hudStartX;
+      const dy = e.clientY - hudStartY;
+      btn.style.left = (hudOrigLeft + dx) + "px";
+      btn.style.top = (hudOrigTop + dy) + "px";
+      btn.style.right = "auto";
+    });
+
+    btn.addEventListener("pointerup", () => {
+      if (hudDragging !== btn) return;
+      btn.classList.remove("dragging");
+      hudDragging = null;
+      saveHudPositions();
+    });
+
+    btn.addEventListener("pointercancel", () => {
+      if (hudDragging !== btn) return;
+      btn.classList.remove("dragging");
+      hudDragging = null;
+    });
+  });
+}
+
 function startTreino() {
   buildRaias();
   const modoTag = document.getElementById("sbTreinoModeTag");
@@ -1108,6 +1204,7 @@ function startTreino() {
   renderChronoList();
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
+  initHudDrag();
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(false, "Parar/Zerar");

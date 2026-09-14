@@ -312,11 +312,17 @@
   </dialog>
 
   <dialog id="sbChronoDialog" class="chrono-dialog">
-    <div class="sb-chrono-top">
-      <button id="sbMasterStartBtn" class="sb-chrono-btn sb-chrono-btn-start" type="button">
+    <div id="sbHudLayer" class="sb-hud-layer">
+      <button id="sbMasterStartBtn" class="sb-hud-btn sb-hud-btn-start" type="button">
         <span class="sb-play-icon" aria-hidden="true"></span>
         <span id="sbStartBtnLabel">Iniciar/Split</span>
       </button>
+      <button id="sbMasterStopBtn" class="sb-hud-btn sb-hud-btn-stop" type="button">
+        <span class="sb-reset-icon" aria-hidden="true">&#x21bb;</span>
+        <span id="sbStopBtnLabel">Parar/Zerar</span>
+      </button>
+    </div>
+    <div class="sb-chrono-top">
       <div class="sb-timer-box">
         <div class="sb-timer-header">
           <div class="sb-clock-icon" aria-hidden="true"></div>
@@ -327,10 +333,6 @@
         </div>
         <div id="sbMasterDisplay" class="sb-timer-digits">00'00"<span>00</span></div>
       </div>
-      <button id="sbMasterStopBtn" class="sb-chrono-btn sb-chrono-btn-stop" type="button">
-        <span class="sb-reset-icon" aria-hidden="true">&#x21bb;</span>
-        <span id="sbStopBtnLabel">Parar/Zerar</span>
-      </button>
     </div>
     <div class="sb-chrono-info">
       <span id="sbChronoTitle">Treino</span>
