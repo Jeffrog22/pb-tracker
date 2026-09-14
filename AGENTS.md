@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.22.0
+- **Versão atual:** v0.23.0
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v56` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v57` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2445,3 +2445,53 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: design system unificado - paleta azul, dark mode, fonte inter e componentes padronizados`
   → MINOR → **v0.22.0** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Dois relógios no cronômetro SwimBase + blink (v0.23.0)
+
+### O que foi feito
+- **Relógio contínuo** (`#sbContinuousDisplay`): novo display abaixo da barra de
+  info (`.sb-chrono-info`) no cronômetro SwimBase. Roda sem pausa do 1º Iniciar
+  ao Zerar — registra o tempo total do treino. **Só zera no hold Zerar 3s**
+  (que também reseta séries e preserva atletas pré-selecionados).
+- **Relógio principal com blink**: o `#sbMasterDisplay` agora **pisca 3x em 2s**
+  mostrando o último tempo registrado, depois retoma a exibir o tempo ao vivo.
+  Efeito aplicado em: M2 Split (`recordM2Split`) e M2 Parar (`recordM2Final`).
+  Transições de série (M1/M3) resetam direto, sem blink.
+- **`tr.continuousStartedAt`**: novo campo no estado `tr` — timestamp do 1º
+  Iniciar. O ticker (`startMasterTicker`) atualiza o display contínuo a cada
+  30ms independente de `masterRunning`.
+- **`blinkMasterDisplay(recordedTime)`**: nova função — limpa timeout anterior,
+  insere o tempo gravado no display, adiciona classe `.blink` (CSS animation
+  2s), remove após 2s via `setTimeout`. O ticker não sobrescreve o display
+  principal durante o blink (checa `tr.blinkTimeout`).
+- **`resetMaster()`**: agora limpa `continuousStartedAt`, `blinkTimeout` e
+  reseta o display contínuo para `00'00"00`.
+- **CSS**: `.sb-continuous-bar` (flex, label 13px muted + digits 13px cyan
+  monospace), `@keyframes timerBlink` (3 ciclos de opacidade em 2s) e
+  `.sb-timer-digits.blink`.
+- **`index.html`**: `.sb-continuous-bar` inserido entre `.sb-chrono-info` e
+  `.sb-chrono-header`.
+- **`app.js`**: `APP_VERSION` → **`0.23.0`**.
+- **`sw.js`**: cache `pbtracker-v56` → **`pbtracker-v57`**.
+
+### Decisões (consultas do usuário)
+- Contínuo **continua rodando** quando o master para (M2 todos done, M1/M3
+  última série) — só o hold Zerar zera.
+- Blink **3x em 2s** com retomada do tempo ao vivo (não congelamento permanente).
+- Transições de série (M1/M3) **resetam direto**, sem blink.
+- M2 Parar (tempo final) **pisca** o tempo gravado.
+- Fonte do contínuo **13px** (igual ao label da info bar).
+
+### Arquivos
+- `index.html` (`.sb-continuous-bar`), `styles.css` (estilos + keyframes),
+  `swimbase.js` (estado, ticker, blinkMasterDisplay, reset, M2 split/final)
+- `app.js` (APP_VERSION), `sw.js` (cache v57)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: dois relogios no cronometro SwimBase - continuo + blink do principal`
+  → MINOR → **v0.23.0** → push origin master + tag.

@@ -700,6 +700,8 @@ const tr = {
   masterElapsedMs: 0,
   sessionStartedAt: null,
   m2SelectedAtletaId: null,
+  continuousStartedAt: 0,
+  blinkTimeout: null,
 };
 
 async function renderSbTreino() {
@@ -1106,6 +1108,7 @@ function startTreino() {
   renderChronoList();
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
+  tr.continuousStartedAt = Date.now();
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(false, "Parar/Zerar");
@@ -1193,6 +1196,7 @@ function recordM2Split() {
   const splitMs = Date.now() - raia.startedAt;
   raia.currentSplits.push(splitMs);
   hapticFeedback(40);
+  blinkMasterDisplay(msToDisplay(splitMs));
   updateRaiaRow(raia);
   api.logAction(`SwimBase M2 volta: ${raia.nome} — ${msToDisplay(splitMs)}.`);
 }
@@ -1206,6 +1210,7 @@ function recordM2Final() {
   raia.lastIsPr = false;
   raia.currentSplits = [];
   hapticFeedback(60);
+  blinkMasterDisplay(msToDisplay(splitMs));
 
   if (raia.rep < tr.config.repeticoes) {
     raia.rep += 1;
@@ -1363,6 +1368,9 @@ function resetMaster() {
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
+  tr.continuousStartedAt = 0;
+  clearTimeout(tr.blinkTimeout);
+  tr.blinkTimeout = null;
   tr.raias.forEach((raia) => {
     raia.elapsedMs = 0;
     raia.startedAt = 0;
@@ -1398,11 +1406,25 @@ function resetMaster() {
   }
   const masterDisplay = document.getElementById("sbMasterDisplay");
   if (masterDisplay) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(0));
+  const contEl = document.getElementById("sbContinuousDisplay");
+  if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(0));
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(false, "Parar/Zerar");
   renderChronoList();
   api.logAction("Treino zerado no SwimBase.");
+}
+
+function blinkMasterDisplay(recordedTime) {
+  const el = document.getElementById("sbMasterDisplay");
+  if (!el) return;
+  clearTimeout(tr.blinkTimeout);
+  el.innerHTML = maskTimeHTML(recordedTime);
+  el.classList.add("blink");
+  tr.blinkTimeout = setTimeout(() => {
+    el.classList.remove("blink");
+    tr.blinkTimeout = null;
+  }, 2000);
 }
 
 function startMasterTicker() {
@@ -1412,7 +1434,12 @@ function startMasterTicker() {
     if (tr.masterRunning) {
       tr.masterElapsedMs = now - tr.masterStartedAt;
       const masterDisplay = document.getElementById("sbMasterDisplay");
-      if (masterDisplay) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(tr.masterElapsedMs));
+      if (masterDisplay && !tr.blinkTimeout) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(tr.masterElapsedMs));
+    }
+    if (tr.continuousStartedAt > 0) {
+      const contMs = now - tr.continuousStartedAt;
+      const contEl = document.getElementById("sbContinuousDisplay");
+      if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(contMs));
     }
     if (tr.config.modo === 1) tickModo1();
     else if (tr.config.modo === 3) tickModo3(now);
