@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.23.1
+- **Versão atual:** v0.23.2
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v58` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v59` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2529,3 +2529,31 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: relógio contínuo inline na info bar do cronometro SwimBase`
   → PATCH → **v0.23.1** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Sync do relógio contínuo: inicia no botão Iniciar (v0.23.2)
+
+### O que foi feito
+- **Bug**: `tr.continuousStartedAt = Date.now()` estava em `startTreino()` (ao
+  abrir o dialog), fazendo o contínuo começar a contar antes do clique em
+  "Iniciar". Movido para `startMaster()` com guarda `=== 0` (só inicia no
+  1º Iniciar; resume não reseta).
+- **`swimbase.js`**: removida linha de `startTreino`; adicionada em `startMaster`
+  antes de `startMasterTicker()`.
+- **`app.js`**: `APP_VERSION` → `0.23.2`.
+- **`sw.js`**: cache `pbtracker-v58` → `pbtracker-v59`.
+
+### Decisões (consultas do usuário)
+- Contínuo começa **no 1º clique de Iniciar**, não na abertura do dialog.
+- Condição `=== 0` garante que resume não reseta o contínuo.
+
+### Arquivos
+- `swimbase.js` (startTreino, startMaster)
+- `app.js` (APP_VERSION), `sw.js` (cache v59)
+
+### Verificações
+- `node --check app.js swimbase.js sw.js`: 0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: sincroniza relogio contínuo para iniciar no botao Iniciar`
+  → PATCH → **v0.23.2** → push origin master + tag.

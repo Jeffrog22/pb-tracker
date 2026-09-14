@@ -1108,7 +1108,6 @@ function startTreino() {
   renderChronoList();
   document.getElementById("sbChronoDialog").showModal();
   requestWakeLock();
-  tr.continuousStartedAt = Date.now();
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(false, "Parar/Zerar");
@@ -1348,6 +1347,7 @@ function startMaster() {
   } else {
     syncStopBtn(false, "Parar");
   }
+  if (tr.continuousStartedAt === 0) tr.continuousStartedAt = Date.now();
   startMasterTicker();
   api.logAction("Treino iniciado no SwimBase.");
 }
