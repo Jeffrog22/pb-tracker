@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.23.0
+- **Versão atual:** v0.23.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v57` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v58` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2495,3 +2495,37 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: dois relogios no cronometro SwimBase - continuo + blink do principal`
   → MINOR → **v0.23.0** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Relógio contínuo inline na info bar (v0.23.1)
+
+### O que foi feito
+- **Layout do contínuo corrigido**: o `#sbContinuousDisplay` saiu da barra
+  separada (`.sb-continuous-bar`) e foi para **dentro de `.sb-chrono-info`**,
+  no meio entre o nome da prova e as info de intervalo/descanso.
+  Layout final: `Crawl 25m · Adulto A    00'00"00    Descanso: 20s · 3 reps`
+  — rente ao frame do relógio principal.
+- **`index.html`**: `<div class="sb-continuous-bar">` removido; `#sbContinuousDisplay`
+  movido para dentro de `.sb-chrono-info` como filho central.
+- **`styles.css`**: removidas `.sb-continuous-bar` e `.sb-continuous-label`;
+  `.sb-chrono-info` ganhou `align-items: center` e `gap: 8px`;
+  novo `#sbChronoDialog .sb-continuous-digits` (cyan, monospace, 13px bold,
+  `flex: 0 0 auto`).
+- **`app.js`**: `APP_VERSION` → `0.23.1`.
+- **`sw.js`**: cache `pbtracker-v57` → `pbtracker-v58`.
+
+### Decisões (consultas do usuário)
+- Contínuo **inline na info bar**, sem label "Tempo total" — só o display.
+- Sync (ambos zerados antes do Iniciar) confirmado como **comportamento esperado**.
+
+### Arquivos
+- `index.html` (reestruturado), `styles.css` (removido barra, adicionado inline)
+- `app.js` (APP_VERSION), `sw.js` (cache v58)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: relógio contínuo inline na info bar do cronometro SwimBase`
+  → PATCH → **v0.23.1** → push origin master + tag.
