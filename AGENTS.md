@@ -40,7 +40,7 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.24.0
+- **Versão atual:** v0.24.1
 - **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
@@ -114,7 +114,7 @@ Regras:
   (sem Equipe e sem PR Parcial). **Células de parcial sem metragem viram `--`**
   (`buildResultsRows`): só há tempo quando `athlete.current[split]` está preenchido;
   split fora da prova, intermediária não registrada ou `00:00:00` → `--` (XLSX e CSV).
-- **Cache do service worker**: nome `pbtracker-v60` em `sw.js` (app shell inclui
+- **Cache do service worker**: nome `pbtracker-v61` em `sw.js` (app shell inclui
   `exporter.js`). Ao subir versão, atualizar o nome do cache.
 - **Cores dos toggles de baliza (cronômetro)**: cada série embaralha a paleta
   `LANE_COLORS` em `state.activeChrono.laneColors` via `getBalizaColor` — cor
@@ -2601,3 +2601,38 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: Custom HUD - drag and drop dos botoes de trigger no cronometro`
   → MINOR → **v0.24.0** → push origin master + tag.
+
+---
+
+## Sessão: 13/09/2026 — Relógio principal reseta a cada série (v0.24.1)
+
+### O que foi feito
+- **Bug**: o display principal (`sbMasterDisplay`) mostrava o tempo **total**
+  desde o 1º Iniciar (`masterElapsedMs` nunca reseta entre séries), quando
+  deveria mostrar o tempo da **série corrente**. O contínuo já cumpre o papel
+  de tempo total.
+- **Novo campo `tr.seriesStartedAt`**: timestamp do início da série atual.
+  O display principal agora mostra `Date.now() - tr.seriesStartedAt` (reseta
+  a cada série); o contínuo continua com `Date.now() - tr.continuousStartedAt`.
+- **`startMaster()`**: inicializa `seriesStartedAt` no 1º Iniciar (guard `=== 0`).
+- **`tickModo1()`**: reseta `seriesStartedAt` quando avança de série (`g.serie++`).
+- **`tickModo3()`**: reseta `seriesStartedAt` quando avança de série (`modo3Serie++`).
+- **`resetMaster()`**: limpa `seriesStartedAt` junto com o contínuo.
+- **`app.js`**: `APP_VERSION` → `0.24.1`.
+- **`sw.js`**: cache `pbtracker-v60` → `pbtracker-v61`.
+
+### Decisões
+- M2 sem mudança (cada atleta tem timer individual).
+- `masterElapsedMs` mantido para cálculos internos (M1 countUp, M3 waves);
+  só o **display** usa `seriesStartedAt`.
+
+### Arquivos
+- `swimbase.js` (estado, ticker, startMaster, tickModo1, tickModo3, resetMaster)
+- `app.js` (APP_VERSION), `sw.js` (cache v61)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `fix: relogio principal reseta a cada serie mostrando tempo da serie corrente`
+  → PATCH → **v0.24.1** → push origin master + tag.

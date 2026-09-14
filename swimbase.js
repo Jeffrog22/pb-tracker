@@ -701,6 +701,7 @@ const tr = {
   sessionStartedAt: null,
   m2SelectedAtletaId: null,
   continuousStartedAt: 0,
+  seriesStartedAt: 0,
   blinkTimeout: null,
 };
 
@@ -1445,6 +1446,7 @@ function startMaster() {
     syncStopBtn(false, "Parar");
   }
   if (tr.continuousStartedAt === 0) tr.continuousStartedAt = Date.now();
+  if (tr.seriesStartedAt === 0) tr.seriesStartedAt = Date.now();
   startMasterTicker();
   api.logAction("Treino iniciado no SwimBase.");
 }
@@ -1466,6 +1468,7 @@ function resetMaster() {
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
   tr.continuousStartedAt = 0;
+  tr.seriesStartedAt = 0;
   clearTimeout(tr.blinkTimeout);
   tr.blinkTimeout = null;
   tr.raias.forEach((raia) => {
@@ -1531,7 +1534,8 @@ function startMasterTicker() {
     if (tr.masterRunning) {
       tr.masterElapsedMs = now - tr.masterStartedAt;
       const masterDisplay = document.getElementById("sbMasterDisplay");
-      if (masterDisplay && !tr.blinkTimeout) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(tr.masterElapsedMs));
+      const seriesMs = tr.seriesStartedAt > 0 ? now - tr.seriesStartedAt : 0;
+      if (masterDisplay && !tr.blinkTimeout) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(seriesMs));
     }
     if (tr.continuousStartedAt > 0) {
       const contMs = now - tr.continuousStartedAt;
@@ -1637,6 +1641,7 @@ function tickModo1() {
       g.phase = "serieInt";
       g.remainingMs = tr.config.intervaloSeries * 1000;
       g.countUpMs = 0;
+      tr.seriesStartedAt = Date.now();
     } else {
       g.phase = "done";
       tr.masterRunning = false;
@@ -1726,6 +1731,7 @@ function tickModo3(now) {
     tr.waves.every((w) => w.done)
   ) {
     tr.modo3Serie += 1;
+    tr.seriesStartedAt = Date.now();
     tr.raias.forEach((r) => {
       r.done = false;
       r.running = false;
