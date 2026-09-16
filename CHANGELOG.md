@@ -18,6 +18,27 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 ### Removed
 - (funcionalidades removidas)
 
+## [0.25.0] - 2026-09-16
+### Added
+- **Comparador de Atletas** (aba "Comparação" na Análise): comparação lado a lado
+  de 2 atletas estilo "versus.com" com filtros de estilo/distância, cards de
+  seleção com avatar circular, badge "VS" com placar dinâmico, tabela comparativa
+  de PRs (melhor tempo, média dos últimos 5, total de provas, total de PRs) com
+  badges de vencedor, e cards de resumo (vitórias, provas em comum, PRs totais).
+- **Aba "Desempenho"** na Análise: gráficos comparativos com Chart.js (CDN) —
+  gráfico de linhas (evolução temporal), gráfico de barras (comparação por prova),
+  heatmap de evolução (grade mês × prova com células coloridas por % de melhoria).
+  Toggle de métrica: Tempo, Colocação, Índice técnico, Consistência.
+- **Sistema de abas na Análise**: a tela agora tem 3 abas — Análise (individual,
+  código original), Comparação e Desempenho. Aba ativa é persistida entre renders.
+- CDN do Chart.js adicionado ao `index.html`.
+- ~380 linhas de CSS para o comparador (`.cmp-*`) com dark mode e alto contraste.
+
+### Changed
+- Tela de Análise reestruturada com 3 abas (`renderSbAnalise` → `renderAnaliseIndividual`
+  + `renderComparador` + `renderDesempenho`).
+- `APP_VERSION` → `0.25.0`; cache do SW → `pbtracker-v62`.
+
 ## [0.21.0] - 2026-08-27
 ### Added
 - **Importação de turmas e atletas via CSV** no SwimBase: novo botão

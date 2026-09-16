@@ -1,4 +1,4 @@
-<!-- última-sessão: 22/08/2026 — Fix cascata M2: split só pelo botão + seleção por toque v0.19.7 -->
+<!-- última-sessão: 16/09/2026 — Comparador de Atletas: 3 abas na Análise (v0.25.0) -->
 # AGENTS.md — Histórico Completo do Projeto
 
 ## Regras de Ouro
@@ -40,8 +40,8 @@ Regras:
 - **Nome:** PBTracker
 - **Descrição:** Balizamento e controle rápido de parciais para competição de natação + **SwimBase** (Modo Treino/Tier 2: atletas, turmas, PRs, análise) — PWA mobile/tablet-first, sem backend.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
-- **Versão atual:** v0.24.1
-- **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
+- **Versão atual:** v0.25.0
+- **Stack:** HTML + CSS + JavaScript puro (ES modules, sem build) + PDF.js via CDN + Chart.js via CDN + PWA (manifest + service worker) + **IndexedDB** (SwimBase) + Canvas nativo (gráficos). Sem backend, sem banco, sem testes automatizados.
 - **Deploy:** estático em **Vercel** (`*.vercel.app`), integrado ao repo git
   (push em `master` publica automaticamente, sem build; Output Directory na
   raiz). PDF.js requer rede no primeiro carregamento.
@@ -158,6 +158,13 @@ Regras:
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `tr.config.distancia < 50`.
   `syncStartBtn` mostra "Iniciar" (não "Split") para dist < 50m. Split
   intermédiario só faz sentido em provas com mais de uma volta.
+- **Comparador de Atletas (aba na Análise)**: tela com 3 abas — "Análise"
+  (individual, código original), "Comparação" (2 atletas lado a lado com VS,
+  filtros estilo/distância, tabela de PRs, cards de resumo) e "Desempenho"
+  (Chart.js via CDN: gráfico de linhas, barras comparativas, heatmap de evolução).
+  Estado `cmp` (ids, estilo, distancia, metrica) e `an.activeTab` para persistência
+  entre renders. Dados reais do IndexedDB (`sw.prs`, `sw.registros`, `sw.atletas`).
+  CSS: ~380 linhas (`.cmp-*`) com dark mode e alto contraste.
 
 ---
 
@@ -2636,3 +2643,59 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `fix: relogio principal reseta a cada serie mostrando tempo da serie corrente`
   → PATCH → **v0.24.1** → push origin master + tag.
+
+---
+
+## Sessão: 16/09/2026 — Comparador de Atletas: 3 abas na Análise (v0.25.0)
+
+### O que foi feito
+- **Tela de Análise reestruturada com 3 abas** (`swimbase.js`):
+  - **Aba "Análise"** (individual): código original reembalado em `renderAnaliseIndividual()`,
+    inalterado funcionalmente (filtros atleta/estilo/distância/período, gráfico Canvas,
+    tabela de PRs, registros recentes, exportação).
+  - **Aba "Comparação"** (novo): `renderComparador()` — comparação lado a lado de 2 atletas
+    estilo "versus.com". Inclui:
+    - Filtros de estilo (Crawl/Costas/Peito/Borboleta/Medley) e distância (25–1500m).
+    - Cards de seleção de atleta com avatar circular (iniciais), select com busca,
+      nome/idade/categoria/equipe, badge "✕" para limpar, badge "Melhor no geral" dourado.
+    - Badge "VS" centralizado com placar dinâmico (`3 × 2`) e barra de proporção.
+    - Tabela comparativa de PRs: melhor tempo por prova, média dos últimos 5 tempos,
+      total de provas registradas, total de PRs — cada linha com badge de vencedor colorido.
+    - Cards de resumo: vitórias, provas em comum, PRs totais.
+  - **Aba "Desempenho"** (novo): `renderDesempenho()` — gráficos comparativos com
+    Chart.js (CDN). Inclui:
+    - Toggle de métrica: Tempo, Colocação, Índice técnico, Consistência.
+    - Gráfico de linhas (evolução temporal dos 2 atletas, séries clicáveis via legenda).
+    - Gráfico de barras comparativo por prova (melhor tempo lado a lado).
+    - Heatmap de evolução (grade mês × prova, células coloridas por % de melhoria/pioria).
+- **Estado do comparador (`cmp`)**: `ids` (2 slots), `estilo`, `distancia`, `metrica`.
+- **Estado da Análise (`an`)**: ganhou `activeTab` para persistir a aba ativa entre renders.
+- **CDN Chart.js**: adicionado ao `index.html` (`chart.js@4` via jsdelivr).
+- **CSS** (~380 linhas): `.cmp-tabs`, `.cmp-tab`, `.cmp-athlete-card`, `.cmp-avatar`,
+  `.cmp-vs-circle`, `.cmp-vs-score`, `.cmp-vs-bar`, `.cmp-table`, `.cmp-winner-badge`,
+  `.cmp-summary-grid`, `.cmp-metric-toggle`, `.cmp-chart-wrap`, `.cmp-heatmap`,
+  `.cmp-legend` — todos com suporte a dark mode e alto contraste.
+- **`app.js`**: `APP_VERSION` → `0.25.0`.
+- **`sw.js`**: cache `pbtracker-v61` → `pbtracker-v62`.
+
+### Decisões (consultas do usuário)
+- Comparador como **nova aba dentro da Análise** (não screen separada).
+- **2 atletas** por comparação (slots simétricos com VS no meio).
+- Chart.js via **CDN** (lazy, carrega sob demanda).
+- Dados reais do IndexedDB (`sw.prs`, `sw.registros`, `sw.atletas`), sem mock.
+- Aba Análise original **inalterada** (reembalada em `renderAnaliseIndividual`).
+
+### Arquivos
+- `swimbase.js` (Análise reescrita: 3 abas, comparador, desempenho)
+- `styles.css` (~380 linhas novas: comparador, heatmap, toggle, cards VS)
+- `index.html` (CDN Chart.js)
+- `app.js` (APP_VERSION → 0.25.0)
+- `sw.js` (cache v62)
+- `AGENTS.md` (esta sessão), `CHANGELOG.md` (v0.25.0)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: Comparador de Atletas - 3 abas na Analise (individual, comparacao lado a lado com VS, desempenho com Chart.js + heatmap)`
+  → MINOR → **v0.25.0** → push origin master + tag.

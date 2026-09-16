@@ -74,13 +74,6 @@ const sw = {
 let editingAtletaId = null;
 let editingTurmaId = null;
 
-const an = {
-  atletaId: "",
-  estilo: "",
-  distancia: "",
-  periodo: "all",
-};
-
 export function initSwimBase(appApi) {
   api = appApi;
   document
@@ -2215,13 +2208,77 @@ function resetTreinoSession() {
   tr.m2SelectedAtletaId = null;
 }
 
-/* ---- Análise (gráficos + PRs + registros + export) ---- */
+/* ==== Análise — 3 abas: Análise · Comparação · Desempenho ==== */
+
+const an = {
+  atletaId: "",
+  estilo: "",
+  distancia: "",
+  periodo: "all",
+  activeTab: "individual",
+};
+
+/* ---- Comparador state ---- */
+const cmp = {
+  ids: ["", ""],
+  estilo: "",
+  distancia: "",
+  metrica: "tempo",
+};
+
+/* ==== Render principal com abas ==== */
 
 async function renderSbAnalise() {
   await ensureLoaded();
   const container = document.getElementById("sbAnaliseContent");
   if (!container) return;
+
   container.innerHTML = `
+    <div class="cmp-tabs">
+      <button class="cmp-tab active" data-tab="individual">Análise</button>
+      <button class="cmp-tab" data-tab="comparador">Comparação</button>
+      <button class="cmp-tab" data-tab="desempenho">Desempenho</button>
+    </div>
+    <div class="cmp-tab-panel active" data-panel="individual" id="cmpPanelIndividual"></div>
+    <div class="cmp-tab-panel" data-panel="comparador" id="cmpPanelComparador"></div>
+    <div class="cmp-tab-panel" data-panel="desempenho" id="cmpPanelDesempenho"></div>
+  `;
+
+  if (!sw.atletas.length) {
+    container.insertAdjacentHTML(
+      "beforeend",
+      '<div class="cmp-empty"><div class="cmp-empty-icon">🏊</div>Cadastre atletas e registre treinos para usar a análise.</div>'
+    );
+    return;
+  }
+
+  container.querySelectorAll(".cmp-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      container.querySelectorAll(".cmp-tab").forEach((t) => t.classList.remove("active"));
+      container.querySelectorAll(".cmp-tab-panel").forEach((p) => p.classList.remove("active"));
+      tab.classList.add("active");
+      const panel = container.querySelector(`[data-panel="${tab.dataset.tab}"]`);
+      if (panel) panel.classList.add("active");
+      an.activeTab = tab.dataset.tab;
+      if (tab.dataset.tab === "comparador") renderComparador();
+      if (tab.dataset.tab === "desempenho") renderDesempenho();
+    });
+  });
+
+  renderAnaliseIndividual();
+  if (an.activeTab === "comparador") {
+    container.querySelector('[data-tab="comparador"]').click();
+  } else if (an.activeTab === "desempenho") {
+    container.querySelector('[data-tab="desempenho"]').click();
+  }
+}
+
+/* ==== ABA 1: Análise individual (código original) ==== */
+
+function renderAnaliseIndividual() {
+  const wrap = document.getElementById("cmpPanelIndividual");
+  if (!wrap) return;
+  wrap.innerHTML = `
     <div class="sb-grid-2">
       <label>Atleta
         <select id="sbAnaliseAtleta"></select>
@@ -2255,15 +2312,6 @@ async function renderSbAnalise() {
       <button id="sbExportPrsBtn" class="ghost" type="button">Exportar PRs</button>
     </div>
   `;
-
-  if (!sw.atletas.length) {
-    container.insertAdjacentHTML(
-      "beforeend",
-      '<p class="muted">Cadastre atletas e registre treinos para ver a análise.</p>'
-    );
-    return;
-  }
-
   populateAnaliseAtletas();
   bindAnaliseEvents();
   updateAnaliseChart();
@@ -2278,9 +2326,7 @@ function populateAnaliseAtletas() {
   select.innerHTML = sw.atletas
     .map((a) => {
       const turma = sw.turmas.find((t) => t.id === a.turmaId);
-      return `<option value="${a.id}" ${a.id === an.atletaId ? "selected" : ""}>${escapeHtml(a.nome)}${
-        turma ? ` · ${escapeHtml(turma.nome)}` : ""
-      }</option>`;
+      return `<option value="${a.id}" ${a.id === an.atletaId ? "selected" : ""}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turma.nome)}` : ""}</option>`;
     })
     .join("");
   populateAnaliseEstilos();
@@ -2300,9 +2346,7 @@ function populateAnaliseEstilos() {
 function populateAnaliseDistancias() {
   const select = document.getElementById("sbAnaliseDistancia");
   if (!select) return;
-  const dists = [...new Set(analiseRegistros(true, false).map((r) => r.distancia).filter((d) => d != null))].sort(
-    (a, b) => a - b
-  );
+  const dists = [...new Set(analiseRegistros(true, false).map((r) => r.distancia).filter((d) => d != null))].sort((a, b) => a - b);
   if (an.distancia === "" || !dists.includes(an.distancia)) an.distancia = dists[0] ?? "";
   select.innerHTML =
     dists.map((d) => `<option value="${d}" ${String(d) === String(an.distancia) ? "selected" : ""}>${d} m</option>`).join("") ||
@@ -2345,25 +2389,16 @@ function updateAnaliseChart() {
 function renderPrsTable() {
   const wrap = document.getElementById("sbPrsTable");
   if (!wrap) return;
-  const prs = sw.prs
-    .filter((p) => p.atletaId === an.atletaId)
-    .sort((a, b) => new Date(b.data) - new Date(a.data));
-  if (!prs.length) {
-    wrap.innerHTML = '<p class="muted">Nenhum PR registrado ainda.</p>';
-    return;
-  }
-  const rows = prs
-    .map(
-      (p) => `<tr>
-        <td>${escapeHtml(p.estilo || "")}</td>
-        <td>${p.distancia != null ? `${p.distancia}m` : ""}</td>
-        <td class="mono">${maskTimeHTML(msToDisplay(p.melhorTempo))}</td>
-        <td class="mono">${p.tempoAnterior != null ? maskTimeHTML(msToDisplay(p.tempoAnterior)) : "—"}</td>
-        <td>${p.melhoria ? `${p.melhoria.toFixed(1)}%` : "—"}</td>
-        <td>${new Date(p.data).toLocaleDateString("pt-BR")}</td>
-      </tr>`
-    )
-    .join("");
+  const prs = sw.prs.filter((p) => p.atletaId === an.atletaId).sort((a, b) => new Date(b.data) - new Date(a.data));
+  if (!prs.length) { wrap.innerHTML = '<p class="muted">Nenhum PR registrado ainda.</p>'; return; }
+  const rows = prs.map((p) => `<tr>
+    <td>${escapeHtml(p.estilo || "")}</td>
+    <td>${p.distancia != null ? `${p.distancia}m` : ""}</td>
+    <td class="mono">${maskTimeHTML(msToDisplay(p.melhorTempo))}</td>
+    <td class="mono">${p.tempoAnterior != null ? maskTimeHTML(msToDisplay(p.tempoAnterior)) : "—"}</td>
+    <td>${p.melhoria ? `${p.melhoria.toFixed(1)}%` : "—"}</td>
+    <td>${new Date(p.data).toLocaleDateString("pt-BR")}</td>
+  </tr>`).join("");
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
     <th>Estilo</th><th>Dist.</th><th>Melhor tempo</th><th>Anterior</th><th>Melhoria</th><th>Data</th>
   </tr></thead><tbody>${rows}</tbody></table>`;
@@ -2373,44 +2408,37 @@ function renderRegistrosTable() {
   const wrap = document.getElementById("sbRegistrosTable");
   if (!wrap) return;
   const recent = [...analiseRegistros()].reverse().slice(0, 20);
-  if (!recent.length) {
-    wrap.innerHTML = '<p class="muted">Nenhum registro no período.</p>';
-    return;
-  }
-  const rows = recent
-    .map(
-      (r) => `<tr>
-        <td>${new Date(r.dataHora).toLocaleDateString("pt-BR")}</td>
-        <td>${escapeHtml(r.estilo || "")}</td>
-        <td>${r.distancia != null ? `${r.distancia}m` : ""}</td>
-        <td>${r.serie || ""}</td>
-        <td class="mono">${(r.tempos || []).map((t) => maskTimeHTML(t)).join(" / ") || "—"}</td>
-        <td>${r.flagPr ? '<span class="pr-badge">PR</span>' : ""}</td>
-      </tr>`
-    )
-    .join("");
+  if (!recent.length) { wrap.innerHTML = '<p class="muted">Nenhum registro no período.</p>'; return; }
+  const rows = recent.map((r) => `<tr>
+    <td>${new Date(r.dataHora).toLocaleDateString("pt-BR")}</td>
+    <td>${escapeHtml(r.estilo || "")}</td>
+    <td>${r.distancia != null ? `${r.distancia}m` : ""}</td>
+    <td>${r.serie || ""}</td>
+    <td class="mono">${(r.tempos || []).map((t) => maskTimeHTML(t)).join(" / ") || "—"}</td>
+    <td>${r.flagPr ? '<span class="pr-badge">PR</span>' : ""}</td>
+  </tr>`).join("");
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
     <th>Data</th><th>Estilo</th><th>Dist.</th><th>Série</th><th>Tempos</th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function bindAnaliseEvents() {
-  document.getElementById("sbAnaliseAtleta")?.addEventListener("change", (event) => {
-    an.atletaId = event.target.value;
+  document.getElementById("sbAnaliseAtleta")?.addEventListener("change", (e) => {
+    an.atletaId = e.target.value;
     populateAnaliseEstilos();
     updateAnaliseChart();
   });
-  document.getElementById("sbAnaliseEstilo")?.addEventListener("change", (event) => {
-    an.estilo = event.target.value;
+  document.getElementById("sbAnaliseEstilo")?.addEventListener("change", (e) => {
+    an.estilo = e.target.value;
     populateAnaliseDistancias();
     updateAnaliseChart();
   });
-  document.getElementById("sbAnaliseDistancia")?.addEventListener("change", (event) => {
-    an.distancia = event.target.value === "" ? "" : Number(event.target.value);
+  document.getElementById("sbAnaliseDistancia")?.addEventListener("change", (e) => {
+    an.distancia = e.target.value === "" ? "" : Number(e.target.value);
     updateAnaliseChart();
   });
-  document.getElementById("sbAnalisePeriodo")?.addEventListener("change", (event) => {
-    an.periodo = event.target.value;
+  document.getElementById("sbAnalisePeriodo")?.addEventListener("change", (e) => {
+    an.periodo = e.target.value;
     updateAnaliseChart();
   });
   document.getElementById("sbExportRegistrosBtn")?.addEventListener("click", handleExportRegistros);
@@ -2423,10 +2451,7 @@ function getAtletaName(atletaId) {
 
 async function handleExportRegistros() {
   const registros = an.atletaId ? sw.registros.filter((r) => r.atletaId === an.atletaId) : sw.registros;
-  if (!registros.length) {
-    window.alert("Nenhum registro para exportar.");
-    return;
-  }
+  if (!registros.length) { window.alert("Nenhum registro para exportar."); return; }
   const res = await exportSwimBaseRegistros({ registros, getAtletaName });
   api.logAction(res.ok ? `Exportou registros SwimBase (${res.format}).` : "Falha ao exportar registros SwimBase.");
   if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
@@ -2434,11 +2459,663 @@ async function handleExportRegistros() {
 
 async function handleExportPrs() {
   const prs = an.atletaId ? sw.prs.filter((p) => p.atletaId === an.atletaId) : sw.prs;
-  if (!prs.length) {
-    window.alert("Nenhum PR para exportar.");
-    return;
-  }
+  if (!prs.length) { window.alert("Nenhum PR para exportar."); return; }
   const res = await exportSwimBasePRs({ prs, getAtletaName });
   api.logAction(res.ok ? `Exportou PRs SwimBase (${res.format}).` : "Falha ao exportar PRs SwimBase.");
   if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
+}
+
+/* ==== ABA 2: Comparação de atletas ==== */
+
+const CMP_ESTILOS = ["Crawl", "Costas", "Peito", "Borboleta", "Medley"];
+const CMP_DISTANCIAS = [25, 50, 100, 200, 400, 800, 1500];
+const CMP_PROVAS = [];
+for (const e of CMP_ESTILOS) for (const d of CMP_DISTANCIAS) CMP_PROVAS.push(`${d}m ${e}`);
+
+function cmpAthleteAge(a) {
+  if (!a.dataNascimento) return null;
+  const born = new Date(a.dataNascimento);
+  const now = new Date();
+  let age = now.getFullYear() - born.getFullYear();
+  const m = now.getMonth() - born.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < born.getDate())) age--;
+  return age;
+}
+
+function cmpGetPr(atletaId, estilo, distancia) {
+  return sw.prs.find((p) => p.atletaId === atletaId && p.estilo === estilo && p.distancia === distancia);
+}
+
+function cmpGetRegistros(atletaId) {
+  return sw.registros.filter((r) => r.atletaId === atletaId).sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+}
+
+function cmpAvatarInitials(nome) {
+  const parts = (nome || "?").trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
+function renderComparador() {
+  const wrap = document.getElementById("cmpPanelComparador");
+  if (!wrap) return;
+
+  const allEstilos = [...new Set(sw.prs.map((p) => p.estilo).filter(Boolean))].sort();
+  const allDists = [...new Set(sw.prs.map((p) => p.distancia).filter((d) => d != null))].sort((a, b) => a - b);
+
+  wrap.innerHTML = `
+    <div class="cmp-filters">
+      <label>Estilo
+        <select id="cmpEstilo">
+          <option value="">Todos</option>
+          ${allEstilos.map((e) => `<option value="${e}" ${cmp.estilo === e ? "selected" : ""}>${escapeHtml(e)}</option>`).join("")}
+        </select>
+      </label>
+      <label>Distância
+        <select id="cmpDistancia">
+          <option value="">Todas</option>
+          ${allDists.map((d) => `<option value="${d}" ${String(cmp.distancia) === String(d) ? "selected" : ""}>${d}m</option>`).join("")}
+        </select>
+      </label>
+      <button class="cmp-clear-btn" id="cmpClearBtn">Limpar filtros</button>
+    </div>
+    <div class="cmp-selectors" id="cmpSelectors"></div>
+    <div id="cmpTableWrap"></div>
+    <div id="cmpSummaryWrap"></div>
+  `;
+
+  wrap.querySelector("#cmpEstilo")?.addEventListener("change", (e) => { cmp.estilo = e.target.value; renderComparador(); });
+  wrap.querySelector("#cmpDistancia")?.addEventListener("change", (e) => { cmp.distancia = e.target.value === "" ? "" : Number(e.target.value); renderComparador(); });
+  wrap.querySelector("#cmpClearBtn")?.addEventListener("click", () => { cmp.estilo = ""; cmp.distancia = ""; renderComparador(); });
+
+  renderCmpSelectors();
+  renderCmpResults();
+}
+
+function renderCmpSelectors() {
+  const wrap = document.getElementById("cmpSelectors");
+  if (!wrap) return;
+
+  const nSlots = 2;
+  let html = "";
+
+  for (let i = 0; i < nSlots; i++) {
+    const id = cmp.ids[i] || "";
+    const atleta = sw.atletas.find((a) => a.id === id);
+    const cls = `a${i + 1}`;
+
+    html += `<div class="cmp-athlete-card">
+      <button class="cmp-clear-card" data-idx="${i}" title="Limpar">&times;</button>
+      <div class="cmp-avatar ${cls}">${atleta ? cmpAvatarInitials(atleta.nome) : "?"}</div>
+      <select class="cmp-athlete-select" data-idx="${i}">
+        <option value="">Selecionar atleta…</option>
+        ${sw.atletas.map((a) => {
+          const turma = sw.turmas.find((t) => t.id === a.turmaId);
+          const sel = a.id === id ? "selected" : "";
+          return `<option value="${a.id}" ${sel}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turma.nome)}` : ""}</option>`;
+        }).join("")}
+      </select>
+      ${atleta ? `<div class="cmp-athlete-info">
+        <strong>${escapeHtml(atleta.nome)}</strong>
+        ${atleta.sexo ? `${atleta.sexo === "M" ? "Masculino" : "Feminino"}` : ""}
+        ${cmpAthleteAge(atleta) != null ? ` · ${cmpAthleteAge(atleta)} anos` : ""}
+        ${atleta.categoria ? ` · ${escapeHtml(atleta.categoria)}` : ""}
+      </div>` : ""}
+    </div>`;
+
+    if (i < nSlots - 1) {
+      html += `<div class="cmp-vs">
+        <div class="cmp-vs-circle">VS</div>
+        <div class="cmp-vs-score" id="cmpVsScore"></div>
+        <div class="cmp-vs-bar" id="cmpVsBar"><div class="cmp-vs-bar-fill a1"></div><div class="cmp-vs-bar-fill a2"></div></div>
+      </div>`;
+    }
+  }
+
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll(".cmp-athlete-select").forEach((sel) => {
+    sel.addEventListener("change", (e) => {
+      const idx = Number(e.target.dataset.idx);
+      cmp.ids[idx] = e.target.value;
+      renderComparador();
+    });
+  });
+
+  wrap.querySelectorAll(".cmp-clear-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.idx);
+      cmp.ids[idx] = "";
+      renderComparador();
+    });
+  });
+}
+
+function renderCmpResults() {
+  const tableWrap = document.getElementById("cmpTableWrap");
+  const summaryWrap = document.getElementById("cmpSummaryWrap");
+  if (!tableWrap || !summaryWrap) return;
+
+  const [id1, id2] = cmp.ids;
+  if (!id1 || !id2) {
+    const msg = !id1 && !id2
+      ? "Selecione dois atletas para comparar."
+      : !id1 ? "Selecione o primeiro atleta." : "Selecione o segundo atleta.";
+    tableWrap.innerHTML = `<div class="cmp-empty"><div class="cmp-empty-icon">⚖️</div>${msg}</div>`;
+    summaryWrap.innerHTML = "";
+    return;
+  }
+
+  const a1 = sw.atletas.find((a) => a.id === id1);
+  const a2 = sw.atletas.find((a) => a.id === id2);
+  if (!a1 || !a2) { tableWrap.innerHTML = '<div class="cmp-empty">Atletas não encontrados.</div>'; summaryWrap.innerHTML = ""; return; }
+
+  const provas = CMP_PROVAS.filter((p) => {
+    if (!cmp.estilo && !cmp.distancia) return true;
+    const [d, ...eParts] = p.split(" ");
+    const estilo = eParts.join(" ");
+    if (cmp.estilo && estilo !== cmp.estilo) return false;
+    if (cmp.distancia !== "" && Number(d) !== cmp.distancia) return false;
+    return true;
+  });
+
+  let wins1 = 0, wins2 = 0;
+  const rows = [];
+
+  for (const prova of provas) {
+    const [dStr, ...eParts] = prova.split(" ");
+    const estilo = eParts.join(" ");
+    const dist = Number(dStr);
+
+    const pr1 = cmpGetPr(id1, estilo, dist);
+    const pr2 = cmpGetPr(id2, estilo, dist);
+
+    const v1 = pr1?.melhorTempo;
+    const v2 = pr2?.melhorTempo;
+    const t1 = v1 != null ? maskTimeHTML(msToDisplay(v1)) : "—";
+    const t2 = v2 != null ? maskTimeHTML(msToDisplay(v2)) : "—";
+
+    let winner = "draw";
+    if (v1 != null && v2 != null) {
+      if (v1 < v2) { winner = "w1"; wins1++; }
+      else if (v2 < v1) { winner = "w2"; wins2++; }
+    } else if (v1 != null) { winner = "w1"; wins1++; }
+    else if (v2 != null) { winner = "w2"; wins2++; }
+
+    const winnerLabel = winner === "w1" ? a1.nome : winner === "w2" ? a2.nome : "Empate";
+
+    rows.push(`<tr>
+      <td class="cmp-crit">${escapeHtml(prova)}</td>
+      <td class="cmp-val ${winner === "w1" ? "winner" : winner === "w2" ? "loser" : ""}">${t1}</td>
+      <td class="cmp-val ${winner === "w2" ? "winner" : winner === "w1" ? "loser" : ""}">${t2}</td>
+      <td><span class="cmp-winner-badge ${winner}">${winner === "draw" ? "—" : escapeHtml(winnerLabel)}</span></td>
+    </tr>`);
+  }
+
+  /* Métricas extras */
+  const reg1 = cmpGetRegistros(id1);
+  const reg2 = cmpGetRegistros(id2);
+
+  const totalReg1 = reg1.length;
+  const totalReg2 = reg2.length;
+  if (totalReg1 > totalReg2) wins1++;
+  else if (totalReg2 > totalReg1) wins2++;
+
+  const prCount1 = sw.prs.filter((p) => p.atletaId === id1).length;
+  const prCount2 = sw.prs.filter((p) => p.atletaId === id2).length;
+  if (prCount1 > prCount2) wins1++;
+  else if (prCount2 > prCount1) wins2++;
+
+  /* Média dos últimos 5 tempos por prova */
+  const avgRows = [];
+  const avgProvas = [...new Set([...reg1, ...reg2].map((r) => `${r.distancia}m ${r.estilo}`))].filter(Boolean);
+  for (const prova of avgProvas) {
+    const [dStr, ...eParts] = prova.split(" ");
+    const estilo = eParts.join(" ");
+    const dist = Number(dStr);
+    const getAvg = (regs) => {
+      const filtered = regs.filter((r) => r.estilo === estilo && r.distancia === dist);
+      const last5 = filtered.slice(-5);
+      const tempos = last5.flatMap((r) => (r.tempos || []).map((t) => parseTimeToMs(t)).filter((v) => v != null));
+      if (!tempos.length) return null;
+      return tempos.reduce((a, b) => a + b, 0) / tempos.length;
+    };
+    const avg1 = getAvg(reg1);
+    const avg2 = getAvg(reg2);
+    if (avg1 != null || avg2 != null) avgRows.push({ prova, avg1, avg2 });
+  }
+
+  if (avgRows.length) {
+    for (const { prova, avg1, avg2 } of avgRows) {
+      const t1 = avg1 != null ? maskTimeHTML(msToDisplay(Math.round(avg1))) : "—";
+      const t2 = avg2 != null ? maskTimeHTML(msToDisplay(Math.round(avg2))) : "—";
+      let winner = "draw";
+      if (avg1 != null && avg2 != null) {
+        if (avg1 < avg2) { winner = "w1"; wins1++; } else if (avg2 < avg1) { winner = "w2"; wins2++; }
+      }
+      rows.push(`<tr>
+        <td class="cmp-crit">⏱ Média · ${escapeHtml(prova)}</td>
+        <td class="cmp-val ${winner === "w1" ? "winner" : winner === "w2" ? "loser" : ""}">${t1}</td>
+        <td class="cmp-val ${winner === "w2" ? "winner" : winner === "w1" ? "loser" : ""}">${t2}</td>
+        <td><span class="cmp-winner-badge ${winner}">${winner === "draw" ? "—" : (winner === "w1" ? escapeHtml(a1.nome) : escapeHtml(a2.nome))}</span></td>
+      </tr>`);
+    }
+  }
+
+  /* Total de provas */
+  rows.push(`<tr>
+    <td class="cmp-crit">🏆 Total de provas registradas</td>
+    <td class="cmp-val ${totalReg1 > totalReg2 ? "winner" : totalReg2 > totalReg1 ? "loser" : ""}">${totalReg1}</td>
+    <td class="cmp-val ${totalReg2 > totalReg1 ? "winner" : totalReg1 > totalReg2 ? "loser" : ""}">${totalReg2}</td>
+    <td><span class="cmp-winner-badge ${totalReg1 > totalReg2 ? "w1" : totalReg2 > totalReg1 ? "w2" : "draw"}">${totalReg1 > totalReg2 ? escapeHtml(a1.nome) : totalReg2 > totalReg1 ? escapeHtml(a2.nome) : "—"}</span></td>
+  </tr>`);
+
+  /* PRs */
+  rows.push(`<tr>
+    <td class="cmp-crit">📋 Total de PRs</td>
+    <td class="cmp-val ${prCount1 > prCount2 ? "winner" : prCount2 > prCount1 ? "loser" : ""}">${prCount1}</td>
+    <td class="cmp-val ${prCount2 > prCount1 ? "winner" : prCount1 > prCount2 ? "loser" : ""}">${prCount2}</td>
+    <td><span class="cmp-winner-badge ${prCount1 > prCount2 ? "w1" : prCount2 > prCount1 ? "w2" : "draw"}">${prCount1 > prCount2 ? escapeHtml(a1.nome) : prCount2 > prCount1 ? escapeHtml(a2.nome) : "—"}</span></td>
+  </tr>`);
+
+  /* Best badge */
+  const bestBadge1 = wins1 > wins2 ? `<span class="cmp-best-badge">Melhor no geral</span>` : "";
+  const bestBadge2 = wins2 > wins1 ? `<span class="cmp-best-badge">Melhor no geral</span>` : "";
+
+  const scoreEl = document.getElementById("cmpVsScore");
+  if (scoreEl) scoreEl.textContent = `${wins1} × ${wins2}`;
+
+  const barEl = document.getElementById("cmpVsBar");
+  if (barEl) {
+    const total = (wins1 + wins2) || 1;
+    barEl.querySelector(".a1").style.width = `${(wins1 / total) * 100}%`;
+    barEl.querySelector(".a2").style.width = `${(wins2 / total) * 100}%`;
+  }
+
+  /* Re-apply best badge */
+  const cards = document.querySelectorAll("#cmpSelectors .cmp-athlete-card");
+  cards.forEach((c) => c.querySelector(".cmp-best-badge")?.remove());
+  if (wins1 > wins2 && cards[0]) cards[0].insertAdjacentHTML("beforeend", bestBadge1);
+  if (wins2 > wins1 && cards[1]) cards[1].insertAdjacentHTML("beforeend", bestBadge2);
+
+  tableWrap.innerHTML = `
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead><tr>
+          <th>Critério</th>
+          <th>${escapeHtml(a1.nome)}</th>
+          <th>${escapeHtml(a2.nome)}</th>
+          <th>Vencedor</th>
+        </tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    </div>
+  `;
+
+  const commonProvas = provas.filter((p) => {
+    const [dStr, ...eParts] = p.split(" ");
+    return cmpGetPr(id1, eParts.join(" "), Number(dStr)) && cmpGetPr(id2, eParts.join(" "), Number(dStr));
+  });
+
+  summaryWrap.innerHTML = `
+    <div class="cmp-summary-grid">
+      <div class="cmp-summary-card">
+        <div class="cmp-summary-label">Vitórias</div>
+        <div class="cmp-summary-value">${wins1} × ${wins2}</div>
+        <div class="cmp-summary-sub">${escapeHtml(a1.nome)} vs ${escapeHtml(a2.nome)}</div>
+      </div>
+      <div class="cmp-summary-card">
+        <div class="cmp-summary-label">Provas em comum</div>
+        <div class="cmp-summary-value">${commonProvas.length}</div>
+        <div class="cmp-summary-sub">de ${provas.length} filtradas</div>
+      </div>
+      <div class="cmp-summary-card">
+        <div class="cmp-summary-label">PRs totais</div>
+        <div class="cmp-summary-value">${prCount1} / ${prCount2}</div>
+        <div class="cmp-summary-sub">${escapeHtml(a1.nome)} / ${escapeHtml(a2.nome)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ==== ABA 3: Desempenho (gráficos comparativos) ==== */
+
+let cmpChartInstance = null;
+
+function renderDesempenho() {
+  const wrap = document.getElementById("cmpPanelDesempenho");
+  if (!wrap) return;
+
+  const [id1, id2] = cmp.ids;
+  if (!id1 || !id2) {
+    wrap.innerHTML = `<div class="cmp-empty"><div class="cmp-empty-icon">📈</div>Selecione dois atletas na aba Comparação para ver o desempenho.</div>`;
+    return;
+  }
+
+  const a1 = sw.atletas.find((a) => a.id === id1);
+  const a2 = sw.atletas.find((a) => a.id === id2);
+  if (!a1 || !a2) { wrap.innerHTML = '<div class="cmp-empty">Atletas não encontrados.</div>'; return; }
+
+  wrap.innerHTML = `
+    <div class="cmp-metric-toggle" id="cmpMetricToggle">
+      <button class="cmp-metric-btn ${cmp.metrica === "tempo" ? "active" : ""}" data-metric="tempo">Tempo</button>
+      <button class="cmp-metric-btn ${cmp.metrica === "colocacao" ? "active" : ""}" data-metric="colocacao">Colocação</button>
+      <button class="cmp-metric-btn ${cmp.metrica === "indice" ? "active" : ""}" data-metric="indice">Índice técnico</button>
+      <button class="cmp-metric-btn ${cmp.metrica === "consistencia" ? "active" : ""}" data-metric="consistencia">Consistência</button>
+    </div>
+    <div class="cmp-chart-wrap">
+      <div class="cmp-chart-title">Evolução temporal</div>
+      <canvas id="cmpLineChart"></canvas>
+      <div class="cmp-legend">
+        <div class="cmp-legend-item" data-legend="0"><span class="cmp-legend-dot a1"></span>${escapeHtml(a1.nome)}</div>
+        <div class="cmp-legend-item" data-legend="1"><span class="cmp-legend-dot a2"></span>${escapeHtml(a2.nome)}</div>
+      </div>
+    </div>
+    <div class="cmp-chart-wrap">
+      <div class="cmp-chart-title">Comparação por prova (melhor tempo)</div>
+      <canvas id="cmpBarChart"></canvas>
+    </div>
+    <div class="cmp-chart-wrap">
+      <div class="cmp-chart-title">Heatmap de evolução</div>
+      <div class="cmp-heatmap" id="cmpHeatmap"></div>
+    </div>
+  `;
+
+  wrap.querySelectorAll(".cmp-metric-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      cmp.metrica = btn.dataset.metric;
+      wrap.querySelectorAll(".cmp-metric-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      renderCmpLineChart();
+    });
+  });
+
+  wrap.querySelectorAll(".cmp-legend-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      item.classList.toggle("hidden");
+      const idx = Number(item.dataset.legend);
+      if (cmpChartInstance?.data?.datasets?.[idx]) {
+        cmpChartInstance.data.datasets[idx].hidden = item.classList.contains("hidden");
+        cmpChartInstance.update();
+      }
+    });
+  });
+
+  renderCmpLineChart();
+  renderCmpBarChart();
+  renderCmpHeatmap();
+}
+
+function renderCmpLineChart() {
+  const canvas = document.getElementById("cmpLineChart");
+  if (!canvas) return;
+  if (cmpChartInstance) { cmpChartInstance.destroy(); cmpChartInstance = null; }
+
+  const [id1, id2] = cmp.ids;
+  const reg1 = cmpGetRegistros(id1).filter((r) => !cmp.estilo || r.estilo === cmp.estilo).filter((r) => cmp.distancia === "" || r.distancia === cmp.distancia);
+  const reg2 = cmpGetRegistros(id2).filter((r) => !cmp.estilo || r.estilo === cmp.estilo).filter((r) => cmp.distancia === "" || r.distancia === cmp.distancia);
+
+  const toPoints = (regs) => {
+    const pts = [];
+    regs.forEach((r) => {
+      (r.tempos || []).forEach((t) => {
+        const ms = parseTimeToMs(t);
+        if (ms != null) {
+          let val = ms;
+          if (cmp.metrica === "colocacao") val = r.colocacao || 0;
+          else if (cmp.metrica === "indice") val = Math.min(100, Math.max(0, 100 - (ms / 1000)));
+          else if (cmp.metrica === "consistencia") val = 0;
+          pts.push({ x: new Date(r.dataHora).getTime(), y: val });
+        }
+      });
+    });
+    pts.sort((a, b) => a.x - b.x);
+    return pts;
+  };
+
+  let p1 = toPoints(reg1);
+  let p2 = toPoints(reg2);
+
+  if (cmp.metrica === "consistencia") {
+    const calcConsistencia = (regs) => {
+      const byProva = {};
+      regs.forEach((r) => {
+        const key = `${r.estilo}_${r.distancia}`;
+        if (!byProva[key]) byProva[key] = [];
+        (r.tempos || []).forEach((t) => {
+          const ms = parseTimeToMs(t);
+          if (ms != null) byProva[key].push({ x: new Date(r.dataHora).getTime(), y: ms });
+        });
+      });
+      const points = [];
+      for (const vals of Object.values(byProva)) {
+        vals.sort((a, b) => a.x - b.x);
+        for (let i = 0; i < vals.length; i++) {
+          const slice = vals.slice(Math.max(0, i - 4), i + 1);
+          const avg = slice.reduce((s, v) => s + v.y, 0) / slice.length;
+          const variance = slice.reduce((s, v) => s + (v.y - avg) ** 2, 0) / slice.length;
+          const cv = avg > 0 ? (Math.sqrt(variance) / avg) * 100 : 0;
+          points.push({ x: vals[i].x, y: Math.max(0, 100 - cv * 10) });
+        }
+      }
+      points.sort((a, b) => a.x - b.x);
+      return points;
+    };
+    p1 = calcConsistencia(reg1);
+    p2 = calcConsistencia(reg2);
+  }
+
+  if (cmp.metrica === "colocacao") {
+    p1 = p1.filter((p) => p.y > 0);
+    p2 = p2.filter((p) => p.y > 0);
+  }
+
+  const allPts = [...p1, ...p2];
+  if (!allPts.length) {
+    const ctx = canvas.getContext("2d");
+    canvas.width = 300; canvas.height = 200;
+    canvas.style.width = "100%"; canvas.style.height = "200px";
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--text-muted").trim() || "#888";
+    ctx.font = "13px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Sem dados para os filtros selecionados", 150, 100);
+    return;
+  }
+
+  const labels = allPts.map((p) => {
+    const d = new Date(p.x);
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  const yLabel = cmp.metrica === "tempo" ? "Tempo" : cmp.metrica === "colocacao" ? "Posição" : cmp.metrica === "indice" ? "Índice (0-100)" : "Consistência (%)";
+
+  cmpChartInstance = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: getAtletaName(id1),
+          data: p1.map((p) => p.y),
+          borderColor: "#0ea5e9",
+          backgroundColor: "rgba(14,165,233,0.1)",
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: getAtletaName(id2),
+          data: p2.map((p) => p.y),
+          borderColor: "#f97316",
+          backgroundColor: "rgba(249,115,22,0.1)",
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.3,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+        y: {
+          title: { display: true, text: yLabel, font: { size: 11 } },
+          reverse: cmp.metrica === "colocacao",
+          ticks: cmp.metrica === "tempo" ? {
+            callback: (v) => msToDisplay(Math.round(v)).replace(/^0/, ""),
+          } : {},
+        },
+      },
+    },
+  });
+
+  canvas.style.height = "260px";
+}
+
+function renderCmpBarChart() {
+  const canvas = document.getElementById("cmpBarChart");
+  if (!canvas) return;
+
+  const [id1, id2] = cmp.ids;
+  const allProvas = new Set();
+  sw.prs.filter((p) => p.atletaId === id1 || p.atletaId === id2).forEach((p) => allProvas.add(`${p.distancia}m ${p.estilo}`));
+  const provaList = [...allProvas].sort((a, b) => {
+    const dA = parseInt(a); const dB = parseInt(b);
+    return dA - dB || a.localeCompare(b);
+  });
+
+  if (!provaList.length) {
+    const ctx = canvas.getContext("2d");
+    canvas.width = 300; canvas.height = 200;
+    canvas.style.width = "100%"; canvas.style.height = "200px";
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--text-muted").trim() || "#888";
+    ctx.font = "13px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Sem PRs registrados para comparar", 150, 100);
+    return;
+  }
+
+  const v1 = provaList.map((p) => {
+    const [dStr, ...eParts] = p.split(" ");
+    const pr = cmpGetPr(id1, eParts.join(" "), Number(dStr));
+    return pr ? pr.melhorTempo / 1000 : null;
+  });
+
+  const v2 = provaList.map((p) => {
+    const [dStr, ...eParts] = p.split(" ");
+    const pr = cmpGetPr(id2, eParts.join(" "), Number(dStr));
+    return pr ? pr.melhorTempo / 1000 : null;
+  });
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: provaList.map((p) => p.replace("m ", "\nm ")),
+      datasets: [
+        {
+          label: getAtletaName(id1),
+          data: v1,
+          backgroundColor: "rgba(14,165,233,0.7)",
+          borderColor: "#0ea5e9",
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: getAtletaName(id2),
+          data: v2,
+          backgroundColor: "rgba(249,115,22,0.7)",
+          borderColor: "#f97316",
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: "bottom", labels: { font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { font: { size: 9 } } },
+        y: {
+          title: { display: true, text: "Segundos", font: { size: 11 } },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+
+  canvas.style.height = "260px";
+}
+
+function renderCmpHeatmap() {
+  const wrap = document.getElementById("cmpHeatmap");
+  if (!wrap) return;
+
+  const [id1, id2] = cmp.ids;
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}` });
+  }
+
+  const allProvas = new Set();
+  sw.registros.filter((r) => r.atletaId === id1 || r.atletaId === id2).forEach((r) => {
+    if (r.estilo && r.distancia) allProvas.add(`${r.distancia}m ${r.estilo}`);
+  });
+  const provaList = [...allProvas].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
+
+  if (!provaList.length) { wrap.innerHTML = '<p class="muted">Sem registros para gerar o heatmap.</p>'; return; }
+
+  const getMonthlyAvg = (atletaId, estilo, distancia, monthKey) => {
+    return sw.registros
+      .filter((r) => r.atletaId === atletaId && r.estilo === estilo && r.distancia === distancia && r.dataHora?.startsWith(monthKey))
+      .flatMap((r) => (r.tempos || []).map((t) => parseTimeToMs(t)).filter((v) => v != null));
+  };
+
+  let html = "<table><thead><tr><th>Prova</th>";
+  months.forEach((m) => { html += `<th>${m.label}</th>`; });
+  html += "</tr></thead><tbody>";
+
+  for (const prova of provaList) {
+    const [dStr, ...eParts] = prova.split(" ");
+    const estilo = eParts.join(" ");
+    const dist = Number(dStr);
+
+    html += `<tr><td>${escapeHtml(prova)}</td>`;
+    for (const m of months) {
+      const t1 = getMonthlyAvg(id1, estilo, dist, m.key);
+      const t2 = getMonthlyAvg(id2, estilo, dist, m.key);
+
+      if (!t1.length && !t2.length) {
+        html += `<td class="cell-stable">—</td>`;
+        continue;
+      }
+
+      if (t1.length >= 2) {
+        const first = t1[0];
+        const last = t1[t1.length - 1];
+        const pctChange = ((first - last) / first) * 100;
+        if (pctChange > 2) html += `<td class="cell-improve-strong">▼${pctChange.toFixed(1)}%</td>`;
+        else if (pctChange > 0.5) html += `<td class="cell-improve">▼${pctChange.toFixed(1)}%</td>`;
+        else if (pctChange < -0.5) html += `<td class="cell-worse">▲${Math.abs(pctChange).toFixed(1)}%</td>`;
+        else html += `<td class="cell-stable">~</td>`;
+      } else if (t1.length === 1 && t2.length === 1) {
+        const diff = ((t2[0] - t1[0]) / t2[0]) * 100;
+        if (diff > 0.5) html += `<td class="cell-improve">▼${diff.toFixed(1)}%</td>`;
+        else if (diff < -0.5) html += `<td class="cell-worse">▲${Math.abs(diff).toFixed(1)}%</td>`;
+        else html += `<td class="cell-stable">~</td>`;
+      } else {
+        html += `<td class="cell-stable">—</td>`;
+      }
+    }
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  wrap.innerHTML = html;
 }

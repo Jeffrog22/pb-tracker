@@ -77,7 +77,7 @@ O app tem **dois modos** controlados por `state.appMode` ("balizamento" |
 | SB Home | `#screenSbHome` | Resumo do SwimBase (links/atalhos) |
 | SB Atletas | `#screenSbAtletas` | CRUD de turmas e atletas + categoria automática |
 | SB Treino | `#screenSbTreino` | Wizard de treino (turma → atletas → config) |
-| SB Análise | `#screenSbAnalise` | Gráfico de progressão, PRs, registros e export |
+| SB Análise | `#screenSbAnalise` | 3 abas: Análise individual, Comparação de atletas (VS), Desempenho (Chart.js) |
 
 O **cronômetro** de balizamento é um `<dialog>` (`#chronoDialog`) com visor,
 botões, lista de capturas pendentes e paleta de balizas. O **cronômetro do
@@ -319,6 +319,10 @@ recarrega a página automaticamente.
   - `.sb-*` — componentes do SwimBase: cartões de modo, CRUD de turmas/atletas,
     wizard de treino, raias do cronômetro (`#sbChronoDialog`) e tela Análise
     (`.sb-chart` + `.sb-table`).
+  - `.cmp-*` — comparador de atletas: `.cmp-tabs`/`.cmp-tab` (abas),
+    `.cmp-athlete-card`/`.cmp-avatar` (seleção), `.cmp-vs-circle`/`.cmp-vs-score`
+    (VS), `.cmp-table`/`.cmp-winner-badge` (tabela comparativa), `.cmp-chart-wrap`
+    (Chart.js), `.cmp-heatmap` (evolução), `.cmp-metric-toggle` (métricas).
 - **Segurança de renderização**: todo conteúdo vindo de arquivos passa por
   `escapeHtml` antes de ser injetado no DOM.
 
