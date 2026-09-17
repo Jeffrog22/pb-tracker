@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.26.0";
+const APP_VERSION = "0.27.0";
 
 const state = {
   teamName: "",
@@ -81,6 +81,7 @@ const el = {
   settingsDialog: document.getElementById("settingsDialog"),
   closeSettingsBtn: document.getElementById("closeSettingsBtn"),
   chronoDialog: document.getElementById("chronoDialog"),
+  chronoHudLayer: document.getElementById("chronoHudLayer"),
   startLapBtn: document.getElementById("startLapBtn"),
   stopResetBtn: document.getElementById("stopResetBtn"),
   closeChronoBtn: document.getElementById("closeChronoBtn"),
@@ -1436,6 +1437,87 @@ function getSplitsForEvent(eventName) {
   return EVENT_SPLITS[50];
 }
 
+/* --- HUD drag (Balizamento) --- */
+const CHRONO_HUD_KEY = "pbtracker_chrono_hud";
+const CHRONO_HUD_DEFAULTS = {
+  start: { left: "14px", top: "14px" },
+  stop: { right: "14px", top: "14px" },
+};
+
+function loadChronoHudPositions() {
+  try { return JSON.parse(localStorage.getItem(CHRONO_HUD_KEY)) || null; } catch { return null; }
+}
+
+function saveChronoHudPositions() {
+  const layer = el.chronoHudLayer;
+  if (!layer) return;
+  const pos = {};
+  layer.querySelectorAll(".hud-btn").forEach((btn) => {
+    const id = btn.id === "startLapBtn" ? "start" : "stop";
+    pos[id] = { left: btn.style.left, top: btn.style.top, right: btn.style.right };
+  });
+  localStorage.setItem(CHRONO_HUD_KEY, JSON.stringify(pos));
+}
+
+function resetChronoHudPositions() {
+  localStorage.removeItem(CHRONO_HUD_KEY);
+  const s = el.startLapBtn, r = el.stopResetBtn;
+  if (s) { s.style.left = CHRONO_HUD_DEFAULTS.start.left; s.style.top = CHRONO_HUD_DEFAULTS.start.top; s.style.right = "auto"; }
+  if (r) { r.style.right = CHRONO_HUD_DEFAULTS.stop.right; r.style.top = CHRONO_HUD_DEFAULTS.stop.top; r.style.left = "auto"; }
+}
+
+function applyChronoHudPositions(pos) {
+  const s = el.startLapBtn, r = el.stopResetBtn;
+  if (pos?.start) {
+    if (s) { s.style.left = pos.start.left || ""; s.style.top = pos.start.top || ""; s.style.right = pos.start.right || "auto"; }
+  } else if (s) {
+    s.style.left = CHRONO_HUD_DEFAULTS.start.left; s.style.top = CHRONO_HUD_DEFAULTS.start.top; s.style.right = "auto";
+  }
+  if (pos?.stop) {
+    if (r) { r.style.left = pos.stop.left || "auto"; r.style.top = pos.stop.top || ""; r.style.right = pos.stop.right || ""; }
+  } else if (r) {
+    r.style.right = CHRONO_HUD_DEFAULTS.stop.right; r.style.top = CHRONO_HUD_DEFAULTS.stop.top; r.style.left = "auto";
+  }
+}
+
+let chronoHudDragging = null;
+let chronoHudStartX = 0, chronoHudStartY = 0;
+let chronoHudOrigLeft = 0, chronoHudOrigTop = 0;
+
+function initChronoHudDrag() {
+  const layer = el.chronoHudLayer;
+  if (!layer) return;
+  applyChronoHudPositions(loadChronoHudPositions());
+  layer.querySelectorAll(".hud-btn").forEach((btn) => {
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      btn.setPointerCapture(e.pointerId);
+      btn.classList.add("dragging");
+      chronoHudDragging = btn;
+      chronoHudStartX = e.clientX; chronoHudStartY = e.clientY;
+      const rect = btn.getBoundingClientRect(), lRect = layer.getBoundingClientRect();
+      chronoHudOrigLeft = rect.left - lRect.left; chronoHudOrigTop = rect.top - lRect.top;
+    });
+    btn.addEventListener("pointermove", (e) => {
+      if (chronoHudDragging !== btn) return;
+      btn.style.left = (chronoHudOrigLeft + e.clientX - chronoHudStartX) + "px";
+      btn.style.top = (chronoHudOrigTop + e.clientY - chronoHudStartY) + "px";
+      btn.style.right = "auto";
+    });
+    btn.addEventListener("pointerup", () => {
+      if (chronoHudDragging !== btn) return;
+      btn.classList.remove("dragging");
+      chronoHudDragging = null;
+      saveChronoHudPositions();
+    });
+    btn.addEventListener("pointercancel", () => {
+      if (chronoHudDragging !== btn) return;
+      btn.classList.remove("dragging");
+      chronoHudDragging = null;
+    });
+  });
+}
+
 function openChrono(eventKey, seriesKey, athletes) {
   stopChronoTimer();
 
@@ -1460,6 +1542,7 @@ function openChrono(eventKey, seriesKey, athletes) {
   renderPending();
   refreshNextCapture();
   el.chronoDialog.showModal();
+  initChronoHudDrag();
 }
 
 function closeChrono() {

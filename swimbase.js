@@ -1075,7 +1075,7 @@ function loadHudPositions() {
 function saveHudPositions() {
   const layer = document.getElementById("sbHudLayer");
   if (!layer) return;
-  const btns = layer.querySelectorAll(".sb-hud-btn");
+  const btns = layer.querySelectorAll(".hud-btn");
   const pos = {};
   btns.forEach((btn) => {
     const id = btn.id === "sbMasterStartBtn" ? "start" : "stop";
@@ -1119,7 +1119,7 @@ function initHudDrag() {
   const saved = loadHudPositions();
   applyHudPositions(saved);
 
-  layer.querySelectorAll(".sb-hud-btn").forEach((btn) => {
+  layer.querySelectorAll(".hud-btn").forEach((btn) => {
     btn.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       e.stopPropagation();

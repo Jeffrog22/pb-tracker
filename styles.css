@@ -1980,23 +1980,23 @@ body.dark .sb-table tbody tr:hover td {
 }
 
 /* --- Top controls --- */
-/* --- HUD layer (draggable trigger buttons) --- */
-.sb-hud-layer {
+/* --- HUD layer (shared: Balizamento + SwimBase) --- */
+.hud-layer {
   position: absolute;
   inset: 0;
   z-index: 10;
   pointer-events: none;
 }
-.sb-hud-btn {
+.hud-btn {
   position: absolute;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  border-radius: 25px;
+  border-radius: var(--radius-pill);
   border: none;
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   cursor: grab;
   white-space: nowrap;
@@ -2007,26 +2007,19 @@ body.dark .sb-table tbody tr:hover td {
   z-index: 11;
   transition: box-shadow 0.15s, opacity 0.15s;
 }
-.sb-hud-btn:active {
+.hud-btn:active {
   cursor: grabbing;
 }
-.sb-hud-btn.dragging {
+.hud-btn.dragging {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   opacity: 0.9;
   z-index: 20;
 }
-.sb-hud-btn-start { background-color: var(--ok); }
-.sb-hud-btn-stop { background-color: var(--sb-red); }
+.hud-btn-start { background-color: var(--btn-start); }
+.hud-btn-stop { background-color: var(--btn-reset); }
 
-/* --- Timer row (centered, no buttons) --- */
-.sb-chrono-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 10px 14px 8px;
-}
-
-.sb-play-icon {
+/* --- CSS icons (shared) --- */
+.play-icon {
   width: 0;
   height: 0;
   border-top: 7px solid transparent;
@@ -2034,11 +2027,18 @@ body.dark .sb-table tbody tr:hover td {
   border-left: 12px solid white;
   flex-shrink: 0;
 }
-
-.sb-reset-icon {
+.reset-icon {
   font-size: 16px;
   transform: rotate(-45deg);
   display: inline-block;
+}
+
+/* --- Timer row (centered, no buttons) --- */
+.sb-chrono-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 14px 8px;
 }
 
 /* --- Timer display box --- */
@@ -2322,39 +2322,6 @@ body.dark #sbChronoDialog .sb-raia-time { color: var(--sb-text); }
   color: #000;
 }
 
-/* --- Action buttons inside card --- */
-.sb-chrono-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 100px;
-}
-
-.sb-chrono-btn-save {
-  background-color: var(--ok);
-  color: white;
-  border: none;
-  padding: 8px 24px;
-  border-radius: 16px;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.sb-chrono-btn-save:hover { opacity: 0.9; }
-
-.sb-chrono-btn-cancel {
-  background-color: transparent;
-  color: var(--sb-text);
-  border: 1px solid var(--sb-border);
-  padding: 8px 18px;
-  border-radius: 16px;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
-}
-
 /* --- M1: countdown inside card --- */
 #sbChronoDialog .sb-countdown {
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
@@ -2516,9 +2483,9 @@ body.high-contrast #sbChronoDialog .sb-raia {
 
 body.high-contrast #sbChronoDialog .sb-raia-name { color: #fff; }
 body.high-contrast #sbChronoDialog .sb-raia-time { color: #ffff00; }
-body.high-contrast #sbChronoDialog .sb-chrono-btn-save { color: #000; }
+body.high-contrast #sbChronoDialog .btn-save { color: #000; }
 
-body.high-contrast #sbChronoDialog .sb-chrono-btn-cancel {
+body.high-contrast #sbChronoDialog .btn-cancel {
   color: #fff;
   border-color: #fff;
 }

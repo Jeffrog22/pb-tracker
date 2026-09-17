@@ -186,10 +186,19 @@
   </div>
 
   <dialog id="chronoDialog" class="chrono-dialog">
+    <div id="chronoHudLayer" class="hud-layer">
+      <button id="startLapBtn" class="hud-btn hud-btn-start" type="button">
+        <span class="play-icon" aria-hidden="true"></span>
+        <span id="startLapBtnLabel">Iniciar/Voltas</span>
+      </button>
+      <button id="stopResetBtn" class="hud-btn hud-btn-stop" type="button">
+        <span class="reset-icon" aria-hidden="true">&#x21bb;</span>
+        <span id="stopResetBtnLabel">Parar/Reiniciar</span>
+      </button>
+    </div>
     <div class="timer-container">
       <div class="sheet-grabber" aria-hidden="true"></div>
       <div class="timer-controls">
-        <button id="startLapBtn" class="btn-pill btn-start">Iniciar/Voltas</button>
         <div id="chronoTimerBox" class="chrono-timer-box">
           <div class="chrono-timer-header">
             <div class="clock-icon" aria-hidden="true"></div>
@@ -200,7 +209,6 @@
           </div>
           <div id="chronoDisplay" class="timer-display">00'00"<span>00</span></div>
         </div>
-        <button id="stopResetBtn" class="btn-pill btn-reset">Parar/Reiniciar</button>
       </div>
 
       <div class="timer-meta">
@@ -321,13 +329,13 @@
   </dialog>
 
   <dialog id="sbChronoDialog" class="chrono-dialog">
-    <div id="sbHudLayer" class="sb-hud-layer">
-      <button id="sbMasterStartBtn" class="sb-hud-btn sb-hud-btn-start" type="button">
-        <span class="sb-play-icon" aria-hidden="true"></span>
+    <div id="sbHudLayer" class="hud-layer">
+      <button id="sbMasterStartBtn" class="hud-btn hud-btn-start" type="button">
+        <span class="play-icon" aria-hidden="true"></span>
         <span id="sbStartBtnLabel">Iniciar/Split</span>
       </button>
-      <button id="sbMasterStopBtn" class="sb-hud-btn sb-hud-btn-stop" type="button">
-        <span class="sb-reset-icon" aria-hidden="true">&#x21bb;</span>
+      <button id="sbMasterStopBtn" class="hud-btn hud-btn-stop" type="button">
+        <span class="reset-icon" aria-hidden="true">&#x21bb;</span>
         <span id="sbStopBtnLabel">Parar/Zerar</span>
       </button>
     </div>
@@ -354,10 +362,10 @@
     </div>
     <div class="sb-chrono-card">
       <div id="sbChronoList" class="sb-chrono-list"></div>
-      <div class="sb-chrono-actions">
-        <button id="sbChronoFinishBtn" class="sb-chrono-btn-save" type="button">Salvar</button>
-        <button id="sbChronoCloseBtn" class="sb-chrono-btn-cancel" type="button">Cancelar</button>
-      </div>
+    </div>
+    <div class="action-footer">
+      <button id="sbChronoFinishBtn" class="btn-save" type="button">Salvar</button>
+      <button id="sbChronoCloseBtn" class="btn-cancel" type="button">Cancelar</button>
     </div>
   </dialog>
 
