@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.27.1";
+const APP_VERSION = "0.28.0";
 
 const state = {
   teamName: "",
@@ -39,6 +39,9 @@ const state = {
     currentSplitIndex: 0,
     clickInSplit: 0,
     lastStopCaptured: false,
+    continuousStartedAt: 0,
+    seriesStartedAt: 0,
+    blinkTimeout: null,
   },
 };
 
@@ -1534,10 +1537,15 @@ function openChrono(eventKey, seriesKey, athletes) {
     currentSplitIndex: 0,
     clickInSplit: 0,
     laneColors: {},
+    continuousStartedAt: 0,
+    seriesStartedAt: 0,
+    blinkTimeout: null,
   };
 
   el.chronoTitle.textContent = `${eventKey} | Série ${seriesKey}`;
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
+  const contEl = document.getElementById("chronoContinuousDisplay");
+  if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(0));
   syncChronoStateBadge(false);
   renderPending();
   refreshNextCapture();
@@ -1556,6 +1564,8 @@ function handleChronoStartLap() {
   if (!state.activeChrono.isRunning) {
     state.activeChrono.isRunning = true;
     state.activeChrono.startedAt = Date.now() - state.activeChrono.elapsedMs;
+    if (state.activeChrono.seriesStartedAt === 0) state.activeChrono.seriesStartedAt = Date.now();
+    if (state.activeChrono.continuousStartedAt === 0) state.activeChrono.continuousStartedAt = Date.now();
     state.activeChrono.timerId = window.setInterval(updateChronoDisplay, 30);
     updateChronoDisplay();
     syncChronoStateBadge(true);
@@ -1572,6 +1582,7 @@ function handleChronoStopReset() {
     captureLap(true);
     state.activeChrono.isRunning = false;
     stopChronoTimer();
+    blinkChronoDisplay(state.activeChrono.elapsedMs);
     syncChronoStateBadge(false);
     setStatus("Cronômetro parado e último clique registrado.", "neutral");
     return;
@@ -1582,7 +1593,13 @@ function handleChronoStopReset() {
   state.activeChrono.currentSplitIndex = 0;
   state.activeChrono.clickInSplit = 0;
   state.activeChrono.lastStopCaptured = false;
+  state.activeChrono.continuousStartedAt = 0;
+  state.activeChrono.seriesStartedAt = 0;
+  clearTimeout(state.activeChrono.blinkTimeout);
+  state.activeChrono.blinkTimeout = null;
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
+  const contEl = document.getElementById("chronoContinuousDisplay");
+  if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(0));
   syncChronoStateBadge(false);
   renderPending();
   refreshNextCapture();
@@ -1598,7 +1615,24 @@ function stopChronoTimer() {
 function updateChronoDisplay() {
   if (!state.activeChrono.isRunning) return;
   state.activeChrono.elapsedMs = Date.now() - state.activeChrono.startedAt;
-  el.chronoDisplay.innerHTML = maskTimeHTML(msToDisplay(state.activeChrono.elapsedMs));
+  if (!state.activeChrono.blinkTimeout) {
+    el.chronoDisplay.innerHTML = maskTimeHTML(msToDisplay(state.activeChrono.elapsedMs));
+  }
+  if (state.activeChrono.continuousStartedAt > 0) {
+    const contMs = Date.now() - state.activeChrono.continuousStartedAt;
+    const contEl = document.getElementById("chronoContinuousDisplay");
+    if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(contMs));
+  }
+}
+
+function blinkChronoDisplay(recordedTime) {
+  clearTimeout(state.activeChrono.blinkTimeout);
+  el.chronoDisplay.innerHTML = maskTimeHTML(msToDisplay(recordedTime));
+  el.chronoDisplay.classList.add("blink");
+  state.activeChrono.blinkTimeout = setTimeout(() => {
+    el.chronoDisplay.classList.remove("blink");
+    state.activeChrono.blinkTimeout = null;
+  }, 2000);
 }
 
 function syncChronoStateBadge(running) {
@@ -1630,6 +1664,7 @@ function captureLap(isStop = false) {
     ac.lastStopCaptured = true;
     logAction(`Clique de parar registrado no cronômetro: parcial ${split}m, ordem ${ac.clickInSplit}, tempo ${msToDisplay(ac.elapsedMs)}.`);
   } else {
+    blinkChronoDisplay(ac.elapsedMs);
     logAction(`Clique de volta registrado: parcial ${split}m, ordem ${ac.clickInSplit}, tempo ${msToDisplay(ac.elapsedMs)}.`);
   }
 

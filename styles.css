@@ -1001,6 +1001,26 @@ body.dark .chrono-dialog::backdrop {
   font-weight: 700;
 }
 
+.chrono-continuous-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chrono-continuous-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.chrono-continuous-digits {
+  color: var(--timer-digits);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 1px;
+}
+.timer-display.blink {
+  animation: timerBlink 2s ease-in-out;
+}
+
 .pending-wrap { margin: 0 12px; }
 
 .pending-head {

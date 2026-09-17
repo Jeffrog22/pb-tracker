@@ -1626,6 +1626,7 @@ function tickModo1() {
       g.remainingMs = tr.config.tempoSaida * 1000;
       g.countUpMs = 0;
       g.repStartMs = tr.masterElapsedMs;
+      tr.seriesStartedAt = Date.now();
     } else if (g.rep < tr.config.repeticoes) {
       g.rep += 1;
       g.remainingMs = tr.config.tempoSaida * 1000;
@@ -1637,7 +1638,6 @@ function tickModo1() {
       g.phase = "serieInt";
       g.remainingMs = tr.config.intervaloSeries * 1000;
       g.countUpMs = 0;
-      tr.seriesStartedAt = Date.now();
     } else {
       g.phase = "done";
       tr.masterRunning = false;
