@@ -876,7 +876,7 @@ body.dark .chrono-dialog::backdrop {
 
 .timer-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   gap: 0.5rem;
 }
@@ -2484,6 +2484,8 @@ body.high-contrast #sbChronoDialog .sb-raia {
 body.high-contrast #sbChronoDialog .sb-raia-name { color: #fff; }
 body.high-contrast #sbChronoDialog .sb-raia-time { color: #ffff00; }
 body.high-contrast #sbChronoDialog .btn-save { color: #000; }
+
+#sbChronoDialog .btn-cancel { color: var(--sb-text); border-color: var(--sb-border); }
 
 body.high-contrast #sbChronoDialog .btn-cancel {
   color: #fff;

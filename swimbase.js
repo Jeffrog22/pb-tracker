@@ -1479,13 +1479,16 @@ function resetMaster() {
     raia.lastIsPr = false;
     raia.tempos = [];
     raia.splitIndex = 0;
+    raia.serie = 1;
+    raia.rep = 1;
   });
   if (tr.config.modo === 1 && tr.group) {
     tr.group.serie = 1;
     tr.group.rep = 1;
-    tr.group.phase = "run";
+    tr.group.phase = "rep";
     tr.group.countUpMs = 0;
-    tr.group.remainingMs = 0;
+    tr.group.remainingMs = tr.config.tempoSaida * 1000;
+    tr.group.repStartMs = 0;
   }
   if (tr.config.modo === 3) {
     tr.modo3Serie = 1;
