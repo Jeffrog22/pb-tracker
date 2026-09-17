@@ -115,6 +115,9 @@ body.high-contrast .sb-raia-time {
   color: #ffff00;
 }
 
+body.high-contrast .clock-icon { background-color: #ffff00; }
+body.high-contrast .timer-status-title { color: #ffff00; }
+
 body.high-contrast .mode-card {
   background: #000;
   border-color: #3a3a3a;
@@ -885,6 +888,72 @@ body.dark .chrono-dialog::backdrop {
   text-align: center;
 }
 
+/* --- Timer box (frame escuro, ícone, badge) --- */
+.chrono-timer-box {
+  background-color: #0c101c;
+  border-radius: 12px;
+  padding: 10px 18px 14px;
+  color: #fff;
+  text-align: center;
+  flex: 0 1 auto;
+  min-width: 220px;
+}
+
+.chrono-timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.clock-icon {
+  width: 18px;
+  height: 18px;
+  background-color: var(--timer-digits);
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.clock-icon::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-left: 2px solid #0c101c;
+  border-bottom: 2px solid #0c101c;
+  top: 4px;
+  left: 5px;
+}
+
+.timer-status { text-align: right; }
+
+.timer-status-title {
+  color: var(--timer-digits);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timer-status-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: bold;
+  margin-left: 4px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.timer-status-badge.running {
+  background-color: rgba(63, 203, 122, 0.15);
+  color: #3fcb7a;
+}
+
+.timer-status-badge.stopped {
+  background-color: rgba(255, 51, 102, 0.15);
+  color: #ff3366;
+}
+
 .timer-display {
   font-family: "Courier New", Courier, monospace;
   font-size: clamp(1.4rem, 6vw, 2.2rem);
@@ -892,13 +961,12 @@ body.dark .chrono-dialog::backdrop {
   color: var(--timer-digits);
   text-align: center;
   letter-spacing: 1px;
-  line-height: 1;
+  line-height: 1.1;
   flex: 0 0 auto;
   white-space: nowrap;
-  border: 1px solid var(--timer-digits);
-  border-radius: 8px;
-  padding: 1px 2px;
 }
+
+.timer-display span { font-size: 0.65em; }
 
 .timer-meta {
   display: flex;

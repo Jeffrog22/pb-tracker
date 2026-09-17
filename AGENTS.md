@@ -2699,3 +2699,32 @@ Regras:
 - Ação registrada em `project-actions.log` via `node project-action-log.js`.
 - Commit `feat: Comparador de Atletas - 3 abas na Analise (individual, comparacao lado a lado com VS, desempenho com Chart.js + heatmap)`
   → MINOR → **v0.25.0** → push origin master + tag.
+
+---
+
+## Sessão: 16/09/2026 — Cronômetro Balizamento com visual do SwimBase (v0.26.0)
+
+### O que foi feito
+- **Cronômetro do Balizamento unificado visualmente com o do SwimBase**:
+  - **HTML**: `#chronoDialog` ganhou `.chrono-timer-box` (frame escuro `#0c101c`, border-radius 12px), `.clock-icon` (CSS puro, 18px ciano com ponteiros via `::after`), `.timer-status` + `#chronoStateBadge` ("Parado"/"Rodando"), display com `<span>` para centésimos.
+  - **CSS**: novos estilos `.chrono-timer-box`, `.chrono-timer-header`, `.clock-icon` (+ `::after`), `.timer-status`, `.timer-status-badge` (`.running`/`.stopped`). `.timer-display` migrado de `clamp(1.4-2.2rem)` + borda ciano para 42px com `clamp()` responsivo, sem borda, sem padding. `.timer-display span` → `0.65em` para centésimos. Alto contraste para novos elementos.
+  - **JS**: `updateChronoDisplay` mantém `maskTimeHTML(msToDisplay(...))` (formato `MM'SS"CC`). Nova `syncChronoStateBadge(running)` chamada em `openChrono` (Parado), `handleChronoStartLap` (Rodando), `handleChronoStopReset` (Parado).
+- **Botões inalterados**: `#startLapBtn` (Iniciar/Voltas) e `#stopResetBtn` (Parar/Reiniciar) mantiveram IDs, classes, handlers e lógica de captura intactos.
+
+### Decisões (consultas do usuário)
+- Display **responsivo** (mantido `clamp()` em vez de 42px fixo do SwimBase).
+- `maskTimeHTML` (MM'SS"CC") **mantido** como formatador do display.
+
+### Arquivos
+- `index.html` (timer-container reestruturado)
+- `styles.css` (novos estilos do timer-box + clock-icon + status-badge)
+- `app.js` (syncChronoStateBadge + APP_VERSION → 0.26.0)
+- `sw.js` (cache v62 → v63)
+- `CHANGELOG.md` (v0.26.0), `AGENTS.md` (esta sessão)
+
+### Verificações
+- `node --check app.js swimbase.js utils.js db.js charts.js exporter.js sw.js`:
+  0 erros
+- Ação registrada em `project-actions.log` via `node project-action-log.js`.
+- Commit `feat: cronometro do Balizamento com visual do SwimBase (frame, icone, estado)`
+  → MINOR → **v0.26.0** → push origin master + tag.

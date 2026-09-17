@@ -190,7 +190,16 @@
       <div class="sheet-grabber" aria-hidden="true"></div>
       <div class="timer-controls">
         <button id="startLapBtn" class="btn-pill btn-start">Iniciar/Voltas</button>
-        <div id="chronoDisplay" class="timer-display">00:00:00</div>
+        <div id="chronoTimerBox" class="chrono-timer-box">
+          <div class="chrono-timer-header">
+            <div class="clock-icon" aria-hidden="true"></div>
+            <div class="timer-status">
+              <span class="timer-status-title">Estado</span>
+              <span id="chronoStateBadge" class="timer-status-badge">Parado</span>
+            </div>
+          </div>
+          <div id="chronoDisplay" class="timer-display">00'00"<span>00</span></div>
+        </div>
         <button id="stopResetBtn" class="btn-pill btn-reset">Parar/Reiniciar</button>
       </div>
 

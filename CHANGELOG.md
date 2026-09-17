@@ -6,6 +6,26 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+
+## [0.26.0] - 2026-09-16
+### Changed
+- Cronômetro do Balizamento agora usa o mesmo sistema visual do SwimBase: frame escuro `#0c101c` com border-radius 12px, ícone de relógio CSS (círculo ciano 18px), badge de estado "Parado"/"Rodando" (verde/vermelho), display com centésimos em `<span>` menor e fonte responsiva.
+- Display migrado de `00:00:00` (colons) para `MM'SS"CC` (aspas duplas, padrão de natação) via `maskTimeHTML`.
+- Removida a moldura/borda do display (dígitos livres no box escuro).
+- Botões de gatilho (Iniciar/Voltas, Parar/Reiniciar) inalterados.
+
+### Added
+- Função `syncChronoStateBadge(running)` para atualizar o badge de estado do cronômetro Balizamento.
+- Estilos CSS: `.chrono-timer-box`, `.chrono-timer-header`, `.clock-icon` (+ `::after`), `.timer-status`, `.timer-status-badge` (`.running`/`.stopped`).
+- Alto contraste para novos elementos do cronômetro.
+
+### Fixed
+- (nenhum bug fix nesta versão)
+
+### Removed
+- (nenhuma remoção nesta versão)
+
+- `APP_VERSION` → `0.26.0`; cache do SW → `pbtracker-v63`.
 ### Added
 - (novas funcionalidades)
 

@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
 
-const APP_VERSION = "0.25.0";
+const APP_VERSION = "0.26.0";
 
 const state = {
   teamName: "",
@@ -1456,6 +1456,7 @@ function openChrono(eventKey, seriesKey, athletes) {
 
   el.chronoTitle.textContent = `${eventKey} | Série ${seriesKey}`;
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
+  syncChronoStateBadge(false);
   renderPending();
   refreshNextCapture();
   el.chronoDialog.showModal();
@@ -1474,6 +1475,7 @@ function handleChronoStartLap() {
     state.activeChrono.startedAt = Date.now() - state.activeChrono.elapsedMs;
     state.activeChrono.timerId = window.setInterval(updateChronoDisplay, 30);
     updateChronoDisplay();
+    syncChronoStateBadge(true);
     return;
   }
 
@@ -1487,6 +1489,7 @@ function handleChronoStopReset() {
     captureLap(true);
     state.activeChrono.isRunning = false;
     stopChronoTimer();
+    syncChronoStateBadge(false);
     setStatus("Cronômetro parado e último clique registrado.", "neutral");
     return;
   }
@@ -1497,6 +1500,7 @@ function handleChronoStopReset() {
   state.activeChrono.clickInSplit = 0;
   state.activeChrono.lastStopCaptured = false;
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
+  syncChronoStateBadge(false);
   renderPending();
   refreshNextCapture();
 }
@@ -1510,9 +1514,16 @@ function stopChronoTimer() {
 
 function updateChronoDisplay() {
   if (!state.activeChrono.isRunning) return;
-
   state.activeChrono.elapsedMs = Date.now() - state.activeChrono.startedAt;
   el.chronoDisplay.innerHTML = maskTimeHTML(msToDisplay(state.activeChrono.elapsedMs));
+}
+
+function syncChronoStateBadge(running) {
+  const badge = document.getElementById("chronoStateBadge");
+  if (!badge) return;
+  badge.textContent = running ? "Rodando" : "Parado";
+  badge.classList.toggle("running", running);
+  badge.classList.toggle("stopped", !running);
 }
 
 function captureLap(isStop = false) {
