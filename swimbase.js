@@ -2235,6 +2235,8 @@ function resetTreinoSession() {
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
+  const masterDisplay = document.getElementById("sbMasterDisplay");
+  if (masterDisplay) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(0));
 }
 
 /* ==== Análise — 3 abas: Análise · Comparação · Desempenho ==== */
