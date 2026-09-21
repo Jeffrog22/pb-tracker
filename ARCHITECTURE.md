@@ -138,7 +138,66 @@ são mantidos em memória (fonte da tela Análise), sincronizados por
 As linhas são normalizadas por `normalizeImportedRow` e agregadas por
 `groupByProofAndSeries`, que gera chave de evento `prova | sexo`.
 
-## 6. Fluxo de Dados da Importação
+## 6. Fluxo de Dados Geral
+
+```mermaid
+graph TD
+    subgraph Entrada de Dados
+        A[Arquivo de Balizamento] -- PDF/JSON/CSV --> B(handleImport)
+        B --> C{Tipo de Arquivo?}
+        C -- PDF --> D[parsePdfFile (PDF.js)]
+        C -- JSON --> E[parseJsonFile]
+        C -- CSV --> F[parseCsvFile]
+    end
+
+    subgraph Processamento e Estado (app.js)
+        D & E & F --> G(normalizeImportedRow)
+        G --> H(groupByProofAndSeries)
+        H --> I[state.groupedEvents (Memória)]
+        subgraph Gerenciamento de Cronômetro
+            I -- Seleção de Prova/Série --> J(openChrono)
+            J --> K[state.activeChrono (Memória)]
+            K -- Interações do Usuário --> L(captureLap / registerPendingTimes)
+            L --> M[athlete.current[split] (Memória no state.groupedEvents)]
+        end
+        N[app.js UI] -- Leitura/Escrita --> I
+        N -- Leitura/Escrita --> K
+    end
+
+    subgraph Persistência
+        O[localStorage]
+        P[IndexedDB (db.js)]
+        I -- Perfis/Logs/Configurações --> O
+        subgraph SwimBase (swimbase.js)
+            Q[Dados SwimBase (Atletas, Turmas, Registros, PRs)] -- CRUD --> P
+            Q -- Sincronização em memória --> R[state.swimBaseData (Memória)]
+            R -- Atualizações --> P
+        end
+    end
+
+    subgraph Saída de Dados
+        M -- Exportar Resultados --> S[exportResults (exporter.js)]
+        O -- Exportar Log --> T[downloadActivityLog]
+        S -- XLSX/CSV --> U[Arquivo Exportado]
+        T -- TXT --> U
+        P -- Exportar Dados SwimBase --> V[exportSwimBaseRegistros/PRs (exporter.js)]
+        V -- XLSX/CSV --> U
+    end
+
+    subgraph Offline / PWA (sw.js)
+        W[Navegador do Usuário] -- Requisições --> X{Service Worker (sw.js)}
+        X -- Cache-First/Network-First --> Y[Cache Storage]
+        Y -- Recursos do App Shell / Dados Cachedos --> W
+        W -- Atualizações --> Z[Service Worker Update Flow (app.js)]
+        Z -- SKIP_WAITING --> X
+    end
+
+    A -- (PDF.js CDN) --> D
+    P -- (initSwimBase) --> Q
+    O -- Carregamento Inicial --> N
+```
+
+## 7. Fluxo de Dados da Importação
 
 ```
 Arquivo (PDF/JSON/CSV)
@@ -178,7 +237,7 @@ openChrono() → capturas → registerPendingTimes() → athlete.current[split]
 - Filtro por equipe usa `isSameTeam` (correspondência fuzzy com acentos removidos
   e stop-words via `getTeamTokens`).
 
-## 7. Arquitetura do Cronômetro
+## 8. Arquitetura do Cronômetro
 
 ### Máquina de estados do `activeChrono`
 
@@ -215,7 +274,7 @@ o plano correspondente.
 - `attachTimeMask` / `digitsToTimeMask` — máscara de entrada nos campos de histórico.
 - `buildDiffLabel` — gera rótulo `+/-` comparando prova × histórico (verde = melhora).
 
-## 8. Arquitetura PWA
+## 9. Arquitetura PWA
 
 ### Manifest (`manifest.webmanifest`)
 
@@ -243,7 +302,7 @@ novo worker fica `installed`, o botão "Atualizar app" vira "Aplicar atualizaç�
 (`markUpdateAvailable`). Ao clicar, o app envia `SKIP_WAITING`; o `controllerchange`
 recarrega a página automaticamente.
 
-## 9. Exportação de Resultados (`exporter.js`)
+## 10. Exportação de Resultados (`exporter.js`)
 
 - `buildResultsRows(state, getSplitsForEvent)` — itera **todas** as provas de
   `state.groupedEvents` (ordem do filtro), ordena por série/baliza e monta
@@ -270,7 +329,7 @@ recarrega a página automaticamente.
 - `exportSpreadsheet({ sheets, filename })` é o helper comum (tenta XLSX;
   offline → CSV). Os botões ficam na tela Análise do SwimBase.
 
-## 10. Persistência e Log de Atividades
+## 11. Persistência e Log de Atividades
 
 - `logAction(message)` grava `{ timestamp, message }` no array `state.activityLog`
   e persiste em `localStorage["pbtracker_activity_log"]`.
@@ -291,7 +350,7 @@ recarrega a página automaticamente.
   lado do nome do app** (`#appVersionTag`, via `renderVersionTags`). Deve ser
   **atualizada a cada release** junto do CHANGELOG e da tag SemVer.
 
-## 11. Camada de UI e Estilos
+## 12. Camada de UI e Estilos
 
 - **Tema**: variáveis CSS em `:root` (cores de fundo, gradientes, `--ok`, `--danger`).
 - **Mobile-first**: `@media`/breakpoints; bloqueio em larguras `> 1024px` **apenas
@@ -326,7 +385,7 @@ recarrega a página automaticamente.
 - **Segurança de renderização**: todo conteúdo vindo de arquivos passa por
   `escapeHtml` antes de ser injetado no DOM.
 
-## 12. Decisões de Design (ADR resumido)
+## 13. Decisões de Design (ADR resumido)
 
 | Decisão | Justificativa |
 |---|---|
@@ -337,7 +396,7 @@ recarrega a página automaticamente.
 | Network-first p/ core, cache-first p/ assets | Garante versão atualizada do app e offline para o restante |
 | Cartão compacto lado a lado | Densidade de informação para uso em tela pequena |
 
-## 13. Limitações Conhecidas
+## 14. Limitações Conhecidas
 
 - **Parser PDF acoplado ao layout** recebido; novas variações exigem ajustes em
   `parseRowsFromPdfLines`/`parseAthleteLine`.
