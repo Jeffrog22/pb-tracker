@@ -1172,7 +1172,7 @@ function startTreino() {
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
           ? "Toque na linha do atleta para registrar"
-          : "Iniciar para começar · Split para volta · Parar para finalizar";
+          : "Iniciar para começar · Split para volta (avança próximo) · Parar para finalizar";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
   if (chronoTitle) {
@@ -1289,6 +1289,7 @@ function recordM2Split() {
   blinkMasterDisplay(msToDisplay(splitMs));
   updateRaiaRow(raia);
   api.logAction(`SwimBase M2 volta: ${raia.nome} — ${msToDisplay(splitMs)}.`);
+  autoSelectNextM2(raia.atletaId);
 }
 
 function recordM2Final() {
@@ -1339,8 +1340,30 @@ function recordM2Final() {
   }
 }
 
-function autoSelectNextM2() {
-  const next = [...tr.raias.values()].find((r) => !r.done && !r.waiting && r.startedAt > 0);
+function autoSelectNextM2(currentAtletaId = null) {
+  const raiasArray = [...tr.raias.values()];
+  const currentIndex = currentAtletaId ? raiasArray.findIndex(r => r.atletaId === currentAtletaId) : -1;
+  
+  let nextAtleta = null;
+  // Tenta encontrar o próximo atleta na ordem após o atual
+  for (let i = 1; i < raiasArray.length; i++) {
+    const nextIndex = (currentIndex + i) % raiasArray.length;
+    const candidate = raiasArray[nextIndex];
+    if (!candidate.done && !candidate.waiting && candidate.startedAt > 0) {
+      nextAtleta = candidate;
+      break;
+    }
+  }
+
+  // Se não encontrar na sequência, tenta o primeiro atleta ativo do início da lista
+  if (!nextAtleta && currentIndex !== -1) {
+    nextAtleta = raiasArray.find((r) => !r.done && !r.waiting && r.startedAt > 0);
+    if (nextAtleta && nextAtleta.atletaId === currentAtletaId) { // Se o único ativo for o mesmo, não faz nada
+      nextAtleta = null;
+    }
+  }
+
+  const next = nextAtleta;
   if (next) {
     tr.m2SelectedAtletaId = next.atletaId;
     document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
