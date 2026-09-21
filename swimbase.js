@@ -1373,6 +1373,7 @@ function autoSelectNextM2(currentAtletaId = null) {
     const lastEl = row?.querySelector(".sb-raia-last");
     if (lastEl) lastEl.textContent = "Selecionado";
     if (tr.config.modo === 2 && tr.masterRunning) syncStopBtn(true, "Parar");
+    syncStartBtn(tr.masterRunning);
   } else {
     tr.m2SelectedAtletaId = null;
     document.querySelectorAll("#sbChronoList .sb-raia.selected").forEach((row) => {
@@ -1385,6 +1386,8 @@ function autoSelectNextM2(currentAtletaId = null) {
       syncStateBadge(false);
       syncStartBtn(false);
       syncStopBtn(true, "Zerar");
+    } else {
+      syncStartBtn(tr.masterRunning);
     }
   }
 }
