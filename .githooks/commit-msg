@@ -1,8 +1,15 @@
 #!/bin/sh
-# SemVer auto-tag on every commit (Conventional Commits)
-#   BREAKING CHANGE or !:  → MAJOR  (vX.0.0)
+# SemVer: atualiza APP_VERSION em app.js ANTES de o commit ser criado.
+# Usa o hook commit-msg porque a mensagem proposta só está disponível em "$1".
+# Cálculo idêntico ao do post-commit → mesma tag/version bump.
+#   BREAKING CHANGE ou !:  → MAJOR  (vX.0.0)
 #   feat:                  → MINOR  (v0.X.0)
 #   fix:, refactor:, etc   → PATCH  (v0.0.X)
+
+MSG_FILE="$1"
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  exit 0
+fi
 
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 VERSION=${LAST_TAG#v}
@@ -15,8 +22,8 @@ MAJOR=${MAJOR:-0}
 MINOR=${MINOR:-0}
 PATCH=${PATCH:-0}
 
-COMMIT_MSG=$(git log -1 --format="%s")
-COMMIT_BODY=$(git log -1 --format="%b")
+COMMIT_MSG=$(sed -n '1p' "$MSG_FILE")
+COMMIT_BODY=$(cat "$MSG_FILE")
 
 BUMP="patch"
 if echo "$COMMIT_MSG" | grep -qi "BREAKING CHANGE" || \
@@ -50,5 +57,11 @@ while true; do
   PATCH=$((PATCH + 1))
 done
 
-git tag "$NEW_TAG"
-echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG, bump: $BUMP)"
+NEW_VERSION_WITHOUT_V=${NEW_TAG#v}
+if sed -i "s/const APP_VERSION = \".*\";/const APP_VERSION = \"${NEW_VERSION_WITHOUT_V}\";/g" app.js; then
+  echo "commit-msg: APP_VERSION -> ${NEW_VERSION_WITHOUT_V}"
+  git add app.js
+else
+  echo "commit-msg: Failed to update APP_VERSION in app.js"
+  exit 1
+fi
