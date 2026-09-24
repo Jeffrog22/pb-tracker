@@ -1392,7 +1392,10 @@ function autoSelectNextM2(currentAtletaId = null) {
       row.classList.remove("selected");
     });
     const anyResting = [...tr.raias.values()].some((r) => r.waiting);
-    if (!anyResting) {
+    const anySwimming = [...tr.raias.values()].some(
+      (r) => !r.done && !r.waiting && r.startedAt > 0
+    );
+    if (!anyResting && !anySwimming) {
       tr.masterRunning = false;
       stopMasterTicker();
       syncStateBadge(false);
@@ -1628,14 +1631,18 @@ function tickModo2() {
           raia.startedAt = 0;
           noteGroupSerieRelease(raia);
           updateRaiaRow(raia);
-          tr.m2SelectedAtletaId = raia.atletaId;
-          document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
-            row.classList.toggle("selected", row.dataset.id === raia.atletaId);
-          });
           const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
           const lastEl = row?.querySelector(".sb-raia-last");
           if (lastEl) lastEl.textContent = "Pronto";
-          if (tr.masterRunning) syncStopBtn(true, "Parar");
+          const sel = tr.raias.get(tr.m2SelectedAtletaId);
+          const selValid = sel && !sel.done && !sel.waiting;
+          if (!selValid) {
+            tr.m2SelectedAtletaId = raia.atletaId;
+            document.querySelectorAll("#sbChronoList .sb-raia").forEach((rowEl) => {
+              rowEl.classList.toggle("selected", rowEl.dataset.id === raia.atletaId);
+            });
+          }
+          if (tr.masterRunning && tr.m2SelectedAtletaId) syncStopBtn(true, "Parar");
           tr.raias.forEach((r) => {
             if (r.waiting && r.frozen) {
               r.waiting = false;
@@ -1648,7 +1655,10 @@ function tickModo2() {
             }
           });
           const anyResting = [...tr.raias.values()].some((r) => r.waiting);
-          if (!anyResting && tr.masterRunning) {
+          const anySwimming = [...tr.raias.values()].some(
+            (r) => !r.done && !r.waiting && r.startedAt > 0
+          );
+          if (!anyResting && !anySwimming && tr.masterRunning) {
             tr.masterRunning = false;
             stopMasterTicker();
             syncStateBadge(false);
