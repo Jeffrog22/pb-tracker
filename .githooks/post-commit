@@ -50,5 +50,13 @@ while true; do
   PATCH=$((PATCH + 1))
 done
 
+NEW_VERSION_WITHOUT_V=${NEW_TAG#v}
+sed -i "s/const APP_VERSION = \".*\";/const APP_VERSION = \"${NEW_VERSION_WITHOUT_V}\";/g" app.js
+if [ $? -eq 0 ]; then
+  echo "pre-commit: APP_VERSION updated $(grep 'const APP_VERSION' app.js | cut -d'"' -f2) -> ${NEW_VERSION_WITHOUT_V}"
+else
+  echo "pre-commit: Failed to update APP_VERSION in app.js"
+fi
+git add app.js
 git tag "$NEW_TAG"
 echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG, bump: $BUMP)"
