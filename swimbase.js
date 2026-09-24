@@ -1311,6 +1311,20 @@ function recordM2Final() {
     raia.frozen = false;
     raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
     raia.startedAt = 0;
+  } else if (raia.serie < tr.config.series) {
+    raia.serie += 1;
+    raia.rep = 1;
+    raia.waiting = true;
+    raia.waitMs = tr.config.intervaloSeries * 1000;
+    raia.restAlert = false;
+    raia.frozen = false;
+    raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
+    raia.startedAt = 0;
+    if (raia.serie > tr.currentGroupSerieM2) {
+      tr.currentGroupSerieM2 = raia.serie;
+      tr.seriesStartedAt = Date.now();
+      api.logAction(`SwimBase M2: Série ${raia.serie} iniciada para o grupo. Relógio principal resetado.`);
+    }
   } else {
     raia.done = true;
     raia.waitLabel = "Concluído";
@@ -1466,6 +1480,8 @@ function startMaster() {
   }
   if (tr.continuousStartedAt === 0) tr.continuousStartedAt = Date.now();
   if (tr.seriesStartedAt === 0) tr.seriesStartedAt = Date.now();
+  tr.currentGroupSerieM2 = 1;
+  tr.currentGroupSerieM2 = 1;
   startMasterTicker();
   api.logAction("Treino iniciado no SwimBase.");
 }
@@ -1488,6 +1504,8 @@ function resetMaster() {
   tr.m2SelectedAtletaId = null;
   tr.continuousStartedAt = 0;
   tr.seriesStartedAt = 0;
+  tr.currentGroupSerieM2 = 1;
+  tr.currentGroupSerieM2 = 1;
   clearTimeout(tr.blinkTimeout);
   tr.blinkTimeout = null;
   tr.raias.forEach((raia) => {
@@ -2076,6 +2094,11 @@ async function recordSplit(atletaId) {
     raia.waiting = true;
     raia.waitMs = tr.config.intervaloSeries * 1000;
     raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
+    if (raia.serie > tr.currentGroupSerieM2) {
+      tr.currentGroupSerieM2 = raia.serie;
+      tr.seriesStartedAt = Date.now();
+      api.logAction(`SwimBase M2: Série ${raia.serie} iniciada para o grupo. Relógio principal resetado.`);
+    }
   } else {
     raia.done = true;
     raia.waitLabel = "Concluído";
