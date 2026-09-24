@@ -7,6 +7,37 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.32.7] - 2026-09-24
+### Fixed
+- **SwimBase M2 — saída inesperada do cronômetro**: evento `cancel` do
+  `#sbChronoDialog` (Esc / botão Voltar do Android) é interceptado e roteado
+  para `closeTreino()` com confirm; backdrop ignora cliques `detail===0` e
+  cliques resultantes de drag do HUD (`hudDragMoved`); listener `close`
+  encerra ticker e wake lock (idempotente). Confirm de fechamento ampliado
+  para qualquer treino em andamento (master, relógio contínuo, nadando ou
+  descansando), não só quando há tempos registrados.
+- **SwimBase M2 — deriva do descanso/intervalo**: contagem em wall-clock
+  (`waitEndsAt = Date.now() + waitMs`; tick calcula o restante) em vez de
+  `waitMs -= 30` — sem drift e correta em segundo plano.
+- **SwimBase M2 — confusão série/repetição**: label mantém "Intervalo"
+  durante o intervalo entre séries (não vira "Descanso"); tag durante
+  intervalo mostra séries concluídas/total (não `0/4`); header exibe
+  `X/Y concluídos · Série N/M` quando há múltiplas séries.
+- `autoSelectNextM2` varre todos os atletas (não pula o último; mantém a
+  seleção se só o atual está nadando).
+- `maskTimeHTML` aceita minutos com 3+ dígitos (relógio contínuo ≥100min
+  não perde a máscara).
+- **Rollover de `tempos`/`registroId` por série** em M2: persistência com
+  snapshot síncrono em `persistRegistro` antes de limpar (sem race com a
+  rep final); `resetMaster` (Zerar) zera `registroId` (evita sobrescrever
+  registro de sessão anterior).
+- (0.32.4–0.32.5) Botão Iniciar/Split na primeira seleção; relógio geral
+  não para com nadadores ativos; seleção manual prevalece na liberação;
+  relógio principal reinicia na liberação da série.
+
+### Changed
+- `APP_VERSION` → `0.32.7`; cache do SW → `pbtracker-v69`.
+
 ## [0.26.0] - 2026-09-16
 ### Changed
 - Cronômetro do Balizamento agora usa o mesmo sistema visual do SwimBase: frame escuro `#0c101c` com border-radius 12px, ícone de relógio CSS (círculo ciano 18px), badge de estado "Parado"/"Rodando" (verde/vermelho), display com centésimos em `<span>` menor e fonte responsiva.

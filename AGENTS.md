@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.28.0"` em `app.js`; cache SW `pbtracker-v66` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.32.7"` em `app.js`; cache SW `pbtracker-v69` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -46,7 +46,7 @@
 | `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
 | `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs SwimBase |
 | `styles.css` | Tema, layout mobile-first, design system (dark mode, alto contraste) |
-| `sw.js` | Service worker: cache offline (`pbtracker-v66`) — **atualizar nome ao subir versão** |
+| `sw.js` | Service worker: cache offline (`pbtracker-v69`) — **atualizar nome ao subir versão** |
 | `index.html` | Telas, dialogs (cronômetro com HUD layer, SwimBase), manifest |
 | `manifest.webmanifest` | Metadados PWA (sem trava de orientação; sigue o dispositivo) |
 | `icons/` | Ícones PWA (SVG) |
@@ -71,8 +71,8 @@
 - **Correspondência de equipe é fuzzy** (`isSameTeam`/`getTeamTokens`): remove acentos e stop-words; pede interseção de tokens.
 - **Importação em duas passadas**: estrita (só equipe conhecida) → se vazia, tolerante (`allowUnknownTeam: true`).
 - **Exportação**: XLSX via SheetJS (CDN, lazy-load no clique); fallback CSV (BOM UTF-8, separador `;`). `#exportBtn` no topbar exporta **todas** as provas (`groupedEvents`). Células de parcial sem metragem viram `--`.
-- **Cache do service worker**: nome `pbtracker-v66` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
-- **Tag de versão no topbar** (`#appVersionTag`) renderiza `PBTracker v0.28.0` a partir de `APP_VERSION` — manter sincronizado em cada release.
+- **Cache do service worker**: nome `pbtracker-v69` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
+- **Tag de versão no topbar** (`#appVersionTag`) renderiza `PBTracker v0.32.7` a partir de `APP_VERSION` — manter sincronizado em cada release.
 - **Configurações**: engrenagem `#settingsBtn` abre `#settingsDialog` (Atualizar app + Exportar log + alto contraste + dark mode). Badge "Pronto" removido (v0.10.5); aviso de atualização fica só no botão Atualizar.
 - **Perfil**: cadastro/login local (sem senha), uma equipe por perfil, persistido em `localStorage["pbtracker_profiles"]` / `localStorage["pbtracker_active_profile"]`.
 - **PR = melhor tempo por `atletaId + estilo + distância`** (prova ou treino). `checkPrAndFlag` grava `flagPr`; badge `PR!` dourado + haptics.
@@ -83,6 +83,9 @@
 - **Export SwimBase**: `exportSwimBaseRegistros`/`exportSwimBasePRs` em `exporter.js` (XLSX via SheetJS, fallback CSV).
 - **Categoria automática** por idade: Pré-Mirim → M80+; hint atualizada no campo nascimento.
 - **M2 sync de descanso (≤10s)**: atletas com diferença ≤10s são congelados/liberados juntos; relógio mestre para quando todos liberados.
+- **M2 descanso/intervalo em wall-clock**: `raia.waitEndsAt = Date.now() + waitMs`; o tick calcula `waitEndsAt - now` — **nunca voltar a `waitMs -= 30`** (deriva; falha em 2º plano). `raia.waitKind` (`"descanso"`/`"intervalo"`) decide o label.
+- **Cronômetro M2 não fecha sozinho**: `#sbChronoDialog` tem listener `cancel` (Esc/Voltar) → `preventDefault` + `closeTreino()` com confirm; backdrop ignora `detail===0` e `hudDragMoved` (drag do HUD); listener `close` derruba ticker/wake lock. Não remover esses guards.
+- **Rollover de registro por série (M2)**: após a última rep da série, `persistRegistro` snapshota `tempos` síncrono antes de `raia.tempos = []`/`registroId = null` (senão a rep final é perdida). `resetMaster` também zera `registroId`.
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `dist < 50`; botão mostra "Iniciar" (não "Split") para dist < 50m.
 - **Comparador de Atletas**: 3 abas na Análise — Análise (individual), Comparação (VS, 2 atletas), Desempenho (Chart.js via CDN). Dados reais do IndexedDB.
 - **Cronômetro do Balizamento**: visual unificado com SwimBase (frame escuro `#0c101c`, clock icon, status badge). Display usa `maskTimeHTML` (formato `MM'SS"CC` com centésimos em `<span class="cc-mini">`).
