@@ -695,6 +695,7 @@ const tr = {
   m2SelectedAtletaId: null,
   continuousStartedAt: 0,
   seriesStartedAt: 0,
+  currentGroupSerieM2: 1,
   blinkTimeout: null,
 };
 
@@ -1160,6 +1161,7 @@ function initHudDrag() {
 
 function startTreino() {
   buildRaias();
+  tr.currentGroupSerieM2 = 1;
   const modoTag = document.getElementById("sbTreinoModeTag");
   if (modoTag) {
     modoTag.hidden = false;
@@ -1277,6 +1279,7 @@ function selectM2Atleta(atletaId) {
   if (tr.config.modo === 2 && tr.masterRunning) {
     syncStopBtn(true, "Parar");
   }
+  syncStartBtn(tr.masterRunning);
 }
 
 function recordM2Split() {
@@ -1320,11 +1323,6 @@ function recordM2Final() {
     raia.frozen = false;
     raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
     raia.startedAt = 0;
-    if (raia.serie > tr.currentGroupSerieM2) {
-      tr.currentGroupSerieM2 = raia.serie;
-      tr.seriesStartedAt = Date.now();
-      api.logAction(`SwimBase M2: Série ${raia.serie} iniciada para o grupo. Relógio principal resetado.`);
-    }
   } else {
     raia.done = true;
     raia.waitLabel = "Concluído";
@@ -1458,6 +1456,10 @@ function startMaster() {
   tr.masterStartedAt = now - tr.masterElapsedMs;
   if (!tr.sessionStartedAt) tr.sessionStartedAt = new Date().toISOString();
   if (tr.config.modo === 2) {
+    const someoneSwimming = [...tr.raias.values()].some(
+      (r) => !r.done && !r.waiting && r.startedAt > 0
+    );
+    if (!someoneSwimming) tr.seriesStartedAt = now;
     tr.raias.forEach((raia) => {
       if (!raia.done && !raia.waiting && raia.startedAt === 0) {
         raia.startedAt = now;
@@ -1504,7 +1506,6 @@ function resetMaster() {
   tr.m2SelectedAtletaId = null;
   tr.continuousStartedAt = 0;
   tr.seriesStartedAt = 0;
-  tr.currentGroupSerieM2 = 1;
   tr.currentGroupSerieM2 = 1;
   clearTimeout(tr.blinkTimeout);
   tr.blinkTimeout = null;
@@ -1589,6 +1590,14 @@ function startMasterTicker() {
   }, 30);
 }
 
+function noteGroupSerieRelease(raia) {
+  if (raia.serie > tr.currentGroupSerieM2) {
+    tr.currentGroupSerieM2 = raia.serie;
+    tr.seriesStartedAt = Date.now();
+    api.logAction(`SwimBase M2: Série ${raia.serie} iniciada para o grupo. Relógio principal resetado.`);
+  }
+}
+
 function tickModo2() {
   const now = Date.now();
 
@@ -1608,6 +1617,7 @@ function tickModo2() {
           raia.waitLabel = "Aguardando...";
           if (tr.m2SelectedAtletaId === raia.atletaId) {
             tr.m2SelectedAtletaId = null;
+            syncStartBtn(tr.masterRunning);
           }
           updateRaiaRow(raia);
         } else {
@@ -1616,6 +1626,7 @@ function tickModo2() {
           raia.restAlert = false;
           raia.waitLabel = "";
           raia.startedAt = 0;
+          noteGroupSerieRelease(raia);
           updateRaiaRow(raia);
           tr.m2SelectedAtletaId = raia.atletaId;
           document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
@@ -1632,6 +1643,7 @@ function tickModo2() {
               r.restAlert = false;
               r.waitLabel = "";
               r.startedAt = 0;
+              noteGroupSerieRelease(r);
               updateRaiaRow(r);
             }
           });
@@ -2094,11 +2106,6 @@ async function recordSplit(atletaId) {
     raia.waiting = true;
     raia.waitMs = tr.config.intervaloSeries * 1000;
     raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
-    if (raia.serie > tr.currentGroupSerieM2) {
-      tr.currentGroupSerieM2 = raia.serie;
-      tr.seriesStartedAt = Date.now();
-      api.logAction(`SwimBase M2: Série ${raia.serie} iniciada para o grupo. Relógio principal resetado.`);
-    }
   } else {
     raia.done = true;
     raia.waitLabel = "Concluído";
@@ -2258,6 +2265,9 @@ function resetTreinoSession() {
   tr.masterStartedAt = 0;
   tr.sessionStartedAt = null;
   tr.m2SelectedAtletaId = null;
+  tr.continuousStartedAt = 0;
+  tr.seriesStartedAt = 0;
+  tr.currentGroupSerieM2 = 1;
   const masterDisplay = document.getElementById("sbMasterDisplay");
   if (masterDisplay) masterDisplay.innerHTML = maskTimeHTML(msToDisplay(0));
 }
