@@ -3,6 +3,8 @@
 #   BREAKING CHANGE or !:  → MAJOR  (vX.0.0)
 #   feat:                  → MINOR  (v0.X.0)
 #   fix:, refactor:, etc   → PATCH  (v0.0.X)
+# Stamps APP_VERSION in app.js and amends the just-created commit (guarded),
+# so the pushed/deployed commit already contains the correct version.
 
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 VERSION=${LAST_TAG#v}
@@ -49,6 +51,30 @@ while true; do
   fi
   PATCH=$((PATCH + 1))
 done
+
+NEW_VERSION_WITHOUT_V=${NEW_TAG#v}
+
+if ! sed -i "s/const APP_VERSION = \".*\";/const APP_VERSION = \"${NEW_VERSION_WITHOUT_V}\";/g" app.js; then
+  echo "post-commit: Failed to update APP_VERSION in app.js" >&2
+  exit 1
+fi
+git add app.js
+
+HEAD_VER=$(git show HEAD:app.js 2>/dev/null | sed -n 's/.*const APP_VERSION = "\([^"]*\)".*/\1/p')
+
+if [ "$HEAD_VER" != "$NEW_VERSION_WITHOUT_V" ]; then
+  if [ "${PBTRACKER_AMENDING:-0}" = "1" ]; then
+    echo "post-commit: amend did not stamp APP_VERSION (HEAD=${HEAD_VER:-?}, want ${NEW_VERSION_WITHOUT_V})" >&2
+    exit 1
+  fi
+  echo "post-commit: stamping APP_VERSION ${HEAD_VER:-?} -> ${NEW_VERSION_WITHOUT_V} via amend"
+  if ! PBTRACKER_AMENDING=1 git commit --amend --no-edit --no-verify; then
+    echo "post-commit: amend failed" >&2
+    exit 1
+  fi
+  # The nested post-commit invocation (of the amend) creates the tag.
+  exit 0
+fi
 
 git tag "$NEW_TAG"
 echo "post-commit: created tag $NEW_TAG (previous: $LAST_TAG, bump: $BUMP)"

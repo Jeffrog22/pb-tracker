@@ -22,7 +22,7 @@
   - `fix:`/`refactor:`/`chore:`/`docs:` → PATCH (v0.0.X)
   - `BREAKING CHANGE` ou `!:` → MAJOR (vX.0.0)
   - Tags conflitantes (orphan) são puladas automaticamente.
-- Hook `.githooks/commit-msg` atualiza `APP_VERSION` em `app.js` **antes** de o commit ser criado (mesmo cálculo do post-commit), garantindo que o deploy da Vercel tenha a versão correta. Só `post-commit` cria a tag.
+- O mesmo hook também atualiza `APP_VERSION` em `app.js` e faz `git commit --amend --no-edit --no-verify` (guard `PBTRACKER_AMENDING` contra loop), garantindo que o commit empurrado/deployado já tenha a versão correta (Vercel). Hooks `pre-commit`/`commit-msg` não servem para isso: no git 2.52 só o staging do `pre-commit` entra no commit, e o `pre-commit` não tem acesso à mensagem.
 - Hook ativa após `git init && git config core.hooksPath .githooks` (já executado no repositório).
 - **`APP_VERSION` em `app.js` é a fonte da versão exibida no app** — atualizar a cada release junto do CHANGELOG e da tag SemVer (app é estático, não lê tag git).
 - `CHANGELOG.md` deve sempre refletir a versão lançada.
