@@ -161,7 +161,7 @@ export function msToDisplay(ms) {
 }
 
 export function maskTimeHTML(value) {
-  const m = String(value || "00:00:00").match(/^(\d{2}):(\d{2}):(\d{2})$/);
+  const m = String(value || "00:00:00").match(/^(\d{2,}):(\d{2}):(\d{2})$/);
   if (!m) return escapeHtml(String(value || "00:00:00"));
   return `${m[1]}'${m[2]}"<span class="cc-mini">${m[3]}</span>`;
 }

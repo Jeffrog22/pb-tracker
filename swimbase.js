@@ -187,6 +187,11 @@ export function initSwimBase(appApi) {
   const chronoDialog = document.getElementById("sbChronoDialog");
   if (chronoDialog) {
     chronoDialog.addEventListener("click", (event) => {
+      if (event.detail === 0) return;
+      if (hudDragMoved) {
+        hudDragMoved = false;
+        return;
+      }
       const rect = chronoDialog.getBoundingClientRect();
       const outside =
         event.clientX < rect.left ||
@@ -194,6 +199,14 @@ export function initSwimBase(appApi) {
         event.clientY < rect.top ||
         event.clientY > rect.bottom;
       if (outside) closeTreino();
+    });
+    chronoDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      closeTreino();
+    });
+    chronoDialog.addEventListener("close", () => {
+      stopMasterTicker();
+      releaseWakeLock();
     });
   }
 }
@@ -1113,6 +1126,7 @@ let hudStartX = 0;
 let hudStartY = 0;
 let hudOrigLeft = 0;
 let hudOrigTop = 0;
+let hudDragMoved = false;
 
 function initHudDrag() {
   const layer = document.getElementById("sbHudLayer");
@@ -1127,6 +1141,7 @@ function initHudDrag() {
       btn.setPointerCapture(e.pointerId);
       btn.classList.add("dragging");
       hudDragging = btn;
+      hudDragMoved = false;
       hudStartX = e.clientX;
       hudStartY = e.clientY;
       const rect = btn.getBoundingClientRect();
@@ -1139,6 +1154,7 @@ function initHudDrag() {
       if (hudDragging !== btn) return;
       const dx = e.clientX - hudStartX;
       const dy = e.clientY - hudStartY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hudDragMoved = true;
       btn.style.left = (hudOrigLeft + dx) + "px";
       btn.style.top = (hudOrigTop + dy) + "px";
       btn.style.right = "auto";
@@ -1149,12 +1165,18 @@ function initHudDrag() {
       btn.classList.remove("dragging");
       hudDragging = null;
       saveHudPositions();
+      setTimeout(() => {
+        hudDragMoved = false;
+      }, 400);
     });
 
     btn.addEventListener("pointercancel", () => {
       if (hudDragging !== btn) return;
       btn.classList.remove("dragging");
       hudDragging = null;
+      setTimeout(() => {
+        hudDragMoved = false;
+      }, 400);
     });
   });
 }
@@ -1249,7 +1271,15 @@ function updateGroupHeader() {
   } else if (modo === 2) {
     const done = [...tr.raias.values()].filter((r) => r.done).length;
     const total = tr.raias.size;
-    el.textContent = done === total ? "Concluído" : `${done}/${total} concluídos`;
+    if (done === total) {
+      el.textContent = "Concluído";
+    } else {
+      let text = `${done}/${total} concluídos`;
+      if (tr.config.series > 1) {
+        text += ` · Série ${Math.min(tr.currentGroupSerieM2, tr.config.series)}/${tr.config.series}`;
+      }
+      el.textContent = text;
+    }
   } else if (modo === 3) {
     el.textContent = `Série ${tr.modo3Serie}/${tr.config.series}`;
   }
@@ -1306,10 +1336,13 @@ function recordM2Final() {
   hapticFeedback(60);
   blinkMasterDisplay(msToDisplay(splitMs));
 
+  let rolloverRegistro = false;
   if (raia.rep < tr.config.repeticoes) {
     raia.rep += 1;
     raia.waiting = true;
     raia.waitMs = tr.config.descanso * 1000;
+    raia.waitEndsAt = Date.now() + raia.waitMs;
+    raia.waitKind = "descanso";
     raia.restAlert = false;
     raia.frozen = false;
     raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
@@ -1319,10 +1352,13 @@ function recordM2Final() {
     raia.rep = 1;
     raia.waiting = true;
     raia.waitMs = tr.config.intervaloSeries * 1000;
+    raia.waitEndsAt = Date.now() + raia.waitMs;
+    raia.waitKind = "intervalo";
     raia.restAlert = false;
     raia.frozen = false;
     raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
     raia.startedAt = 0;
+    rolloverRegistro = true;
   } else {
     raia.done = true;
     raia.waitLabel = "Concluído";
@@ -1334,6 +1370,10 @@ function recordM2Final() {
     if (isPr) { raia.lastIsPr = true; hapticFeedback([80, 60, 160]); }
     updateRaiaRow(raia);
   });
+  if (rolloverRegistro) {
+    raia.tempos = [];
+    raia.registroId = null;
+  }
   api.logAction(`SwimBase M2: ${raia.nome} — ${msToDisplay(splitMs)} (rep ${raia.rep - (raia.done ? 0 : 1)}/${tr.config.repeticoes}).`);
 
   const allFinished = [...tr.raias.values()].every((r) => r.done || r.waiting);
@@ -1354,24 +1394,17 @@ function recordM2Final() {
 
 function autoSelectNextM2(currentAtletaId = null) {
   const raiasArray = [...tr.raias.values()];
-  const currentIndex = currentAtletaId ? raiasArray.findIndex(r => r.atletaId === currentAtletaId) : -1;
-  
+  const currentIndex = currentAtletaId
+    ? raiasArray.findIndex((r) => r.atletaId === currentAtletaId)
+    : -1;
+
   let nextAtleta = null;
-  // Tenta encontrar o próximo atleta na ordem após o atual
-  for (let i = 1; i < raiasArray.length; i++) {
-    const nextIndex = (currentIndex + i) % raiasArray.length;
+  for (let i = 1; i <= raiasArray.length; i++) {
+    const nextIndex = (currentIndex + i + raiasArray.length) % raiasArray.length;
     const candidate = raiasArray[nextIndex];
     if (!candidate.done && !candidate.waiting && candidate.startedAt > 0) {
       nextAtleta = candidate;
       break;
-    }
-  }
-
-  // Se não encontrar na sequência, tenta o primeiro atleta ativo do início da lista
-  if (!nextAtleta && currentIndex !== -1) {
-    nextAtleta = raiasArray.find((r) => !r.done && !r.waiting && r.startedAt > 0);
-    if (nextAtleta && nextAtleta.atletaId === currentAtletaId) { // Se o único ativo for o mesmo, não faz nada
-      nextAtleta = null;
     }
   }
 
@@ -1440,6 +1473,8 @@ function buildRaias() {
       elapsedMs: 0,
       waiting: false,
       waitMs: 0,
+      waitEndsAt: 0,
+      waitKind: "",
       waitLabel: "",
       restAlert: false,
       frozen: false,
@@ -1519,6 +1554,8 @@ function resetMaster() {
     raia.done = false;
     raia.waiting = false;
     raia.waitMs = 0;
+    raia.waitEndsAt = 0;
+    raia.waitKind = "";
     raia.waitLabel = "";
     raia.restAlert = false;
     raia.frozen = false;
@@ -1526,6 +1563,7 @@ function resetMaster() {
     raia.lastSplitMs = null;
     raia.lastIsPr = false;
     raia.tempos = [];
+    raia.registroId = null;
     raia.splitIndex = 0;
     raia.serie = 1;
     raia.rep = 1;
@@ -1608,7 +1646,10 @@ function tickModo2() {
     if (raia.done) return;
     if (raia.waiting) {
       if (raia.frozen) return;
-      raia.waitMs = Math.max(0, raia.waitMs - 30);
+      raia.waitMs =
+        raia.waitEndsAt > 0
+          ? Math.max(0, raia.waitEndsAt - now)
+          : Math.max(0, raia.waitMs - 30);
       if (raia.waitMs <= 0) {
         const othersResting = [...tr.raias.values()].filter(
           (r) => r.waiting && r !== raia && r.waitMs > 0
@@ -1670,7 +1711,8 @@ function tickModo2() {
         }
       } else {
         raia.restAlert = raia.waitMs <= 5000;
-        raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
+        const kind = raia.waitKind === "intervalo" ? "Intervalo" : "Descanso";
+        raia.waitLabel = `${kind} ${Math.ceil(raia.waitMs / 1000)}s`;
         updateRaiaRow(raia);
       }
     } else if (raia.startedAt > 0 && tr.masterRunning) {
@@ -2015,7 +2057,11 @@ function updateRaiaRow(raia) {
   }
   if (tagEl) {
     if (raia.done) tagEl.textContent = "✓";
-    else if (raia.waiting) tagEl.textContent = `${raia.rep - 1}/${tr.config.repeticoes}`;
+    else if (raia.waiting)
+      tagEl.textContent =
+        raia.waitKind === "intervalo"
+          ? `${raia.serie - 1}/${tr.config.series}`
+          : `${raia.rep - 1}/${tr.config.repeticoes}`;
     else tagEl.textContent = `Rep ${raia.rep}/${tr.config.repeticoes}`;
   }
   if (splitsEl) {
@@ -2163,6 +2209,7 @@ async function checkPrAndFlag(raia, splitMs) {
 }
 
 async function persistRegistro(raia) {
+  const temposSnapshot = [...raia.tempos];
   if (!raia.registroId) {
     const id = uid("registro");
     raia.registroId = id;
@@ -2177,7 +2224,7 @@ async function persistRegistro(raia) {
       distancia: tr.config.distancia,
       serie: raia.serie,
       onda: tr.config.modo === 3 ? raia.onda : null,
-      tempos: [...raia.tempos],
+      tempos: temposSnapshot,
       series: tr.config.series,
       repeticoes: tr.config.repeticoes,
       descanso: tr.config.descanso,
@@ -2194,10 +2241,10 @@ async function persistRegistro(raia) {
   } else {
     const registro = await get(STORES.RECORDS, raia.registroId);
     if (registro) {
-      registro.tempos = [...raia.tempos];
+      registro.tempos = temposSnapshot;
       await put(STORES.RECORDS, registro);
       const cached = sw.registros.find((r) => r.id === registro.id);
-      if (cached) cached.tempos = [...raia.tempos];
+      if (cached) cached.tempos = temposSnapshot;
     }
   }
 }
@@ -2250,8 +2297,18 @@ function finalizeTreino() {
 }
 
 function closeTreino() {
-  const hasData = [...tr.raias.values()].some((r) => r.tempos.length);
-  if (hasData && !window.confirm("Fechar o cronômetro? Os tempos registrados ficam salvos.")) {
+  const inProgress =
+    tr.masterRunning ||
+    tr.continuousStartedAt > 0 ||
+    [...tr.raias.values()].some(
+      (r) => r.tempos.length || r.waiting || r.startedAt > 0
+    );
+  if (
+    inProgress &&
+    !window.confirm(
+      "Fechar o cronômetro? Os tempos registrados ficam salvos."
+    )
+  ) {
     return;
   }
   stopMasterTicker();
