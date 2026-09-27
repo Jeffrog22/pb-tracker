@@ -2405,8 +2405,22 @@ body.dark #sbChronoDialog .sb-raia-time { color: var(--sb-text); }
 
 #sbChronoDialog .sb-countdown.amber { border-color: var(--sb-amber); color: var(--sb-amber); }
 #sbChronoDialog .sb-countdown.red { border-color: var(--sb-red); color: var(--sb-red); }
+#sbChronoDialog .sb-countdown.alert { animation: sbCountdownAlert 1s ease-in-out infinite; }
 #sbChronoDialog .sb-countdown.done { border-color: var(--sb-green); color: var(--sb-green); }
 #sbChronoDialog .sb-countdown.flash { animation: sbCountdownFlash 0.4s ease; }
+
+@keyframes sbCountdownAlert {
+  0%, 100% { background: #0c101c; }
+  50% { background: rgba(239, 68, 68, 0.18); }
+}
+
+#sbChronoDialog .sb-countdown .rest-countdown {
+  animation: none;
+  font-size: 1.2rem;
+  vertical-align: middle;
+  margin-left: 10px;
+  font-family: "Courier New", Courier, monospace;
+}
 
 @keyframes sbCountdownFlash {
   0% { background: rgba(0, 255, 170, 0.25); }

@@ -7,6 +7,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-26
+### Added
+- **SwimBase M1 — contador de alerta decrescente (≤10s)**: quando faltam 10s
+  ou menos no ciclo de saída (`tempoSaida`) ou no intervalo entre séries
+  (`intervaloSeries`), o mostrador `#sbCountdown` ganha as classes `red`
+  (borda/texto vermelhos) + `alert` (pulso de fundo, `sbCountdownAlert`) e,
+  na fase de saída, um badge circular vermelho (`.rest-countdown`, padrão do
+  M2) com os segundos restantes. No intervalo entre séries o mostrador já é
+  regressivo, então ali só ficam o vermelho e o pulso (sem badge duplicado).
+  Limiar único em `M1_ALERT_MS = 10000` (`swimbase.js`); o alerta é limpo ao
+  avançar de fase e em `phase === "done"`.
+
 ## [0.33.0] - 2026-09-26
 ### Added
 - **SwimBase M2 — reordenação dos atletas por drag and drop**: alça de arraste

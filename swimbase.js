@@ -1187,6 +1187,7 @@ function initHudDrag() {
 }
 
 const M2_DRAG_THRESHOLD = 6;
+const M1_ALERT_MS = 10000;
 
 const m2Drag = {
   pointerId: null,
@@ -1696,6 +1697,7 @@ function stopMaster() {
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(true, "Zerar");
+  updateModo1Ui();
   api.logAction("Treino pausado no SwimBase.");
 }
 
@@ -1936,15 +1938,26 @@ function updateModo1Ui() {
   const countdown = document.getElementById("sbCountdown");
   const counter = document.getElementById("sbGroupCounter");
   const groupEl = document.getElementById("sbChronoGroup");
+  const alertActive =
+    tr.masterRunning &&
+    g.phase !== "done" &&
+    g.remainingMs > 0 &&
+    g.remainingMs <= M1_ALERT_MS;
   if (countdown) {
+    const badge =
+      alertActive && g.phase === "rep"
+        ? `<span class="rest-countdown">${Math.ceil(g.remainingMs / 1000)}</span>`
+        : "";
     if (g.phase === "done") {
       countdown.innerHTML = "Concluído";
     } else if (g.phase === "serieInt") {
       countdown.innerHTML = maskTimeHTML(msToDisplay(Math.max(g.remainingMs, 0)));
     } else {
-      countdown.innerHTML = maskTimeHTML(msToDisplay(g.countUpMs));
+      countdown.innerHTML = maskTimeHTML(msToDisplay(g.countUpMs)) + badge;
     }
     countdown.classList.toggle("done", g.phase === "done");
+    countdown.classList.toggle("red", alertActive);
+    countdown.classList.toggle("alert", alertActive);
   }
   const groupText =
     g.phase === "done"
