@@ -184,12 +184,17 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbChronoCloseBtn")
     ?.addEventListener("click", closeTreino);
+  initM2RowDrag();
   const chronoDialog = document.getElementById("sbChronoDialog");
   if (chronoDialog) {
     chronoDialog.addEventListener("click", (event) => {
       if (event.detail === 0) return;
       if (hudDragMoved) {
         hudDragMoved = false;
+        return;
+      }
+      if (m2Drag.suppressBackdrop) {
+        m2Drag.suppressBackdrop = false;
         return;
       }
       const rect = chronoDialog.getBoundingClientRect();
@@ -1181,6 +1186,171 @@ function initHudDrag() {
   });
 }
 
+const M2_DRAG_THRESHOLD = 6;
+
+const m2Drag = {
+  pointerId: null,
+  source: null,
+  ghost: null,
+  active: false,
+  startX: 0,
+  startY: 0,
+  offsetX: 0,
+  offsetY: 0,
+  suppressClick: false,
+  suppressTimer: null,
+  suppressBackdrop: false,
+  backdropTimer: null,
+};
+
+function initM2RowDrag() {
+  const list = document.getElementById("sbChronoList");
+  if (!list) return;
+  list.addEventListener("pointerdown", onM2RowPointerDown);
+}
+
+function onM2RowPointerDown(event) {
+  if (tr.config.modo !== 2) return;
+  const handle = event.target.closest(".sb-raia-handle");
+  if (!handle) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const row = handle.closest(".sb-raia");
+  if (!row) return;
+  event.preventDefault();
+  m2Drag.pointerId = event.pointerId;
+  m2Drag.source = row;
+  m2Drag.active = false;
+  m2Drag.ghost = null;
+  m2Drag.startX = event.clientX;
+  m2Drag.startY = event.clientY;
+  const rect = row.getBoundingClientRect();
+  m2Drag.offsetX = event.clientX - rect.left;
+  m2Drag.offsetY = event.clientY - rect.top;
+  document.addEventListener("pointermove", onM2RowPointerMove);
+  document.addEventListener("pointerup", onM2RowPointerUp);
+  document.addEventListener("pointercancel", onM2RowPointerCancel);
+}
+
+function onM2RowPointerMove(event) {
+  if (event.pointerId !== m2Drag.pointerId) return;
+  if (!m2Drag.active) {
+    const moved = Math.hypot(event.clientX - m2Drag.startX, event.clientY - m2Drag.startY);
+    if (moved < M2_DRAG_THRESHOLD) return;
+    startM2RowGhost();
+  }
+  if (!m2Drag.ghost || !m2Drag.source) return;
+  m2Drag.ghost.style.left = `${event.clientX - m2Drag.offsetX}px`;
+  m2Drag.ghost.style.top = `${event.clientY - m2Drag.offsetY}px`;
+  const list = m2Drag.source.parentElement;
+  const under = document.elementFromPoint(event.clientX, event.clientY);
+  const target = under ? under.closest("#sbChronoList .sb-raia") : null;
+  if (list && target && target !== m2Drag.source) {
+    const targetRect = target.getBoundingClientRect();
+    if (event.clientY < targetRect.top + targetRect.height / 2) {
+      if (m2Drag.source.nextElementSibling !== target) list.insertBefore(m2Drag.source, target);
+    } else if (m2Drag.source.previousElementSibling !== target) {
+      list.insertBefore(m2Drag.source, target.nextElementSibling);
+    }
+  }
+  autoScrollM2Dialog(event.clientY);
+}
+
+function startM2RowGhost() {
+  const source = m2Drag.source;
+  const dialog = document.getElementById("sbChronoDialog");
+  if (!source || !dialog) return;
+  const rect = source.getBoundingClientRect();
+  const ghost = source.cloneNode(true);
+  ghost.removeAttribute("data-id");
+  ghost.classList.add("sb-raia-ghost");
+  ghost.classList.remove("selected", "dragging", "resting", "rest-alert");
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.left = `${rect.left}px`;
+  ghost.style.top = `${rect.top}px`;
+  dialog.appendChild(ghost);
+  source.classList.add("dragging");
+  try {
+    source.setPointerCapture(m2Drag.pointerId);
+  } catch {
+    /* captura opcional — alguns ambientes podem recusar */
+  }
+  m2Drag.ghost = ghost;
+  m2Drag.active = true;
+  hapticFeedback(30);
+}
+
+function autoScrollM2Dialog(y) {
+  const dialog = document.getElementById("sbChronoDialog");
+  if (!dialog) return;
+  const rect = dialog.getBoundingClientRect();
+  const edge = 60;
+  if (y < rect.top + edge) dialog.scrollTop -= 12;
+  else if (y > rect.bottom - edge) dialog.scrollTop += 12;
+}
+
+function onM2RowPointerUp(event) {
+  if (event.pointerId !== m2Drag.pointerId) return;
+  finishM2RowDrag();
+}
+
+function onM2RowPointerCancel(event) {
+  if (event.pointerId !== m2Drag.pointerId) return;
+  finishM2RowDrag();
+}
+
+function finishM2RowDrag() {
+  const wasActive = m2Drag.active;
+  const source = m2Drag.source;
+  detachM2RowDrag();
+  if (!wasActive) return;
+  if (source) source.classList.remove("dragging");
+  m2Drag.suppressClick = true;
+  m2Drag.suppressBackdrop = true;
+  clearTimeout(m2Drag.suppressTimer);
+  m2Drag.suppressTimer = setTimeout(() => {
+    m2Drag.suppressClick = false;
+  }, 500);
+  clearTimeout(m2Drag.backdropTimer);
+  m2Drag.backdropTimer = setTimeout(() => {
+    m2Drag.suppressBackdrop = false;
+  }, 500);
+  commitM2Order();
+}
+
+function detachM2RowDrag() {
+  document.removeEventListener("pointermove", onM2RowPointerMove);
+  document.removeEventListener("pointerup", onM2RowPointerUp);
+  document.removeEventListener("pointercancel", onM2RowPointerCancel);
+  if (m2Drag.ghost) m2Drag.ghost.remove();
+  m2Drag.ghost = null;
+  m2Drag.source = null;
+  m2Drag.pointerId = null;
+  m2Drag.active = false;
+}
+
+function cancelM2RowDrag() {
+  const source = m2Drag.source;
+  detachM2RowDrag();
+  if (source) source.classList.remove("dragging");
+}
+
+function commitM2Order() {
+  const list = document.getElementById("sbChronoList");
+  if (!list) return;
+  const rows = [...list.querySelectorAll(".sb-raia")];
+  if (rows.length < 2) return;
+  const order = rows.map((row) => tr.raias.get(row.dataset.id));
+  if (order.some((raia) => !raia)) return;
+  tr.raias.clear();
+  order.forEach((raia, idx) => {
+    raia.lane = idx + 1;
+    tr.raias.set(raia.atletaId, raia);
+    const laneEl = rows[idx].querySelector(".sb-raia-lane");
+    if (laneEl) laneEl.textContent = String(idx + 1);
+  });
+  api.logAction(`SwimBase M2: ordem dos atletas reorganizada (${order.length} atletas).`);
+}
+
 function startTreino() {
   buildRaias();
   tr.currentGroupSerieM2 = 1;
@@ -1196,7 +1366,7 @@ function startTreino() {
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
           ? "Toque na linha do atleta para registrar"
-          : "Iniciar para começar · Split para volta (avança próximo) · Parar para finalizar";
+          : "Toque para selecionar · arraste o ícone ⠿ para reordenar · Split para volta";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
   if (chronoTitle) {
@@ -1303,9 +1473,6 @@ function selectM2Atleta(atletaId) {
   document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
     row.classList.toggle("selected", row.dataset.id === atletaId);
   });
-  const row = document.querySelector(`.sb-raia[data-id="${atletaId}"]`);
-  const lastEl = row?.querySelector(".sb-raia-last");
-  if (lastEl) lastEl.textContent = "Selecionado";
   if (tr.config.modo === 2 && tr.masterRunning) {
     syncStopBtn(true, "Parar");
   }
@@ -1414,9 +1581,6 @@ function autoSelectNextM2(currentAtletaId = null) {
     document.querySelectorAll("#sbChronoList .sb-raia").forEach((row) => {
       row.classList.toggle("selected", row.dataset.id === next.atletaId);
     });
-    const row = document.querySelector(`.sb-raia[data-id="${next.atletaId}"]`);
-    const lastEl = row?.querySelector(".sb-raia-last");
-    if (lastEl) lastEl.textContent = "Selecionado";
     if (tr.config.modo === 2 && tr.masterRunning) syncStopBtn(true, "Parar");
     syncStartBtn(tr.masterRunning);
   } else {
@@ -1672,9 +1836,6 @@ function tickModo2() {
           raia.startedAt = 0;
           noteGroupSerieRelease(raia);
           updateRaiaRow(raia);
-          const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
-          const lastEl = row?.querySelector(".sb-raia-last");
-          if (lastEl) lastEl.textContent = "Pronto";
           const sel = tr.raias.get(tr.m2SelectedAtletaId);
           const selValid = sel && !sel.done && !sel.waiting;
           if (!selValid) {
@@ -1910,16 +2071,23 @@ function renderChronoModo1(list) {
 }
 
 function renderChronoModo2(list) {
+  if (m2Drag.active) cancelM2RowDrag();
   list.innerHTML = [...tr.raias.values()]
     .map(
       (raia) => `
     <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
+      <span class="sb-raia-handle" role="button" aria-label="Reordenar atleta" title="Arraste para reordenar">
+        <svg viewBox="0 0 12 18" width="12" height="18" aria-hidden="true" focusable="false">
+          <circle cx="3" cy="4" r="1.4" /><circle cx="9" cy="4" r="1.4" />
+          <circle cx="3" cy="9" r="1.4" /><circle cx="9" cy="9" r="1.4" />
+          <circle cx="3" cy="14" r="1.4" /><circle cx="9" cy="14" r="1.4" />
+        </svg>
+      </span>
       <div class="sb-raia-left">
         <div class="sb-raia-lane">${raia.lane}</div>
         <div class="sb-raia-body">
           <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
           <div class="sb-raia-splits" hidden></div>
-          <div class="sb-raia-last">Toque para selecionar</div>
         </div>
       </div>
       <div class="sb-raia-center"><span class="sb-raia-tag">—</span></div>
@@ -1928,7 +2096,13 @@ function renderChronoModo2(list) {
     )
     .join("");
   list.querySelectorAll(".sb-raia").forEach((btn) =>
-    btn.addEventListener("click", () => selectM2Atleta(btn.dataset.id))
+    btn.addEventListener("click", () => {
+      if (m2Drag.suppressClick) {
+        m2Drag.suppressClick = false;
+        return;
+      }
+      selectM2Atleta(btn.dataset.id);
+    })
   );
   tr.raias.forEach(updateRaiaRow);
 }
@@ -1980,11 +2154,11 @@ function updateRaiaRow(raia) {
   const row = document.querySelector(`.sb-raia[data-id="${raia.atletaId}"]`);
   if (!row) return;
   row.classList.toggle("done", raia.done);
+  row.classList.toggle("resting", !!raia.waiting && !raia.done);
   const timeEl = row.querySelector(".sb-raia-time");
   const tagEl = row.querySelector(".sb-raia-tag");
   const splitsEl = row.querySelector(".sb-raia-splits");
   const lastEl = row.querySelector(".sb-raia-last");
-  const metaEl = row.querySelector(".sb-raia-meta");
 
   if (tr.config.modo === 1) {
     if (timeEl)
@@ -2074,21 +2248,6 @@ function updateRaiaRow(raia) {
       splitsEl.hidden = false;
     } else {
       splitsEl.hidden = true;
-    }
-  }
-  if (lastEl) {
-    if (raia.done) {
-      lastEl.innerHTML = raia.lastIsPr
-        ? `<span class="pr-badge">PR!</span> ${msToDisplay(raia.lastSplitMs)}`
-        : raia.tempos.map((t) => t).join(" / ");
-    } else if (raia.waiting) {
-      lastEl.textContent = raia.waitLabel;
-    } else if (tr.m2SelectedAtletaId === raia.atletaId) {
-      lastEl.textContent = "Selecionado";
-    } else if (raia.startedAt > 0 && tr.masterRunning) {
-      lastEl.textContent = `Rep ${raia.rep}/${tr.config.repeticoes}`;
-    } else {
-      lastEl.textContent = "Toque para selecionar";
     }
   }
 }

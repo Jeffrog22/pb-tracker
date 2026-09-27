@@ -7,6 +7,31 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-26
+### Added
+- **SwimBase M2 — reordenação dos atletas por drag and drop**: alça de arraste
+  (grip ⠿) em cada card do cronômetro; arrastar reorganiza a ordem
+  (reordenação ao vivo via `insertBefore` + commit em `tr.raias`), renumera as
+  raias 1..N e mantém a ordem em "Zerar" (só um novo treino volta à ordem
+  original, via `buildRaias`). Clique curto segue selecionando o atleta; o
+  clique gerado pelo drag é suprimido e o backdrop do dialog ignora o gesto
+  (`m2Drag.suppressClick` / `m2Drag.suppressBackdrop`). Delegação de pointer
+  events em `#sbChronoList` (sobrevive ao re-render), `touch-action: none`
+  só na alça (o restante da lista continua rolando), auto-scroll do dialog
+  nas bordas e ghost clonado com `pointer-events: none`.
+- **SwimBase M2 — descanso ativo com fundo azul suave**: classe `.resting`
+  aplicada em `updateRaiaRow` enquanto `raia.waiting`, com as variáveis de
+  tema `--sb-rest-bg` / `--sb-rest-border` (paleta do app + override de alto
+  contraste); o alerta vermelho (≤5s, `.rest-alert`) mantém precedência.
+
+### Changed
+- **SwimBase M2 — terceira linha dos cards removida**: descanso, repetição e
+  último registro já são sinalizados pelo mostrador (relógio, pill central e
+  linha de parciais); o badge `PR!` deixa de aparecer no card em M2 (haptics
+  e registro de PR mantidos). Hint `#sbChronoNext` do M2 agora explica
+  seleção e reordenação.
+- `APP_VERSION` → `0.33.0`; cache do SW → `pbtracker-v70`.
+
 ## [0.32.7] - 2026-09-24
 ### Fixed
 - **SwimBase M2 — saída inesperada do cronômetro**: evento `cancel` do

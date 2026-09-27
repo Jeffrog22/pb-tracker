@@ -1979,6 +1979,8 @@ body.dark .sb-table tbody tr:hover td {
   --sb-blue: var(--primary-500);
   --sb-red: var(--danger);
   --sb-cyan: #00ffaa;
+  --sb-rest-bg: rgba(59, 130, 246, 0.16);
+  --sb-rest-border: rgba(59, 130, 246, 0.45);
   background: var(--sb-bg);
   color: var(--sb-text);
   border-radius: 16px 16px 0 0;
@@ -2229,6 +2231,7 @@ body.dark .sb-chrono-card {
   border: 1px solid transparent;
   box-shadow: none;
   position: relative;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 body.dark #sbChronoDialog .sb-raia {
@@ -2238,9 +2241,52 @@ body.dark #sbChronoDialog .sb-raia {
 
 #sbChronoDialog .sb-raia.done { opacity: 0.55; }
 
+#sbChronoDialog .sb-raia.resting {
+  background: var(--sb-rest-bg) !important;
+  border-color: var(--sb-rest-border) !important;
+}
+
 #sbChronoDialog .sb-raia.selected {
   border-color: var(--sb-cyan) !important;
   background: rgba(0, 255, 170, 0.08) !important;
+}
+
+/* --- M2: drag handle + ghost --- */
+#sbChronoDialog .sb-raia-handle {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 34px;
+  margin: 0 6px 0 -8px;
+  color: var(--sb-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#sbChronoDialog .sb-raia-handle svg {
+  fill: currentColor;
+  display: block;
+}
+
+#sbChronoDialog .sb-raia-handle:active { cursor: grabbing; }
+
+#sbChronoDialog .sb-raia.dragging {
+  opacity: 0.35;
+  border: 1px dashed var(--sb-muted) !important;
+}
+
+#sbChronoDialog .sb-raia-ghost {
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  margin: 0;
+  opacity: 0.96;
+  border-color: var(--sb-cyan) !important;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
 }
 
 .sb-raia-left {
@@ -2480,6 +2526,8 @@ body.high-contrast #sbChronoDialog {
   --sb-blue: #4da6ff;
   --sb-red: #ff4444;
   --sb-cyan: #ffff00;
+  --sb-rest-bg: rgba(77, 166, 255, 0.25);
+  --sb-rest-border: #4da6ff;
 }
 
 body.high-contrast #sbChronoDialog .sb-timer-box {
