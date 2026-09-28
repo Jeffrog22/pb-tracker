@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.36.0"` em `app.js`; cache SW `pbtracker-v74` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.36.0"` em `app.js`; cache SW `pbtracker-v75` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -95,7 +95,10 @@
 - **M3 alerta ≤5s**: `M3_ALERT_MS = 5000` → `r.restAlert` na espera de largada da onda e no descanso entre séries; `.rest-alert`/`.rest-countdown` aplicados no ramo M3 de `updateRaiaRow` (antes do `return`), pills `.sb-wave-pill.rest`/`.alert` em `updateModo3Status`. Linhas `done` só repintam durante o descanso via `restMs > 0 || restEnding` no `tickModo3` (sem isso o badge não tica).
 - **Descanso ativo = fundo azul**: `updateRaiaRow` alterna `.resting` (`--sb-rest-bg`/`--sb-rest-border`, defs em `#sbChronoDialog`) enquanto `raia.waiting`; `.rest-alert` (≤5s) é `!important` e posterior no CSS → prevalece sobre o azul e sobre `.selected`.
 - **M1 alerta ≤10s**: `updateModo1Ui()` aplica `red` + `alert` (pulso) em `#sbCountdown` quando `tr.masterRunning && phase !== "done" && remainingMs <= M1_ALERT_MS` (10000); badge `.rest-countdown` com os segundos **só na fase `rep`** (na `serieInt` o mostrador já é regressivo, ali só vermelho/pulso). Classes são removidas ao avançar de fase e em `done`; `stopMaster()` chama `updateModo1Ui()` no final. O botão Parar fica `disabled` em M1 durante a execução (`syncStopBtn(false, "Parar")`), então `stopMaster()` só é alcançável via M2.
-- **Comparador de Atletas**: 3 abas na Análise — Análise (individual), Comparação (VS, 2 atletas), Desempenho (Chart.js via CDN). Dados reais do IndexedDB.
+- **Comparador de Atletas**: 3 abas na Análise — Análise (individual), Comparação (VS, 2 atletas), Desempenho (Chart.js). Dados reais do IndexedDB.
+- **Análise — Chart.js lazy**: sem tag eager no `index.html`; `ensureChartJs()` (`swimbase.js`) carrega o CDN pinado 4.4.1 ao abrir a aba Desempenho, com `paintChartMessage` de fallback se falhar. `renderDesempenho` é async e só pinta os canvases após o load.
+- **SwimBase — isolamento por perfil**: `inActiveProfile` filtra `professorId` do perfil ativo (tolerante a `null`) em `ensureLoaded` e nos re-loads de `saveAtleta`/`saveTurma`/importação CSV. Trocar/perfil chama `reloadSwimBase()` (exportado) e re-renderiza a tela `sb-*` ativa (`state.screen`).
+- **SwimBase — `deleteAtleta` é cascata**: apaga também `registros` e `prs` do atleta (confirm avisa; log conta removidos).
 - **Cronômetro do Balizamento**: visual unificado com SwimBase (frame escuro `#0c101c`, clock icon, status badge). Display usa `maskTimeHTML` (formato `MM'SS"CC` com centésimos em `<span class="cc-mini">`).
 - **Cores de baliza**: aleatórias por série (`LANE_COLORS`), estáveis durante a série. Balizas extrapoladas ficam opacas (`.lane-draft`) até atribuição.
 

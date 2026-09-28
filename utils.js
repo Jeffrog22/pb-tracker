@@ -160,6 +160,11 @@ export function msToDisplay(ms) {
   return `${minutes}:${seconds}:${centiseconds}`;
 }
 
+export function fmtAxisTime(ms) {
+  if (ms == null || !Number.isFinite(Number(ms))) return "—";
+  return msToDisplay(Math.max(0, Math.round(Number(ms))));
+}
+
 export function maskTimeHTML(value) {
   const m = String(value || "00:00:00").match(/^(\d{2,}):(\d{2}):(\d{2})$/);
   if (!m) return escapeHtml(String(value || "00:00:00"));

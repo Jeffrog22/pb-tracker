@@ -1,14 +1,25 @@
 // charts.js — Gráficos Canvas nativos (MVP: progressão temporal + evolução de PR).
+import { fmtAxisTime } from "./utils.js";
 
-function fmtMs(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const ss = String(totalSeconds % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
+let lastDraw = null;
+let resizeTimer = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => {
+    if (!lastDraw) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (lastDraw.canvas?.isConnected) {
+        drawProgressChart(lastDraw.canvas, lastDraw.points, lastDraw.options);
+      }
+    }, 150);
+  });
 }
 
 export function drawProgressChart(canvas, points, options = {}) {
   const highContrast = !!options.highContrast;
+  const dark = !!options.dark;
+  lastDraw = { canvas, points, options };
   const container = canvas.parentElement;
   const width = Math.max((container?.clientWidth || 320) - 0, 200);
   const height = 260;
@@ -23,12 +34,12 @@ export function drawProgressChart(canvas, points, options = {}) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const grid = highContrast ? "#3a3a3a" : "#e5e5e5";
-  const axis = highContrast ? "#666" : "#bbb";
-  const label = highContrast ? "#ffd700" : "#666";
-  const line = highContrast ? "#00ffd1" : "#0f9d58";
-  const prLine = highContrast ? "#ffff00" : "#ffb400";
-  const empty = highContrast ? "#aaa" : "#888";
+  const grid = highContrast ? "#3a3a3a" : dark ? "#374151" : "#e5e5e5";
+  const axis = highContrast ? "#666" : dark ? "#4b5563" : "#bbb";
+  const label = highContrast ? "#ffd700" : dark ? "#9ca3af" : "#666";
+  const line = highContrast ? "#00ffd1" : dark ? "#34d399" : "#0f9d58";
+  const prLine = highContrast ? "#ffff00" : dark ? "#fbbf24" : "#ffb400";
+  const empty = highContrast ? "#aaa" : dark ? "#9ca3af" : "#888";
 
   if (!points.length) {
     ctx.fillStyle = empty;
@@ -39,7 +50,7 @@ export function drawProgressChart(canvas, points, options = {}) {
     return;
   }
 
-  const margin = { top: 14, right: 12, bottom: 28, left: 48 };
+  const margin = { top: 14, right: 12, bottom: 28, left: 62 };
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
 
@@ -73,7 +84,7 @@ export function drawProgressChart(canvas, points, options = {}) {
     ctx.lineTo(margin.left + plotW, y);
     ctx.stroke();
     ctx.fillStyle = label;
-    ctx.fillText(fmtMs(value), margin.left - 5, y);
+    ctx.fillText(fmtAxisTime(value), margin.left - 5, y);
   }
 
   ctx.strokeStyle = line;

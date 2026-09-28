@@ -11,9 +11,9 @@ import {
   slugify,
   escapeHtml,
 } from "./utils.js";
-import { initSwimBase, renderSwimBaseScreen } from "./swimbase.js";
+import { initSwimBase, renderSwimBaseScreen, reloadSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.36.0";
+const APP_VERSION = "0.37.0";
 
 const state = {
   teamName: "",
@@ -197,6 +197,11 @@ function activateProfile(id, options = {}) {
   setActiveProfileId(profile.id);
   el.teamName.value = profile.equipe || "";
   renderProfileChip();
+  reloadSwimBase()
+    .then(() => {
+      if (state.screen && state.screen.startsWith("sb-")) renderSwimBaseScreen(state.screen);
+    })
+    .catch((err) => console.warn(err));
   if (!options.skipLog) logAction(`Perfil ativado: ${profile.professor} (${profile.equipe}).`);
 }
 
@@ -217,6 +222,7 @@ function createProfile(professor, equipe) {
 function switchProfile() {
   state.activeProfile = null;
   setActiveProfileId(null);
+  reloadSwimBase().catch((err) => console.warn(err));
   renderProfileList();
   showScreen("login");
 }
@@ -569,6 +575,7 @@ function applyDeviceGuard() {
 
 function showScreen(screen) {
   if (screen === "mode" && !state.activeProfile) screen = "login";
+  state.screen = screen;
 
   el.screenLogin.classList.toggle("active", screen === "login");
   el.screenMode.classList.toggle("active", screen === "mode");

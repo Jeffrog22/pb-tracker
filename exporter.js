@@ -216,7 +216,7 @@ export async function exportSwimBasePRs({ prs, getAtletaName }) {
     p.distancia || "",
     msToDisplay(p.melhorTempo),
     p.tempoAnterior != null ? msToDisplay(p.tempoAnterior) : "",
-    p.melhoria ? p.melhoria.toFixed(1) : "",
+    p.tempoAnterior != null ? p.melhoria.toFixed(1) : "novo",
     new Date(p.data).toLocaleString("pt-BR"),
   ]);
   return exportSpreadsheet({

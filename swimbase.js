@@ -4,6 +4,7 @@ import { STORES, getAll, get, put, putAll, remove } from "./db.js";
 import {
   attachClockMask,
   escapeHtml,
+  fmtAxisTime,
   maskTimeHTML,
   msToDisplay,
   normalizeText,
@@ -258,6 +259,12 @@ export function renderSwimBaseScreen(screen) {
   if (screen === "sb-analise") return renderSbAnalise();
 }
 
+function inActiveProfile(item) {
+  const profileId = api?.state?.activeProfile?.id || null;
+  if (!profileId) return true;
+  return item?.professorId == null || item.professorId === profileId;
+}
+
 async function ensureLoaded() {
   if (sw.loaded) return;
   const [turmas, atletas, registros, prs] = await Promise.all([
@@ -266,11 +273,16 @@ async function ensureLoaded() {
     getAll(STORES.RECORDS),
     getAll(STORES.PRS),
   ]);
-  sw.turmas = turmas || [];
-  sw.atletas = atletas || [];
-  sw.registros = registros || [];
-  sw.prs = prs || [];
+  sw.turmas = (turmas || []).filter(inActiveProfile);
+  sw.atletas = (atletas || []).filter(inActiveProfile);
+  sw.registros = (registros || []).filter(inActiveProfile);
+  sw.prs = (prs || []).filter(inActiveProfile);
   sw.loaded = true;
+}
+
+export async function reloadSwimBase() {
+  sw.loaded = false;
+  await ensureLoaded();
 }
 
 /* ---- Home ---- */
@@ -374,7 +386,12 @@ function renderAtletasList() {
   list.querySelectorAll(".sb-athlete-delete").forEach((btn) =>
     btn.addEventListener("click", () => {
       const atleta = sw.atletas.find((x) => x.id === btn.dataset.id);
-      if (atleta && window.confirm(`Excluir o atleta ${atleta.nome}?`)) {
+      if (
+        atleta &&
+        window.confirm(
+          `Excluir o atleta ${atleta.nome}? Registros e PRs dele também serão apagados.`
+        )
+      ) {
         deleteAtleta(atleta.id);
       }
     })
@@ -442,7 +459,7 @@ async function saveAtleta(event) {
     updatedAt: now,
   };
   await put(STORES.ATHLETES, atleta);
-  sw.atletas = await getAll(STORES.ATHLETES);
+  sw.atletas = (await getAll(STORES.ATHLETES)).filter(inActiveProfile);
   document.getElementById("sbAtletaDialog").close();
   renderTurmaSelects();
   renderAtletasList();
@@ -450,11 +467,19 @@ async function saveAtleta(event) {
 }
 
 async function deleteAtleta(id) {
-  await remove(STORES.ATHLETES, id);
+  const registros = sw.registros.filter((r) => r.atletaId === id);
+  const prs = sw.prs.filter((p) => p.atletaId === id);
+  await Promise.all([
+    remove(STORES.ATHLETES, id),
+    ...registros.map((r) => remove(STORES.RECORDS, r.id)),
+    ...prs.map((p) => remove(STORES.PRS, p.id)),
+  ]);
   sw.atletas = sw.atletas.filter((a) => a.id !== id);
+  sw.registros = sw.registros.filter((r) => r.atletaId !== id);
+  sw.prs = sw.prs.filter((p) => p.atletaId !== id);
   document.getElementById("sbAtletaDialog").close();
   renderAtletasList();
-  api.logAction("Atleta excluído do SwimBase.");
+  api.logAction(`Atleta excluído do SwimBase (${registros.length} registro(s) e ${prs.length} PR(s) removidos).`);
 }
 
 function openTurmaDialog(turma = null) {
@@ -517,7 +542,7 @@ async function saveTurma(event) {
     updatedAt: now,
   };
   await put(STORES.GROUPS, turma);
-  sw.turmas = await getAll(STORES.GROUPS);
+  sw.turmas = (await getAll(STORES.GROUPS)).filter(inActiveProfile);
   if (!editingTurmaId) sw.selectedTurmaId = turma.id;
   document.getElementById("sbTurmaDialog").close();
   renderTurmaSelects();
@@ -681,8 +706,8 @@ async function importTurmasFromCsv(text) {
 
   if (turmasNovas.length) await putAll(STORES.GROUPS, turmasNovas);
   if (atletasNovos.length) await putAll(STORES.ATHLETES, atletasNovos);
-  sw.turmas = await getAll(STORES.GROUPS);
-  sw.atletas = await getAll(STORES.ATHLETES);
+  sw.turmas = (await getAll(STORES.GROUPS)).filter(inActiveProfile);
+  sw.atletas = (await getAll(STORES.ATHLETES)).filter(inActiveProfile);
   renderTurmaSelects();
   renderAtletasList();
   const parts = [];
@@ -1578,11 +1603,14 @@ function recordM2Final() {
     raia.startedAt = 0;
   }
 
-  persistRegistro(raia);
-  checkPrAndFlag(raia, splitMs).then((isPr) => {
-    if (isPr) { raia.lastIsPr = true; hapticFeedback([80, 60, 160]); }
-    updateRaiaRow(raia);
-  });
+  const registroId = raia.registroId;
+  persistRegistro(raia)
+    .then(() => checkPrAndFlag(raia, splitMs, registroId))
+    .then((isPr) => {
+      if (isPr) { raia.lastIsPr = true; hapticFeedback([80, 60, 160]); }
+      updateRaiaRow(raia);
+    })
+    .catch((err) => console.warn("SwimBase: falha ao persistir registro/PR.", err));
   if (rolloverRegistro) {
     raia.tempos = [];
     raia.registroId = null;
@@ -2424,6 +2452,10 @@ async function recordSplit(atletaId) {
   if (tr.config.modo === 1) {
     const g = tr.group;
     if (!g || g.phase !== "rep") return;
+    if (raia.registroId && raia.serie !== g.serie) {
+      raia.tempos = [];
+      raia.registroId = null;
+    }
     splitMs = tr.masterElapsedMs - g.repStartMs;
     raia.serie = g.serie;
     raia.rep = g.rep;
@@ -2434,9 +2466,7 @@ async function recordSplit(atletaId) {
     raia.serie = tr.modo3Serie;
     raia.rep = 1;
   } else {
-    if (!raia.running) return;
-    raia.elapsedMs = now - raia.startedAt;
-    splitMs = raia.elapsedMs;
+    return;
   }
 
   raia.tempos.push(msToDisplay(splitMs));
@@ -2475,32 +2505,10 @@ async function recordSplit(atletaId) {
     return;
   }
 
-  if (tr.config.modo === 1) {
-    updateRaiaRow(raia);
-    return;
-  }
-
-  if (raia.rep < tr.config.repeticoes) {
-    raia.rep += 1;
-    raia.waiting = true;
-    raia.waitMs = tr.config.descanso * 1000;
-    raia.waitLabel = `Descanso ${Math.ceil(raia.waitMs / 1000)}s`;
-  } else if (raia.serie < tr.config.series) {
-    raia.serie += 1;
-    raia.rep = 1;
-    raia.tempos = [];
-    raia.registroId = null;
-    raia.waiting = true;
-    raia.waitMs = tr.config.intervaloSeries * 1000;
-    raia.waitLabel = `Intervalo ${Math.ceil(raia.waitMs / 1000)}s`;
-  } else {
-    raia.done = true;
-    raia.waitLabel = "Concluído";
-  }
   updateRaiaRow(raia);
 }
 
-async function checkPrAndFlag(raia, splitMs) {
+async function checkPrAndFlag(raia, splitMs, registroId = raia.registroId) {
   const existing = sw.prs.find(
     (p) =>
       p.atletaId === raia.atletaId &&
@@ -2510,10 +2518,12 @@ async function checkPrAndFlag(raia, splitMs) {
   const isPr = !existing || splitMs < existing.melhorTempo;
   if (!isPr) return false;
 
-  const registro = await get(STORES.RECORDS, raia.registroId);
+  const registro = await get(STORES.RECORDS, registroId);
   if (registro) {
     registro.flagPr = true;
     await put(STORES.RECORDS, registro);
+    const cached = sw.registros.find((r) => r.id === registro.id);
+    if (cached) cached.flagPr = true;
   }
 
   const now = new Date().toISOString();
@@ -2528,7 +2538,7 @@ async function checkPrAndFlag(raia, splitMs) {
     melhoria: existing ? ((existing.melhorTempo - splitMs) / existing.melhorTempo) * 100 : 0,
     data: now,
     local: "treino",
-    registroId: raia.registroId,
+    registroId,
   };
   await put(STORES.PRS, pr);
   if (existing) {
@@ -2687,7 +2697,50 @@ const cmp = {
   estilo: "",
   distancia: "",
   metrica: "tempo",
+  legendHidden: [false, false],
 };
+
+const CMP_METRICAS = ["tempo", "indice", "consistencia"];
+
+function parseProvaLabel(prova) {
+  const [dStr, ...eParts] = prova.split(" ");
+  return { dist: parseInt(dStr, 10), estilo: eParts.join(" ") };
+}
+
+function filterCmpPrs(prs) {
+  return prs
+    .filter((p) => (cmp.estilo ? p.estilo === cmp.estilo : true))
+    .filter((p) => (cmp.distancia !== "" ? String(p.distancia) === String(cmp.distancia) : true));
+}
+
+function filterCmpRegistros(regs) {
+  return regs
+    .filter((r) => (cmp.estilo ? r.estilo === cmp.estilo : true))
+    .filter((r) => (cmp.distancia !== "" ? String(r.distancia) === String(cmp.distancia) : true));
+}
+
+function cmpPrIndex() {
+  const idx = new Map();
+  sw.prs.forEach((p) => idx.set(`${p.atletaId}|${p.estilo}|${p.distancia}`, p));
+  return idx;
+}
+
+function cmpProvaList(id1, id2) {
+  const set = new Set();
+  const srcs = [
+    ...filterCmpPrs(sw.prs.filter((p) => p.atletaId === id1 || p.atletaId === id2)),
+    ...filterCmpRegistros(sw.registros.filter((r) => r.atletaId === id1 || r.atletaId === id2)),
+  ];
+  srcs.forEach((item) => {
+    if (item.distancia == null || !item.estilo) return;
+    set.add(`${item.distancia}m ${item.estilo}`);
+  });
+  return [...set].sort((a, b) => {
+    const pa = parseProvaLabel(a);
+    const pb = parseProvaLabel(b);
+    return pa.dist - pb.dist || a.localeCompare(b);
+  });
+}
 
 /* ==== Render principal com abas ==== */
 
@@ -2707,14 +2760,6 @@ async function renderSbAnalise() {
     <div class="cmp-tab-panel" data-panel="desempenho" id="cmpPanelDesempenho"></div>
   `;
 
-  if (!sw.atletas.length) {
-    container.insertAdjacentHTML(
-      "beforeend",
-      '<div class="cmp-empty"><div class="cmp-empty-icon">🏊</div>Cadastre atletas e registre treinos para usar a análise.</div>'
-    );
-    return;
-  }
-
   container.querySelectorAll(".cmp-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       container.querySelectorAll(".cmp-tab").forEach((t) => t.classList.remove("active"));
@@ -2724,9 +2769,17 @@ async function renderSbAnalise() {
       if (panel) panel.classList.add("active");
       an.activeTab = tab.dataset.tab;
       if (tab.dataset.tab === "comparador") renderComparador();
-      if (tab.dataset.tab === "desempenho") renderDesempenho();
+      if (tab.dataset.tab === "desempenho") renderDesempenho().catch((err) => console.warn(err));
     });
   });
+
+  if (!sw.atletas.length) {
+    container.insertAdjacentHTML(
+      "beforeend",
+      '<div class="cmp-empty"><div class="cmp-empty-icon">🏊</div>Cadastre atletas e registre treinos para usar a análise.</div>'
+    );
+    return;
+  }
 
   renderAnaliseIndividual();
   if (an.activeTab === "comparador") {
@@ -2756,12 +2809,14 @@ function renderAnaliseIndividual() {
       </label>
       <label>Período
         <select id="sbAnalisePeriodo">
-          <option value="all">Todo o período</option>
-          <option value="7d">Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
-          <option value="3m">Últimos 3 meses</option>
-          <option value="6m">Últimos 6 meses</option>
-          <option value="1a">Último ano</option>
+          ${[
+            ["all", "Todo o período"],
+            ["7d", "Últimos 7 dias"],
+            ["30d", "Últimos 30 dias"],
+            ["3m", "Últimos 3 meses"],
+            ["6m", "Últimos 6 meses"],
+            ["1a", "Último ano"],
+          ].map(([v, t]) => `<option value="${v}" ${an.periodo === v ? "selected" : ""}>${t}</option>`).join("")}
         </select>
       </label>
     </div>
@@ -2831,20 +2886,31 @@ function analiseRegistros(useEstilo = true, useDistancia = true) {
     .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
 }
 
+function analisePrs() {
+  const cutoff = periodoCutoff(an.periodo);
+  return sw.prs
+    .filter((p) => p.atletaId === an.atletaId)
+    .filter((p) => (an.estilo ? p.estilo === an.estilo : true))
+    .filter((p) => (an.distancia !== "" ? String(p.distancia) === String(an.distancia) : true))
+    .filter((p) => (cutoff ? new Date(p.data).getTime() >= cutoff : true))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
 function updateAnaliseChart() {
   const canvas = document.getElementById("sbChartCanvas");
   if (!canvas) return;
   const registros = analiseRegistros();
   const points = [];
   registros.forEach((r) => {
-    (r.tempos || []).forEach((t) => {
-      const ms = parseTimeToMs(t);
-      if (ms != null) points.push({ x: new Date(r.dataHora).getTime(), y: ms });
-    });
+    const tempos = (r.tempos || [])
+      .map((t) => parseTimeToMs(t))
+      .filter((v) => v != null);
+    if (!tempos.length) return;
+    points.push({ x: new Date(r.dataHora).getTime(), y: Math.min(...tempos) });
   });
   points.sort((a, b) => a.x - b.x);
   const highContrast = document.body.classList.contains("high-contrast");
-  drawProgressChart(canvas, points, { highContrast });
+  drawProgressChart(canvas, points, { highContrast, dark: document.body.classList.contains("dark") });
   renderPrsTable();
   renderRegistrosTable();
 }
@@ -2852,14 +2918,14 @@ function updateAnaliseChart() {
 function renderPrsTable() {
   const wrap = document.getElementById("sbPrsTable");
   if (!wrap) return;
-  const prs = sw.prs.filter((p) => p.atletaId === an.atletaId).sort((a, b) => new Date(b.data) - new Date(a.data));
+  const prs = analisePrs();
   if (!prs.length) { wrap.innerHTML = '<p class="muted">Nenhum PR registrado ainda.</p>'; return; }
   const rows = prs.map((p) => `<tr>
     <td>${escapeHtml(p.estilo || "")}</td>
     <td>${p.distancia != null ? `${p.distancia}m` : ""}</td>
     <td class="mono">${maskTimeHTML(msToDisplay(p.melhorTempo))}</td>
     <td class="mono">${p.tempoAnterior != null ? maskTimeHTML(msToDisplay(p.tempoAnterior)) : "—"}</td>
-    <td>${p.melhoria ? `${p.melhoria.toFixed(1)}%` : "—"}</td>
+    <td>${p.tempoAnterior != null ? `${p.melhoria.toFixed(1)}%` : "novo"}</td>
     <td>${new Date(p.data).toLocaleDateString("pt-BR")}</td>
   </tr>`).join("");
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
@@ -2870,7 +2936,8 @@ function renderPrsTable() {
 function renderRegistrosTable() {
   const wrap = document.getElementById("sbRegistrosTable");
   if (!wrap) return;
-  const recent = [...analiseRegistros()].reverse().slice(0, 20);
+  const all = analiseRegistros();
+  const recent = [...all].reverse().slice(0, 20);
   if (!recent.length) { wrap.innerHTML = '<p class="muted">Nenhum registro no período.</p>'; return; }
   const rows = recent.map((r) => `<tr>
     <td>${new Date(r.dataHora).toLocaleDateString("pt-BR")}</td>
@@ -2880,9 +2947,12 @@ function renderRegistrosTable() {
     <td class="mono">${(r.tempos || []).map((t) => maskTimeHTML(t)).join(" / ") || "—"}</td>
     <td>${r.flagPr ? '<span class="pr-badge">PR</span>' : ""}</td>
   </tr>`).join("");
+  const note = all.length > recent.length
+    ? `<p class="muted">Mostrando os ${recent.length} mais recentes de ${all.length}.</p>`
+    : "";
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
     <th>Data</th><th>Estilo</th><th>Dist.</th><th>Série</th><th>Tempos</th><th></th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
+  </tr></thead><tbody>${rows}</tbody></table>${note}`;
 }
 
 function bindAnaliseEvents() {
@@ -2902,6 +2972,7 @@ function bindAnaliseEvents() {
   });
   document.getElementById("sbAnalisePeriodo")?.addEventListener("change", (e) => {
     an.periodo = e.target.value;
+    populateAnaliseEstilos();
     updateAnaliseChart();
   });
   document.getElementById("sbExportRegistrosBtn")?.addEventListener("click", handleExportRegistros);
@@ -2913,27 +2984,22 @@ function getAtletaName(atletaId) {
 }
 
 async function handleExportRegistros() {
-  const registros = an.atletaId ? sw.registros.filter((r) => r.atletaId === an.atletaId) : sw.registros;
-  if (!registros.length) { window.alert("Nenhum registro para exportar."); return; }
+  const registros = analiseRegistros();
+  if (!registros.length) { window.alert("Nenhum registro para exportar com os filtros atuais."); return; }
   const res = await exportSwimBaseRegistros({ registros, getAtletaName });
   api.logAction(res.ok ? `Exportou registros SwimBase (${res.format}).` : "Falha ao exportar registros SwimBase.");
   if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
 }
 
 async function handleExportPrs() {
-  const prs = an.atletaId ? sw.prs.filter((p) => p.atletaId === an.atletaId) : sw.prs;
-  if (!prs.length) { window.alert("Nenhum PR para exportar."); return; }
+  const prs = analisePrs();
+  if (!prs.length) { window.alert("Nenhum PR para exportar com os filtros atuais."); return; }
   const res = await exportSwimBasePRs({ prs, getAtletaName });
   api.logAction(res.ok ? `Exportou PRs SwimBase (${res.format}).` : "Falha ao exportar PRs SwimBase.");
   if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
 }
 
 /* ==== ABA 2: Comparação de atletas ==== */
-
-const CMP_ESTILOS = ["Crawl", "Costas", "Peito", "Borboleta", "Medley"];
-const CMP_DISTANCIAS = [25, 50, 100, 200, 400, 800, 1500];
-const CMP_PROVAS = [];
-for (const e of CMP_ESTILOS) for (const d of CMP_DISTANCIAS) CMP_PROVAS.push(`${d}m ${e}`);
 
 function cmpAthleteAge(a) {
   if (!a.dataNascimento) return null;
@@ -2943,10 +3009,6 @@ function cmpAthleteAge(a) {
   const m = now.getMonth() - born.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < born.getDate())) age--;
   return age;
-}
-
-function cmpGetPr(atletaId, estilo, distancia) {
-  return sw.prs.find((p) => p.atletaId === atletaId && p.estilo === estilo && p.distancia === distancia);
 }
 
 function cmpGetRegistros(atletaId) {
@@ -2964,8 +3026,13 @@ function renderComparador() {
   const wrap = document.getElementById("cmpPanelComparador");
   if (!wrap) return;
 
-  const allEstilos = [...new Set(sw.prs.map((p) => p.estilo).filter(Boolean))].sort();
-  const allDists = [...new Set(sw.prs.map((p) => p.distancia).filter((d) => d != null))].sort((a, b) => a - b);
+  const [id1, id2] = cmp.ids;
+  const srcs = [
+    ...sw.prs.filter((p) => p.atletaId === id1 || p.atletaId === id2),
+    ...sw.registros.filter((r) => r.atletaId === id1 || r.atletaId === id2),
+  ];
+  const allEstilos = [...new Set(srcs.map((s) => s.estilo).filter(Boolean))].sort();
+  const allDists = [...new Set(srcs.map((s) => s.distancia).filter((d) => d != null))].sort((a, b) => a - b);
 
   wrap.innerHTML = `
     <div class="cmp-filters">
@@ -3074,25 +3141,17 @@ function renderCmpResults() {
   const a2 = sw.atletas.find((a) => a.id === id2);
   if (!a1 || !a2) { tableWrap.innerHTML = '<div class="cmp-empty">Atletas não encontrados.</div>'; summaryWrap.innerHTML = ""; return; }
 
-  const provas = CMP_PROVAS.filter((p) => {
-    if (!cmp.estilo && !cmp.distancia) return true;
-    const [d, ...eParts] = p.split(" ");
-    const estilo = eParts.join(" ");
-    if (cmp.estilo && estilo !== cmp.estilo) return false;
-    if (cmp.distancia !== "" && Number(d) !== cmp.distancia) return false;
-    return true;
-  });
+  const provas = cmpProvaList(id1, id2);
+  const prIdx = cmpPrIndex();
 
   let wins1 = 0, wins2 = 0;
   const rows = [];
 
   for (const prova of provas) {
-    const [dStr, ...eParts] = prova.split(" ");
-    const estilo = eParts.join(" ");
-    const dist = Number(dStr);
+    const { dist, estilo } = parseProvaLabel(prova);
 
-    const pr1 = cmpGetPr(id1, estilo, dist);
-    const pr2 = cmpGetPr(id2, estilo, dist);
+    const pr1 = prIdx.get(`${id1}|${estilo}|${dist}`);
+    const pr2 = prIdx.get(`${id2}|${estilo}|${dist}`);
 
     const v1 = pr1?.melhorTempo;
     const v2 = pr2?.melhorTempo;
@@ -3117,16 +3176,16 @@ function renderCmpResults() {
   }
 
   /* Métricas extras */
-  const reg1 = cmpGetRegistros(id1);
-  const reg2 = cmpGetRegistros(id2);
+  const reg1 = filterCmpRegistros(cmpGetRegistros(id1));
+  const reg2 = filterCmpRegistros(cmpGetRegistros(id2));
 
-  const totalReg1 = reg1.length;
-  const totalReg2 = reg2.length;
-  if (totalReg1 > totalReg2) wins1++;
-  else if (totalReg2 > totalReg1) wins2++;
+  const provasReg1 = new Set(reg1.map((r) => `${r.distancia}m ${r.estilo}`)).size;
+  const provasReg2 = new Set(reg2.map((r) => `${r.distancia}m ${r.estilo}`)).size;
+  if (provasReg1 > provasReg2) wins1++;
+  else if (provasReg2 > provasReg1) wins2++;
 
-  const prCount1 = sw.prs.filter((p) => p.atletaId === id1).length;
-  const prCount2 = sw.prs.filter((p) => p.atletaId === id2).length;
+  const prCount1 = filterCmpPrs(sw.prs.filter((p) => p.atletaId === id1)).length;
+  const prCount2 = filterCmpPrs(sw.prs.filter((p) => p.atletaId === id2)).length;
   if (prCount1 > prCount2) wins1++;
   else if (prCount2 > prCount1) wins2++;
 
@@ -3134,9 +3193,7 @@ function renderCmpResults() {
   const avgRows = [];
   const avgProvas = [...new Set([...reg1, ...reg2].map((r) => `${r.distancia}m ${r.estilo}`))].filter(Boolean);
   for (const prova of avgProvas) {
-    const [dStr, ...eParts] = prova.split(" ");
-    const estilo = eParts.join(" ");
-    const dist = Number(dStr);
+    const { dist, estilo } = parseProvaLabel(prova);
     const getAvg = (regs) => {
       const filtered = regs.filter((r) => r.estilo === estilo && r.distancia === dist);
       const last5 = filtered.slice(-5);
@@ -3169,9 +3226,9 @@ function renderCmpResults() {
   /* Total de provas */
   rows.push(`<tr>
     <td class="cmp-crit">🏆 Total de provas registradas</td>
-    <td class="cmp-val ${totalReg1 > totalReg2 ? "winner" : totalReg2 > totalReg1 ? "loser" : ""}">${totalReg1}</td>
-    <td class="cmp-val ${totalReg2 > totalReg1 ? "winner" : totalReg1 > totalReg2 ? "loser" : ""}">${totalReg2}</td>
-    <td><span class="cmp-winner-badge ${totalReg1 > totalReg2 ? "w1" : totalReg2 > totalReg1 ? "w2" : "draw"}">${totalReg1 > totalReg2 ? escapeHtml(a1.nome) : totalReg2 > totalReg1 ? escapeHtml(a2.nome) : "—"}</span></td>
+    <td class="cmp-val ${provasReg1 > provasReg2 ? "winner" : provasReg2 > provasReg1 ? "loser" : ""}">${provasReg1}</td>
+    <td class="cmp-val ${provasReg2 > provasReg1 ? "winner" : provasReg1 > provasReg2 ? "loser" : ""}">${provasReg2}</td>
+    <td><span class="cmp-winner-badge ${provasReg1 > provasReg2 ? "w1" : provasReg2 > provasReg1 ? "w2" : "draw"}">${provasReg1 > provasReg2 ? escapeHtml(a1.nome) : provasReg2 > provasReg1 ? escapeHtml(a2.nome) : "—"}</span></td>
   </tr>`);
 
   /* PRs */
@@ -3217,8 +3274,8 @@ function renderCmpResults() {
   `;
 
   const commonProvas = provas.filter((p) => {
-    const [dStr, ...eParts] = p.split(" ");
-    return cmpGetPr(id1, eParts.join(" "), Number(dStr)) && cmpGetPr(id2, eParts.join(" "), Number(dStr));
+    const { dist, estilo } = parseProvaLabel(p);
+    return prIdx.get(`${id1}|${estilo}|${dist}`) && prIdx.get(`${id2}|${estilo}|${dist}`);
   });
 
   summaryWrap.innerHTML = `
@@ -3245,8 +3302,43 @@ function renderCmpResults() {
 /* ==== ABA 3: Desempenho (gráficos comparativos) ==== */
 
 let cmpChartInstance = null;
+let cmpBarChartInstance = null;
 
-function renderDesempenho() {
+const CHARTJS_CDN = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+let chartJsPromise = null;
+
+function ensureChartJs() {
+  if (window.Chart) return Promise.resolve(window.Chart);
+  if (chartJsPromise) return chartJsPromise;
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return Promise.reject(new Error("offline"));
+  }
+  chartJsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = CHARTJS_CDN;
+    script.onload = () => (window.Chart ? resolve(window.Chart) : reject(new Error("Chart.js indisponível")));
+    script.onerror = () => {
+      chartJsPromise = null;
+      reject(new Error("Falha ao carregar Chart.js"));
+    };
+    document.head.appendChild(script);
+  });
+  return chartJsPromise;
+}
+
+function paintChartMessage(canvas, message) {
+  const ctx = canvas.getContext("2d");
+  canvas.width = 300;
+  canvas.height = 200;
+  canvas.style.width = "100%";
+  canvas.style.height = "200px";
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--text-muted").trim() || "#888";
+  ctx.font = "13px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(message, 150, 100);
+}
+
+async function renderDesempenho() {
   const wrap = document.getElementById("cmpPanelDesempenho");
   if (!wrap) return;
 
@@ -3260,10 +3352,11 @@ function renderDesempenho() {
   const a2 = sw.atletas.find((a) => a.id === id2);
   if (!a1 || !a2) { wrap.innerHTML = '<div class="cmp-empty">Atletas não encontrados.</div>'; return; }
 
+  if (!CMP_METRICAS.includes(cmp.metrica)) cmp.metrica = "tempo";
+
   wrap.innerHTML = `
     <div class="cmp-metric-toggle" id="cmpMetricToggle">
       <button class="cmp-metric-btn ${cmp.metrica === "tempo" ? "active" : ""}" data-metric="tempo">Tempo</button>
-      <button class="cmp-metric-btn ${cmp.metrica === "colocacao" ? "active" : ""}" data-metric="colocacao">Colocação</button>
       <button class="cmp-metric-btn ${cmp.metrica === "indice" ? "active" : ""}" data-metric="indice">Índice técnico</button>
       <button class="cmp-metric-btn ${cmp.metrica === "consistencia" ? "active" : ""}" data-metric="consistencia">Consistência</button>
     </div>
@@ -3271,8 +3364,8 @@ function renderDesempenho() {
       <div class="cmp-chart-title">Evolução temporal</div>
       <canvas id="cmpLineChart"></canvas>
       <div class="cmp-legend">
-        <div class="cmp-legend-item" data-legend="0"><span class="cmp-legend-dot a1"></span>${escapeHtml(a1.nome)}</div>
-        <div class="cmp-legend-item" data-legend="1"><span class="cmp-legend-dot a2"></span>${escapeHtml(a2.nome)}</div>
+        <div class="cmp-legend-item ${cmp.legendHidden[0] ? "hidden" : ""}" data-legend="0"><span class="cmp-legend-dot a1"></span>${escapeHtml(a1.nome)}</div>
+        <div class="cmp-legend-item ${cmp.legendHidden[1] ? "hidden" : ""}" data-legend="1"><span class="cmp-legend-dot a2"></span>${escapeHtml(a2.nome)}</div>
       </div>
     </div>
     <div class="cmp-chart-wrap">
@@ -3297,47 +3390,76 @@ function renderDesempenho() {
     item.addEventListener("click", () => {
       item.classList.toggle("hidden");
       const idx = Number(item.dataset.legend);
+      cmp.legendHidden[idx] = item.classList.contains("hidden");
       if (cmpChartInstance?.data?.datasets?.[idx]) {
-        cmpChartInstance.data.datasets[idx].hidden = item.classList.contains("hidden");
+        cmpChartInstance.data.datasets[idx].hidden = cmp.legendHidden[idx];
         cmpChartInstance.update();
       }
     });
   });
 
-  renderCmpLineChart();
-  renderCmpBarChart();
+  let chartReady = false;
+  try {
+    await ensureChartJs();
+    chartReady = true;
+  } catch (err) {
+    console.warn("Chart.js indisponível:", err);
+  }
+
+  const lineCanvas = document.getElementById("cmpLineChart");
+  const barCanvas = document.getElementById("cmpBarChart");
+  if (!lineCanvas || !barCanvas) return;
+
+  if (chartReady) {
+    renderCmpLineChart();
+    renderCmpBarChart();
+  } else {
+    paintChartMessage(lineCanvas, "Sem conexão — gráficos indisponíveis");
+    paintChartMessage(barCanvas, "Sem conexão — gráficos indisponíveis");
+  }
   renderCmpHeatmap();
 }
 
 function renderCmpLineChart() {
   const canvas = document.getElementById("cmpLineChart");
   if (!canvas) return;
+  if (!window.Chart) { paintChartMessage(canvas, "Sem conexão — gráfico indisponível"); return; }
   if (cmpChartInstance) { cmpChartInstance.destroy(); cmpChartInstance = null; }
 
   const [id1, id2] = cmp.ids;
-  const reg1 = cmpGetRegistros(id1).filter((r) => !cmp.estilo || r.estilo === cmp.estilo).filter((r) => cmp.distancia === "" || r.distancia === cmp.distancia);
-  const reg2 = cmpGetRegistros(id2).filter((r) => !cmp.estilo || r.estilo === cmp.estilo).filter((r) => cmp.distancia === "" || r.distancia === cmp.distancia);
+  const prIdx = cmpPrIndex();
+  const reg1 = filterCmpRegistros(cmpGetRegistros(id1));
+  const reg2 = filterCmpRegistros(cmpGetRegistros(id2));
 
-  const toPoints = (regs) => {
+  const toPoints = (atletaId, regs) => {
     const pts = [];
+    const bestByProva = {};
     regs.forEach((r) => {
-      (r.tempos || []).forEach((t) => {
-        const ms = parseTimeToMs(t);
-        if (ms != null) {
-          let val = ms;
-          if (cmp.metrica === "colocacao") val = r.colocacao || 0;
-          else if (cmp.metrica === "indice") val = Math.min(100, Math.max(0, 100 - (ms / 1000)));
-          else if (cmp.metrica === "consistencia") val = 0;
-          pts.push({ x: new Date(r.dataHora).getTime(), y: val });
+      const tempos = (r.tempos || []).map((t) => parseTimeToMs(t)).filter((v) => v != null);
+      if (!tempos.length) return;
+      const x = new Date(r.dataHora).getTime();
+      const provaKey = `${r.estilo}_${r.distancia}`;
+      const pr = prIdx.get(`${atletaId}|${r.estilo}|${r.distancia}`);
+      tempos.forEach((ms) => {
+        let val = ms;
+        if (cmp.metrica === "indice") {
+          const ref = pr?.melhorTempo ?? bestByProva[provaKey];
+          val = ref ? Math.min(100, (100 * ref) / ms) : 0;
+        } else if (cmp.metrica === "consistencia") {
+          val = 0;
         }
+        pts.push({ x, y: val });
+      });
+      tempos.forEach((ms) => {
+        if (bestByProva[provaKey] == null || ms < bestByProva[provaKey]) bestByProva[provaKey] = ms;
       });
     });
     pts.sort((a, b) => a.x - b.x);
     return pts;
   };
 
-  let p1 = toPoints(reg1);
-  let p2 = toPoints(reg2);
+  let p1 = toPoints(id1, reg1);
+  let p2 = toPoints(id2, reg2);
 
   if (cmp.metrica === "consistencia") {
     const calcConsistencia = (regs) => {
@@ -3358,7 +3480,7 @@ function renderCmpLineChart() {
           const avg = slice.reduce((s, v) => s + v.y, 0) / slice.length;
           const variance = slice.reduce((s, v) => s + (v.y - avg) ** 2, 0) / slice.length;
           const cv = avg > 0 ? (Math.sqrt(variance) / avg) * 100 : 0;
-          points.push({ x: vals[i].x, y: Math.max(0, 100 - cv * 10) });
+          points.push({ x: vals[i].x, y: Math.min(100, Math.max(0, 100 - cv)) });
         }
       }
       points.sort((a, b) => a.x - b.x);
@@ -3368,29 +3490,25 @@ function renderCmpLineChart() {
     p2 = calcConsistencia(reg2);
   }
 
-  if (cmp.metrica === "colocacao") {
-    p1 = p1.filter((p) => p.y > 0);
-    p2 = p2.filter((p) => p.y > 0);
-  }
-
   const allPts = [...p1, ...p2];
   if (!allPts.length) {
-    const ctx = canvas.getContext("2d");
-    canvas.width = 300; canvas.height = 200;
-    canvas.style.width = "100%"; canvas.style.height = "200px";
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--text-muted").trim() || "#888";
-    ctx.font = "13px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Sem dados para os filtros selecionados", 150, 100);
+    paintChartMessage(canvas, "Sem dados para os filtros selecionados");
     return;
   }
 
-  const labels = allPts.map((p) => {
-    const d = new Date(p.x);
+  const xs = [...new Set(allPts.map((p) => p.x))].sort((a, b) => a - b);
+  const labels = xs.map((x) => {
+    const d = new Date(x);
     return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const alignTo = (pts) => {
+    const byX = new Map(pts.map((p) => [p.x, p.y]));
+    return xs.map((x) => byX.get(x) ?? null);
+  };
+  const data1 = alignTo(p1);
+  const data2 = alignTo(p2);
 
-  const yLabel = cmp.metrica === "tempo" ? "Tempo" : cmp.metrica === "colocacao" ? "Posição" : cmp.metrica === "indice" ? "Índice (0-100)" : "Consistência (%)";
+  const yLabel = cmp.metrica === "tempo" ? "Tempo" : cmp.metrica === "indice" ? "Índice (0-100)" : "Consistência (%)";
 
   cmpChartInstance = new Chart(canvas, {
     type: "line",
@@ -3399,7 +3517,8 @@ function renderCmpLineChart() {
       datasets: [
         {
           label: getAtletaName(id1),
-          data: p1.map((p) => p.y),
+          data: data1,
+          hidden: cmp.legendHidden[0],
           borderColor: "#0ea5e9",
           backgroundColor: "rgba(14,165,233,0.1)",
           borderWidth: 2,
@@ -3409,7 +3528,8 @@ function renderCmpLineChart() {
         },
         {
           label: getAtletaName(id2),
-          data: p2.map((p) => p.y),
+          data: data2,
+          hidden: cmp.legendHidden[1],
           borderColor: "#f97316",
           backgroundColor: "rgba(249,115,22,0.1)",
           borderWidth: 2,
@@ -3427,9 +3547,8 @@ function renderCmpLineChart() {
         x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
         y: {
           title: { display: true, text: yLabel, font: { size: 11 } },
-          reverse: cmp.metrica === "colocacao",
           ticks: cmp.metrica === "tempo" ? {
-            callback: (v) => msToDisplay(Math.round(v)).replace(/^0/, ""),
+            callback: (v) => fmtAxisTime(v),
           } : {},
         },
       },
@@ -3442,39 +3561,34 @@ function renderCmpLineChart() {
 function renderCmpBarChart() {
   const canvas = document.getElementById("cmpBarChart");
   if (!canvas) return;
+  if (!window.Chart) { paintChartMessage(canvas, "Sem conexão — gráfico indisponível"); return; }
+  if (cmpBarChartInstance) { cmpBarChartInstance.destroy(); cmpBarChartInstance = null; }
 
   const [id1, id2] = cmp.ids;
+  const prIdx = cmpPrIndex();
   const allProvas = new Set();
-  sw.prs.filter((p) => p.atletaId === id1 || p.atletaId === id2).forEach((p) => allProvas.add(`${p.distancia}m ${p.estilo}`));
+  filterCmpPrs(sw.prs.filter((p) => p.atletaId === id1 || p.atletaId === id2)).forEach((p) => allProvas.add(`${p.distancia}m ${p.estilo}`));
   const provaList = [...allProvas].sort((a, b) => {
-    const dA = parseInt(a); const dB = parseInt(b);
-    return dA - dB || a.localeCompare(b);
+    const pa = parseProvaLabel(a);
+    const pb = parseProvaLabel(b);
+    return pa.dist - pb.dist || a.localeCompare(b);
   });
 
   if (!provaList.length) {
-    const ctx = canvas.getContext("2d");
-    canvas.width = 300; canvas.height = 200;
-    canvas.style.width = "100%"; canvas.style.height = "200px";
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--text-muted").trim() || "#888";
-    ctx.font = "13px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Sem PRs registrados para comparar", 150, 100);
+    paintChartMessage(canvas, "Sem PRs registrados para comparar");
     return;
   }
 
-  const v1 = provaList.map((p) => {
-    const [dStr, ...eParts] = p.split(" ");
-    const pr = cmpGetPr(id1, eParts.join(" "), Number(dStr));
-    return pr ? pr.melhorTempo / 1000 : null;
-  });
+  const valueFor = (atletaId) =>
+    provaList.map((p) => {
+      const { dist, estilo } = parseProvaLabel(p);
+      const pr = prIdx.get(`${atletaId}|${estilo}|${dist}`);
+      return pr ? pr.melhorTempo / 1000 : null;
+    });
+  const v1 = valueFor(id1);
+  const v2 = valueFor(id2);
 
-  const v2 = provaList.map((p) => {
-    const [dStr, ...eParts] = p.split(" ");
-    const pr = cmpGetPr(id2, eParts.join(" "), Number(dStr));
-    return pr ? pr.melhorTempo / 1000 : null;
-  });
-
-  new Chart(canvas, {
+  cmpBarChartInstance = new Chart(canvas, {
     type: "bar",
     data: {
       labels: provaList.map((p) => p.replace("m ", "\nm ")),
@@ -3504,8 +3618,9 @@ function renderCmpBarChart() {
       scales: {
         x: { ticks: { font: { size: 9 } } },
         y: {
-          title: { display: true, text: "Segundos", font: { size: 11 } },
+          title: { display: true, text: "Tempo", font: { size: 11 } },
           beginAtZero: false,
+          ticks: { callback: (v) => fmtAxisTime(v * 1000) },
         },
       },
     },
@@ -3526,18 +3641,38 @@ function renderCmpHeatmap() {
     months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}` });
   }
 
+  const baseRegs = filterCmpRegistros(
+    sw.registros.filter((r) => r.atletaId === id1 || r.atletaId === id2)
+  );
   const allProvas = new Set();
-  sw.registros.filter((r) => r.atletaId === id1 || r.atletaId === id2).forEach((r) => {
+  baseRegs.forEach((r) => {
     if (r.estilo && r.distancia) allProvas.add(`${r.distancia}m ${r.estilo}`);
   });
-  const provaList = [...allProvas].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
+  const provaList = [...allProvas].sort((a, b) => {
+    const pa = parseProvaLabel(a);
+    const pb = parseProvaLabel(b);
+    return pa.dist - pb.dist || a.localeCompare(b);
+  });
 
   if (!provaList.length) { wrap.innerHTML = '<p class="muted">Sem registros para gerar o heatmap.</p>'; return; }
 
-  const getMonthlyAvg = (atletaId, estilo, distancia, monthKey) => {
-    return sw.registros
+  const getMonthlyTempos = (atletaId, estilo, distancia, monthKey) => {
+    return baseRegs
       .filter((r) => r.atletaId === atletaId && r.estilo === estilo && r.distancia === distancia && r.dataHora?.startsWith(monthKey))
+      .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora))
       .flatMap((r) => (r.tempos || []).map((t) => parseTimeToMs(t)).filter((v) => v != null));
+  };
+
+  const evolutionCell = (tempos) => {
+    if (tempos.length < 2) return '<td class="cell-stable">—</td>';
+    const first = tempos[0];
+    const last = tempos[tempos.length - 1];
+    if (!first) return '<td class="cell-stable">—</td>';
+    const pctChange = ((first - last) / first) * 100;
+    if (pctChange > 2) return `<td class="cell-improve-strong">▼${pctChange.toFixed(1)}%</td>`;
+    if (pctChange > 0.5) return `<td class="cell-improve">▼${pctChange.toFixed(1)}%</td>`;
+    if (pctChange < -0.5) return `<td class="cell-worse">▲${Math.abs(pctChange).toFixed(1)}%</td>`;
+    return '<td class="cell-stable">~</td>';
   };
 
   let html = "<table><thead><tr><th>Prova</th>";
@@ -3545,38 +3680,15 @@ function renderCmpHeatmap() {
   html += "</tr></thead><tbody>";
 
   for (const prova of provaList) {
-    const [dStr, ...eParts] = prova.split(" ");
-    const estilo = eParts.join(" ");
-    const dist = Number(dStr);
-
-    html += `<tr><td>${escapeHtml(prova)}</td>`;
-    for (const m of months) {
-      const t1 = getMonthlyAvg(id1, estilo, dist, m.key);
-      const t2 = getMonthlyAvg(id2, estilo, dist, m.key);
-
-      if (!t1.length && !t2.length) {
-        html += `<td class="cell-stable">—</td>`;
-        continue;
+    const { dist, estilo } = parseProvaLabel(prova);
+    for (const atletaId of [id1, id2]) {
+      const nome = getAtletaName(atletaId);
+      html += `<tr><td>${escapeHtml(prova)} · ${escapeHtml(nome)}</td>`;
+      for (const m of months) {
+        html += evolutionCell(getMonthlyTempos(atletaId, estilo, dist, m.key));
       }
-
-      if (t1.length >= 2) {
-        const first = t1[0];
-        const last = t1[t1.length - 1];
-        const pctChange = ((first - last) / first) * 100;
-        if (pctChange > 2) html += `<td class="cell-improve-strong">▼${pctChange.toFixed(1)}%</td>`;
-        else if (pctChange > 0.5) html += `<td class="cell-improve">▼${pctChange.toFixed(1)}%</td>`;
-        else if (pctChange < -0.5) html += `<td class="cell-worse">▲${Math.abs(pctChange).toFixed(1)}%</td>`;
-        else html += `<td class="cell-stable">~</td>`;
-      } else if (t1.length === 1 && t2.length === 1) {
-        const diff = ((t2[0] - t1[0]) / t2[0]) * 100;
-        if (diff > 0.5) html += `<td class="cell-improve">▼${diff.toFixed(1)}%</td>`;
-        else if (diff < -0.5) html += `<td class="cell-worse">▲${Math.abs(diff).toFixed(1)}%</td>`;
-        else html += `<td class="cell-stable">~</td>`;
-      } else {
-        html += `<td class="cell-stable">—</td>`;
-      }
+      html += "</tr>";
     }
-    html += "</tr>";
   }
 
   html += "</tbody></table>";

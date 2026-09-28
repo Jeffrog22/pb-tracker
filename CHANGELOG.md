@@ -7,6 +7,49 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-09-28
+### Fixed
+- **SwimBase — Análise/Comparador: distâncias NaN**: `parseProvaLabel` usa
+  `parseInt` (`Number("50m")` virava NaN); filtros de estilo/distância/prova
+  agora funcionam em comparação, médias, totais, heatmap e exportações.
+- **SwimBase — "Total de provas registradas"** conta provas distintas (não
+  registros) e só inclui provas com tempo válido.
+- **SwimBase — período da Análise**: período era ignorado na lista de provas;
+  mudar o período repovoa os estilos; binding das abas movido antes do retorno
+  de "sem atletas".
+- **SwimBase — PR no cronômetro (M1/M3)**: `checkPrAndFlag(raia, ms,
+  registroId)` usa o registro correto (M2 encadeia `persistRegistro().then()`;
+  M1 faz rollover por série); "novo" exibido quando não há tempo anterior.
+- **Exportação SwimBase**: registros/PRs aplicam os mesmos 4 filtros da tela
+  (período/estilo/distância/prova) em CSV e XLSX.
+- **Análise**: sem dados, clicar em uma aba mostra o estado vazio em vez de
+  travar; sem seleção de 2 atletas, as abas Comparador/Desempenho ficam
+  desabilitadas.
+
+### Changed
+- **Gráfico de progressão (Tab 1)**: 1 ponto por registro (melhor tempo da
+  prova/treino) e paleta dark respeitando o tema.
+- **Comparador — linha de tempo**: labels = união ordenada dos dois eixos com
+  `alignTo()` (ponto nulo onde um atleta não tem dado); legenda alterna
+  datasets (estado `cmp.legendHidden`).
+- **Comparador — métricas**: Índice técnico = `min(100, 100 × ref/ms)` com
+  ref = PR (ou melhor tempo atual); Consistência = `clamp(100 − cv)`.
+  "Colocação" removida (dado indisponível).
+- **Comparador — heatmap**: 1 linha por atleta × prova com evolução
+  intra-atleta (mín. 2 tempos) em vez de contagem de registros.
+- **Comparador — barras**: eixo X em `fmtAxisTime` (`MM:SS:CC`), instância
+  destruída entre re-renderizações; eixo Y da linha também usa
+  `fmtAxisTime`; resize com debounce.
+- **Desempenho — Chart.js sob demanda**: tag eager removida do
+  `index.html`; `ensureChartJs()` carrega o CDN pinado (4.4.1) ao abrir a
+  aba com fallback "Sem conexão — gráficos indisponíveis".
+- **SwimBase — isolamento por perfil**: `ensureLoaded` filtra
+  `professorId` do perfil ativo (tolerante a itens nulos) e
+  `reloadSwimBase()` roda ao ativar/trocar perfil.
+- **SwimBase — excluir atleta apaga também registros e PRs** (aviso no
+  confirm + log com contagens).
+- `cache do SW` → `pbtracker-v75`.
+
 ## [0.36.0] - 2026-09-28
 ### Added
 - **SwimBase — cancelar treino mantém a seleção de atletas (M1/M2/M3)**:
