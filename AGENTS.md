@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.37.1"` em `app.js`; cache SW `pbtracker-v76` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.38.0"` em `app.js`; cache SW `pbtracker-v77` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -46,7 +46,7 @@
 | `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
 | `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs SwimBase |
 | `styles.css` | Tema, layout mobile-first, design system (dark mode, alto contraste) |
-| `sw.js` | Service worker: cache offline (`pbtracker-v73`) — **atualizar nome ao subir versão** |
+| `sw.js` | Service worker: cache offline (`pbtracker-v77`) — **atualizar nome ao subir versão** |
 | `index.html` | Telas, dialogs (cronômetro com HUD layer, SwimBase), manifest |
 | `manifest.webmanifest` | Metadados PWA (sem trava de orientação; sigue o dispositivo) |
 | `icons/` | Ícones PWA (SVG) |
@@ -71,16 +71,20 @@
 - **Correspondência de equipe é fuzzy** (`isSameTeam`/`getTeamTokens`): remove acentos e stop-words; pede interseção de tokens.
 - **Importação em duas passadas**: estrita (só equipe conhecida) → se vazia, tolerante (`allowUnknownTeam: true`).
 - **Exportação**: XLSX via SheetJS (CDN, lazy-load no clique); fallback CSV (BOM UTF-8, separador `;`). `#exportBtn` no topbar exporta **todas** as provas (`groupedEvents`). Células de parcial sem metragem viram `--`.
-- **Cache do service worker**: nome `pbtracker-v71` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
+- **Cache do service worker**: nome `pbtracker-v77` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
 - **Tag de versão no topbar** (`#appVersionTag`) renderiza `PBTracker v0.32.7` a partir de `APP_VERSION` — manter sincronizado em cada release.
-- **Configurações**: engrenagem `#settingsBtn` abre `#settingsDialog` (Atualizar app + Exportar log + alto contraste + dark mode). Badge "Pronto" removido (v0.10.5); aviso de atualização fica só no botão Atualizar.
+- **Configurações (v0.38+)**: engrenagem `#settingsBtn` → `#settingsDialog` largo (720px) com **grid de 5 cards** (`grid-template-columns: 1fr` → `1fr 1fr` em ≥768px): 📤 Exportar (sub-abas Resultados/Registros/PRs/Log, filtros período+atleta, chama `exportSwimBaseFiltered`), 🔔 Notificações (permissão + lembrete local agendado), 🌓 Tema (dark mode), ♿ Acessibilidade (zoom + alto contraste), 🔄 Atualizações (versão, `checkForUpdate`, `applyUpdate`, `hardRefresh`). Cada card é `.settings-card` independente (header emoji+título, descrição, controles). Abre via `openSettingsDialog()` (renderiza status, popula atletas, checa update).
+- **Zoom (card Acessibilidade)**: `document.documentElement.style.zoom` (80–150%, passo 10) + `localStorage["pbtracker_zoom"]`. **Não trocar por `font-size` no html** — o CSS do app é majoritariamente px (~398 usos) e font-size não escala paddings/cards.
+- **Backdrop dos dialogs de Configurações**: fecha em `target === dialog` **ou** fora do retângulo, mas só com `event.isTrusted` — clique sintético (`.click()` programático em aba/botão) vem com `clientX/Y = 0` e fecharia o dialog. Mesma guarda em `#notifPrefsDialog`. Não remover.
+- **`body.dark button` (0,1,2) vence `button.primary`/`button.ghost`**: no dark mode os `!important`/regras compensatórias em `styles.css` mantêm primary azul e ghost sem borda; qualquer novo estilo de botão precisa de especificidade ≥ 0,1,2 ou ser coberto ali.
 - **Perfil**: cadastro/login local (sem senha), uma equipe por perfil, persistido em `localStorage["pbtracker_profiles"]` / `localStorage["pbtracker_active_profile"]`.
 - **PR = melhor tempo por `atletaId + estilo + distância`** (prova ou treino). `checkPrAndFlag` grava `flagPr`; badge `PR!` dourado + haptics.
 - **`sw.registros`** é a fonte da Análise (não re-lê IndexedDB por tela); `persistRegistro` mantém sincronia em memória.
 - **Wake Lock**: acionado em `startTreino`, liberado em `finalizeTreino`/`closeTreino` (re-adquirido em `visibilitychange`).
 - **Alto contraste**: `body.high-contrast` + persistência em `localStorage["pbtracker_high_contrast"]`.
 - **Indicador offline**: `#offlineBadge` no topbar via `bindOnlineStatus`.
-- **Fluxo de atualização (sem reload surpresa)**: o SW **não** usa `skipWaiting()` no install — update fica `waiting` até o usuário tocar em "Atualizar app" (`handleAppRefresh` → `SKIP_WAITING` → `controllerchange` → reload). `controllerchange` (app.js) **só** recarrega se `swUpdateAvailable && !refreshingPage`; primeiro `registration.update()` roda no retorno ao 1º plano (throttle 30 min) só para preparar o botão. **Não reintroduzir** `skipWaiting()` no install nem reload incondicional — causava reload no meio do uso voltando pra tela de modos.
+- **Fluxo de atualização (sem reload surpresa)**: o SW **não** usa `skipWaiting()` no install — update fica `waiting` até o usuário tocar em "Atualizar agora" (`applyUpdate` → `SKIP_WAITING` → `controllerchange` → reload). `controllerchange` (app.js) **só** recarrega se `swUpdateAvailable && !refreshingPage`; primeiro `registration.update()` roda no retorno ao 1º plano (throttle 30 min) e no `checkForUpdate()` do card 🔄, só para preparar o botão. **Não reintroduzir** `skipWaiting()` no install nem reload incondicional — causava reload no meio do uso voltando pra tela de modos. "Hard Refresh" (`hardRefresh`) é a única ação que apaga caches (com confirm) e recarrega.
+- **Lembrete local de notificação (card 🔔)**: sem backend/push — `localStorage["pbtracker_notif_prefs"]` (`{enabled, horario, dias[], frequencia}`) + `startNotifScheduler()` (interval 60s em wall-clock, dispara `swRegistration.showNotification` quando passa do gatilho do dia; última disparada em `pbtracker_notif_last_fired`). Só com app aberto e `Notification.permission === "granted"`; iOS só em PWA instalada.
 - **Restauração de sessão**: `sessionStorage["pbtracker_session"]` = `{appMode, screen}` gravado em `showScreen`; `restoreScreenSession()` no boot só restaura telas `sb-*` (fallback `mode`). `sessionStorage["pbtracker_session_analise"]` = `an`/`cmp` gravado em `pagehide` e na aba oculta, restaurado na carga de `swimbase.js` (`restoreAnaliseSession`).
 - **Export SwimBase**: `exportSwimBaseRegistros`/`exportSwimBasePRs` em `exporter.js` (XLSX via SheetJS, fallback CSV).
 - **Categoria automática** por idade: Pré-Mirim → M80+; hint atualizada no campo nascimento.

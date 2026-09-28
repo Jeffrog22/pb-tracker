@@ -243,19 +243,201 @@
       <button id="closeSettingsBtn" class="ghost" type="button">Fechar</button>
     </div>
     <div class="settings-body">
-      <label class="settings-toggle">
-        <span>Modo escuro</span>
-        <input type="checkbox" id="darkModeToggle" />
-      </label>
-      <label class="settings-toggle">
-        <span>Alto contraste (beira de piscina)</span>
-        <input type="checkbox" id="highContrastToggle" />
-      </label>
-      <div class="actions-row">
-        <button id="refreshAppBtn" class="ghost" type="button">Atualizar app</button>
-        <button id="downloadLogBtn" class="ghost" type="button">Exportar log</button>
-      </div>
+
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-emoji" aria-hidden="true">📤</span>
+          <h4>Exportar</h4>
+        </div>
+        <p class="settings-card-desc">Planilhas de resultados, registros, PRs e log de atividade.</p>
+        <div class="settings-card-controls">
+          <div class="settings-tabs" role="tablist" aria-label="Tipo de exportação">
+            <button type="button" class="settings-tab active" data-exp-tab="resultados">Resultados</button>
+            <button type="button" class="settings-tab" data-exp-tab="registros">Registros</button>
+            <button type="button" class="settings-tab" data-exp-tab="prs">PRs</button>
+            <button type="button" class="settings-tab" data-exp-tab="log">Log</button>
+          </div>
+
+          <div class="settings-panel" data-exp-panel="resultados">
+            <label>
+              Provas
+              <select id="expScope">
+                <option value="all">Todas as provas</option>
+                <option value="selected">Somente as selecionadas</option>
+              </select>
+            </label>
+            <button id="expResultadosBtn" class="primary" type="button">Exportar Excel</button>
+          </div>
+
+          <div class="settings-panel" data-exp-panel="registros" hidden>
+            <div class="settings-filters">
+              <label>
+                Período
+                <select id="expPeriodo">
+                  <option value="all">Todo o período</option>
+                  <option value="7d">Últimos 7 dias</option>
+                  <option value="30d">Últimos 30 dias</option>
+                  <option value="3m">Últimos 3 meses</option>
+                  <option value="6m">Últimos 6 meses</option>
+                  <option value="1a">Último ano</option>
+                </select>
+              </label>
+              <label>
+                Atleta
+                <select id="expAtleta">
+                  <option value="">Todos os atletas</option>
+                </select>
+              </label>
+            </div>
+            <button id="expRegistrosBtn" class="primary" type="button">Exportar registros</button>
+          </div>
+
+          <div class="settings-panel" data-exp-panel="prs" hidden>
+            <div class="settings-filters">
+              <label>
+                Período
+                <select id="expPeriodoPrs">
+                  <option value="all">Todo o período</option>
+                  <option value="7d">Últimos 7 dias</option>
+                  <option value="30d">Últimos 30 dias</option>
+                  <option value="3m">Últimos 3 meses</option>
+                  <option value="6m">Últimos 6 meses</option>
+                  <option value="1a">Último ano</option>
+                </select>
+              </label>
+              <label>
+                Atleta
+                <select id="expAtletaPrs">
+                  <option value="">Todos os atletas</option>
+                </select>
+              </label>
+            </div>
+            <button id="expPrsBtn" class="primary" type="button">Exportar PRs</button>
+          </div>
+
+          <div class="settings-panel" data-exp-panel="log" hidden>
+            <p class="settings-hint">Texto simples com as ações registradas nesta troca de uso.</p>
+            <button id="downloadLogBtn" class="primary" type="button">Exportar log</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-emoji" aria-hidden="true">🔔</span>
+          <h4>Notificações</h4>
+        </div>
+        <p class="settings-card-desc">Lembretes locais neste dispositivo. Push entre dispositivos depende de servidor.</p>
+        <div class="settings-card-controls">
+          <div class="settings-status-row">
+            <span id="notifStatus" class="settings-badge">Verificando…</span>
+            <span id="notifDevice" class="settings-device">Este dispositivo</span>
+          </div>
+          <label class="settings-toggle">
+            <span>Ativar notificações</span>
+            <input type="checkbox" id="notifToggle" />
+          </label>
+          <p id="notifHint" class="settings-hint" hidden></p>
+          <div class="actions-row">
+            <button id="notifPrefsBtn" class="ghost" type="button">Horários e lembretes</button>
+            <button id="notifTestBtn" class="ghost" type="button">Notificação de teste</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-emoji" aria-hidden="true">🌓</span>
+          <h4>Tema</h4>
+        </div>
+        <p class="settings-card-desc">Alternar entre claro e escuro.</p>
+        <div class="settings-card-controls">
+          <label class="settings-toggle">
+            <span>Modo escuro</span>
+            <input type="checkbox" id="darkModeToggle" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-emoji" aria-hidden="true">♿</span>
+          <h4>Acessibilidade</h4>
+        </div>
+        <p class="settings-card-desc">Zoom da interface e alto contraste para leitura em beira de piscina.</p>
+        <div class="settings-card-controls">
+          <div class="zoom-group" role="group" aria-label="Zoom da interface">
+            <button id="zoomOutBtn" class="ghost" type="button" aria-label="Diminuir zoom">A−</button>
+            <button id="zoomResetBtn" class="ghost" type="button">Padrão</button>
+            <button id="zoomInBtn" class="ghost" type="button" aria-label="Aumentar zoom">A+</button>
+            <span id="zoomLabel" class="settings-badge">100%</span>
+          </div>
+          <label class="settings-toggle">
+            <span>Alto contraste (beira de piscina)</span>
+            <input type="checkbox" id="highContrastToggle" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-emoji" aria-hidden="true">🔄</span>
+          <h4>Atualizações</h4>
+        </div>
+        <p class="settings-card-desc">Versão instalada e busca de novas versões do app.</p>
+        <div class="settings-card-controls">
+          <div class="settings-status-row">
+            <span id="settingsVersion" class="settings-badge">v—</span>
+            <span id="updateStatus" class="settings-update-status">Verificando…</span>
+          </div>
+          <div class="actions-row">
+            <button id="checkUpdateBtn" class="ghost" type="button">Verificar</button>
+            <button id="updateNowBtn" class="primary" type="button" disabled>Atualizar agora</button>
+            <button id="hardRefreshBtn" class="ghost" type="button">Hard Refresh</button>
+          </div>
+        </div>
+      </section>
+
     </div>
+  </dialog>
+
+  <dialog id="notifPrefsDialog" class="sb-dialog">
+    <div class="sb-dialog-head">
+      <h3>Horários e lembretes</h3>
+      <button id="closeNotifPrefsBtn" class="ghost" type="button">Fechar</button>
+    </div>
+    <form id="notifPrefsForm" class="sb-dialog-body">
+      <fieldset class="sb-day-fieldset">
+        <legend>Dias da semana</legend>
+        <div id="notifPrefsDias" class="sb-day-toggles" role="group" aria-label="Dias da semana">
+          <button type="button" class="sb-day-chip" data-day="seg">Seg</button>
+          <button type="button" class="sb-day-chip" data-day="ter">Ter</button>
+          <button type="button" class="sb-day-chip" data-day="qua">Qua</button>
+          <button type="button" class="sb-day-chip" data-day="qui">Qui</button>
+          <button type="button" class="sb-day-chip" data-day="sex">Sex</button>
+          <button type="button" class="sb-day-chip" data-day="sab">Sáb</button>
+          <button type="button" class="sb-day-chip" data-day="dom">Dom</button>
+        </div>
+      </fieldset>
+      <div class="sb-grid-2">
+        <label>
+          Horário
+          <input id="notifPrefsHorario" type="time" value="08:00" required />
+        </label>
+        <label>
+          Frequência
+          <select id="notifPrefsFrequencia">
+            <option value="diaria">Uma vez ao dia</option>
+            <option value="3h">A cada 3 horas</option>
+            <option value="6h">A cada 6 horas</option>
+          </select>
+        </label>
+      </div>
+      <p class="settings-hint">O lembrete é disparado enquanto o app estiver aberto. No iPhone, instale o app na tela de início (PWA) para receber notificações.</p>
+      <div class="actions-row">
+        <button type="submit" class="primary">Salvar</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="sbTurmaDialog" class="sb-dialog">

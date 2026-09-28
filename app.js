@@ -11,9 +11,9 @@ import {
   slugify,
   escapeHtml,
 } from "./utils.js";
-import { initSwimBase, renderSwimBaseScreen, reloadSwimBase } from "./swimbase.js";
+import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered } from "./swimbase.js";
 
-const APP_VERSION = "0.37.1";
+const APP_VERSION = "0.38.0";
 
 const state = {
   teamName: "",
@@ -110,11 +110,39 @@ const el = {
   controlContainer: document.getElementById("controlContainer"),
   backToFilterBtn: document.getElementById("backToFilterBtn"),
   exportBtn: document.getElementById("exportBtn"),
-  refreshAppBtn: document.getElementById("refreshAppBtn"),
   downloadLogBtn: document.getElementById("downloadLogBtn"),
   settingsBtn: document.getElementById("settingsBtn"),
   settingsDialog: document.getElementById("settingsDialog"),
   closeSettingsBtn: document.getElementById("closeSettingsBtn"),
+  expResultadosBtn: document.getElementById("expResultadosBtn"),
+  expRegistrosBtn: document.getElementById("expRegistrosBtn"),
+  expPrsBtn: document.getElementById("expPrsBtn"),
+  expScope: document.getElementById("expScope"),
+  expPeriodo: document.getElementById("expPeriodo"),
+  expPeriodoPrs: document.getElementById("expPeriodoPrs"),
+  expAtleta: document.getElementById("expAtleta"),
+  expAtletaPrs: document.getElementById("expAtletaPrs"),
+  notifToggle: document.getElementById("notifToggle"),
+  notifStatus: document.getElementById("notifStatus"),
+  notifHint: document.getElementById("notifHint"),
+  notifDevice: document.getElementById("notifDevice"),
+  notifPrefsBtn: document.getElementById("notifPrefsBtn"),
+  notifTestBtn: document.getElementById("notifTestBtn"),
+  notifPrefsDialog: document.getElementById("notifPrefsDialog"),
+  closeNotifPrefsBtn: document.getElementById("closeNotifPrefsBtn"),
+  notifPrefsForm: document.getElementById("notifPrefsForm"),
+  notifPrefsDias: document.getElementById("notifPrefsDias"),
+  notifPrefsHorario: document.getElementById("notifPrefsHorario"),
+  notifPrefsFrequencia: document.getElementById("notifPrefsFrequencia"),
+  zoomOutBtn: document.getElementById("zoomOutBtn"),
+  zoomInBtn: document.getElementById("zoomInBtn"),
+  zoomResetBtn: document.getElementById("zoomResetBtn"),
+  zoomLabel: document.getElementById("zoomLabel"),
+  settingsVersion: document.getElementById("settingsVersion"),
+  updateStatus: document.getElementById("updateStatus"),
+  checkUpdateBtn: document.getElementById("checkUpdateBtn"),
+  updateNowBtn: document.getElementById("updateNowBtn"),
+  hardRefreshBtn: document.getElementById("hardRefreshBtn"),
   chronoDialog: document.getElementById("chronoDialog"),
   chronoHudLayer: document.getElementById("chronoHudLayer"),
   startLapBtn: document.getElementById("startLapBtn"),
@@ -164,8 +192,11 @@ function init() {
   bindHighContrast();
   loadDarkMode();
   bindDarkMode();
+  loadZoom();
+  startNotifScheduler();
   bindOnlineStatus();
   renderVersionTags();
+  renderUpdateStatus();
   renderNav();
   initSwimBase({
     state,
@@ -392,6 +423,359 @@ function bindDarkMode() {
   toggle.addEventListener("change", () => applyDarkMode(toggle.checked));
 }
 
+/* ============================================================
+   ZOOM (card Acessibilidade) — documentElement.zoom + localStorage
+   ============================================================ */
+const ZOOM_KEY = "pbtracker_zoom";
+const ZOOM_MIN = 80;
+const ZOOM_MAX = 150;
+const ZOOM_STEP = 10;
+
+function readZoom() {
+  try {
+    const raw = Number(window.localStorage.getItem(ZOOM_KEY));
+    if (Number.isFinite(raw) && raw >= ZOOM_MIN && raw <= ZOOM_MAX) return raw;
+  } catch (e) {
+    // storage indisponível
+  }
+  return 100;
+}
+
+function setZoom(pct) {
+  const value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(pct)));
+  try {
+    window.localStorage.setItem(ZOOM_KEY, String(value));
+  } catch (e) {
+    // ignore storage failures
+  }
+  document.documentElement.style.zoom = value / 100;
+  loadZoomLabel();
+}
+
+function stepZoom(delta) {
+  setZoom(readZoom() + delta);
+}
+
+function loadZoom() {
+  document.documentElement.style.zoom = readZoom() / 100;
+  loadZoomLabel();
+}
+
+function loadZoomLabel() {
+  if (el.zoomLabel) el.zoomLabel.textContent = `${readZoom()}%`;
+}
+
+/* ============================================================
+   NOTIFICAÇÕES LOCAIS (card Notificações) — sem backend/push
+   ============================================================ */
+const NOTIF_PREFS_KEY = "pbtracker_notif_prefs";
+const NOTIF_LAST_KEY = "pbtracker_notif_last_fired";
+const DAY_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+
+const defaultNotifPrefs = () => ({
+  enabled: false,
+  horario: "08:00",
+  dias: ["seg", "ter", "qua", "qui", "sex"],
+  frequencia: "diaria",
+});
+
+function loadNotifPrefs() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(NOTIF_PREFS_KEY) || "null");
+    if (stored && typeof stored === "object") {
+      return {
+        enabled: !!stored.enabled,
+        horario: /^\d{2}:\d{2}$/.test(stored.horario || "") ? stored.horario : "08:00",
+        dias: Array.isArray(stored.dias) ? stored.dias.filter((d) => DAY_KEYS.includes(d)) : [],
+        frequencia: ["diaria", "3h", "6h"].includes(stored.frequencia) ? stored.frequencia : "diaria",
+      };
+    }
+  } catch (e) {
+    // storage indisponível
+  }
+  return defaultNotifPrefs();
+}
+
+function persistNotifPrefs(prefs) {
+  try {
+    window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+  } catch (e) {
+    // ignore storage failures
+  }
+}
+
+function notifSupported() {
+  return "Notification" in window && "serviceWorker" in navigator;
+}
+
+function renderNotifStatus() {
+  if (!el.notifStatus) return;
+  const prefs = loadNotifPrefs();
+
+  if (!notifSupported()) {
+    el.notifStatus.textContent = "Indisponível";
+    el.notifStatus.className = "settings-badge";
+    if (el.notifToggle) el.notifToggle.checked = false;
+    if (el.notifToggle) el.notifToggle.disabled = true;
+    setNotifHint("Este navegador não suporta notificações locais.");
+    return;
+  }
+
+  const permission = Notification.permission;
+  const labels = { default: "Não solicitado", granted: "Permitido", denied: "Bloqueado" };
+  el.notifStatus.textContent = labels[permission] || permission;
+  el.notifStatus.className = "settings-badge";
+
+  if (el.notifToggle) {
+    el.notifToggle.disabled = permission !== "granted";
+    el.notifToggle.checked = permission === "granted" && prefs.enabled;
+  }
+
+  if (permission === "denied") {
+    setNotifHint("Notificações bloqueadas. Reative em Configurações do navegador/site para usar lembretes.");
+  } else if (permission === "granted" && prefs.enabled) {
+    setNotifHint(describeNotifSchedule(prefs));
+  } else if (permission === "granted") {
+    setNotifHint("Permissão concedida. Ative o interruptor para agendar lembretes.");
+  } else {
+    setNotifHint("");
+  }
+
+  if (el.notifDevice && navigator.userAgent) {
+    const ua = navigator.userAgent;
+    const browser = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : "Navegador";
+    el.notifDevice.textContent = `Este dispositivo · ${browser}`;
+  }
+}
+
+function setNotifHint(text) {
+  if (!el.notifHint) return;
+  el.notifHint.textContent = text;
+  el.notifHint.hidden = !text;
+}
+
+function describeNotifSchedule(prefs) {
+  const dias = prefs.dias.length ? prefs.dias.join(", ") : "nenhum dia";
+  const freq =
+    prefs.frequencia === "diaria" ? `às ${prefs.horario}` : `a partir de ${prefs.horario}, ${prefs.frequencia === "3h" ? "a cada 3h" : "a cada 6h"}`;
+  return `Lembretes agendados (${freq}) em: ${dias}. Dispara com o app aberto.`;
+}
+
+async function handleNotifToggle() {
+  if (!el.notifToggle) return;
+  if (el.notifToggle.checked) {
+    if (!notifSupported()) {
+      el.notifToggle.checked = false;
+      return;
+    }
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== "granted") {
+      el.notifToggle.checked = false;
+      renderNotifStatus();
+      return;
+    }
+    const prefs = loadNotifPrefs();
+    prefs.enabled = true;
+    persistNotifPrefs(prefs);
+    logAction("Notificações locais ativadas.");
+  } else {
+    const prefs = loadNotifPrefs();
+    prefs.enabled = false;
+    persistNotifPrefs(prefs);
+    logAction("Notificações locais desativadas.");
+  }
+  renderNotifStatus();
+}
+
+function openNotifPrefs() {
+  const prefs = loadNotifPrefs();
+  if (el.notifPrefsHorario) el.notifPrefsHorario.value = prefs.horario;
+  if (el.notifPrefsFrequencia) el.notifPrefsFrequencia.value = prefs.frequencia;
+  if (el.notifPrefsDias) {
+    el.notifPrefsDias.querySelectorAll(".sb-day-chip").forEach((chip) => {
+      chip.classList.toggle("active", prefs.dias.includes(chip.dataset.day));
+    });
+  }
+  el.notifPrefsDialog.showModal();
+}
+
+async function saveNotifPrefs(event) {
+  event.preventDefault();
+  const dias = [...(el.notifPrefsDias?.querySelectorAll(".sb-day-chip.active") || [])]
+    .map((chip) => chip.dataset.day);
+  const prefs = {
+    enabled: loadNotifPrefs().enabled,
+    horario: el.notifPrefsHorario?.value || "08:00",
+    dias,
+    frequencia: el.notifPrefsFrequencia?.value || "diaria",
+  };
+  if (!dias.length) {
+    window.alert("Selecione ao menos um dia da semana.");
+    return;
+  }
+  persistNotifPrefs(prefs);
+  // Um novo horário invalida a última disparada para não perder o lembrete de hoje.
+  try {
+    window.localStorage.removeItem(NOTIF_LAST_KEY);
+  } catch (e) {
+    // ignore
+  }
+  logAction(`Lembretes salvos: ${prefs.horario} (${prefs.frequencia}) em ${dias.join(", ")}.`);
+  el.notifPrefsDialog.close();
+  renderNotifStatus();
+}
+
+function notifTriggerKeys(prefs) {
+  // Gera os horários de disparo de hoje a partir do horário base e da frequência.
+  const [h, m] = prefs.horario.split(":").map(Number);
+  const base = new Date();
+  base.setHours(h || 0, m || 0, 0, 0);
+  const keys = [];
+  const push = (date) => keys.push(date.getTime());
+  push(base);
+  if (prefs.frequencia !== "diaria") {
+    const stepMs = (prefs.frequencia === "3h" ? 3 : 6) * 3600000;
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    for (let t = base.getTime() + stepMs; t <= end.getTime(); t += stepMs) push(new Date(t));
+  }
+  return keys;
+}
+
+async function tickNotifScheduler() {
+  const prefs = loadNotifPrefs();
+  if (!prefs.enabled || !prefs.dias.length) return;
+  if (!notifSupported() || Notification.permission !== "granted") return;
+
+  const now = new Date();
+  const todayKey = DAY_KEYS[now.getDay()];
+  if (!prefs.dias.includes(todayKey)) return;
+
+  const due = notifTriggerKeys(prefs).filter((t) => t <= now.getTime());
+  if (!due.length) return;
+  const latest = due[due.length - 1];
+
+  let last = 0;
+  try {
+    last = Number(window.localStorage.getItem(NOTIF_LAST_KEY)) || 0;
+  } catch (e) {
+    last = 0;
+  }
+  if (latest <= last) return;
+  try {
+    window.localStorage.setItem(NOTIF_LAST_KEY, String(latest));
+  } catch (e) {
+    // ignore
+  }
+  showLocalNotification("Lembrete PBTracker", "Hora do treino! Abra o app para começar.");
+}
+
+async function showLocalNotification(title, body) {
+  try {
+    if (swRegistration?.showNotification) {
+      await swRegistration.showNotification(title, { body, icon: "icons/icon-192.svg", badge: "icons/icon-192.svg" });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body });
+    }
+  } catch (e) {
+    // notificação indisponível
+  }
+}
+
+async function sendTestNotification() {
+  if (!notifSupported()) {
+    window.alert("Este navegador não suporta notificações locais.");
+    return;
+  }
+  let permission = Notification.permission;
+  if (permission === "default") permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    renderNotifStatus();
+    window.alert("Permissão de notificação não concedida.");
+    return;
+  }
+  await showLocalNotification("Teste PBTracker", "Notificações locais funcionando neste dispositivo.");
+  renderNotifStatus();
+}
+
+function startNotifScheduler() {
+  window.setInterval(tickNotifScheduler, 60 * 1000);
+  tickNotifScheduler();
+}
+
+/* ============================================================
+   EXPORTAÇÃO VIA CARD (Configurações)
+   ============================================================ */
+async function populateExportAtletas() {
+  try {
+    const atletas = await listAtletasForExport();
+    const options =
+      '<option value="">Todos os atletas</option>' +
+      atletas.map((a) => `<option value="${a.id}">${escapeHtml(a.nome)}</option>`).join("");
+    [el.expAtleta, el.expAtletaPrs].forEach((select) => {
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = options;
+      if ([...select.options].some((o) => o.value === current)) select.value = current;
+    });
+  } catch (e) {
+    // SwimBase indisponível: select fica só com "Todos"
+  }
+}
+
+async function handleExportFromSettings() {
+  let groupedEvents = state.groupedEvents;
+  if (el.expScope?.value === "selected") {
+    groupedEvents = new Map(
+      [...state.selectedProofs]
+        .map((key) => [key, state.groupedEvents.get(key)])
+        .filter(([, event]) => Boolean(event))
+    );
+    if (!groupedEvents.size) {
+      window.alert("Nenhuma prova selecionada no filtro. Marque provas ou exporte todas.");
+      return;
+    }
+  }
+
+  const result = await exportResults({
+    teamName: state.teamName,
+    competitionDate: state.competitionDate,
+    groupedEvents,
+    getSplitsForEvent,
+    activityLog: state.activityLog,
+  });
+
+  if (result.ok) {
+    const formatLabel = result.format === "xlsx" ? "Excel (XLSX)" : "CSV";
+    logAction(`Exportação ${formatLabel} dos resultados realizada (Configurações).`);
+    alert(
+      result.fallback
+        ? "Sem internet: exportado em CSV (abre no Excel com acentos corretos)."
+        : `Exportado em ${formatLabel}.`
+    );
+  } else {
+    alert(result.reason || "Nada a exportar.");
+  }
+}
+
+async function handleExportSwimBaseFromSettings(tipo) {
+  const isRegistros = tipo === "registros";
+  try {
+    const res = await exportSwimBaseFiltered({
+      tipo,
+      periodo: (isRegistros ? el.expPeriodo?.value : el.expPeriodoPrs?.value) || "all",
+      atletaId: (isRegistros ? el.expAtleta?.value : el.expAtletaPrs?.value) || "",
+    });
+    if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
+    else if (res.fallback) window.alert("Sem internet: exportado em CSV.");
+  } catch (e) {
+    window.alert("Não foi possível exportar agora. Tente novamente.");
+  }
+}
+
 function bindOnlineStatus() {
   const badge = document.getElementById("offlineBadge");
   if (!badge) return;
@@ -515,9 +899,70 @@ function setupServiceWorkerUpdateFlow(registration) {
 
 function markUpdateAvailable() {
   swUpdateAvailable = true;
-  if (el.refreshAppBtn) {
-    el.refreshAppBtn.textContent = "Aplicar atualização";
-    el.refreshAppBtn.classList.add("primary");
+  renderUpdateStatus();
+}
+
+function renderUpdateStatus() {
+  if (el.settingsVersion) el.settingsVersion.textContent = `v${APP_VERSION}`;
+  if (!el.updateStatus) return;
+  if (swUpdateAvailable) {
+    el.updateStatus.textContent = "Atualização disponível";
+    el.updateStatus.className = "settings-update-status available";
+  } else {
+    el.updateStatus.textContent = "Você está na última versão";
+    el.updateStatus.className = "settings-update-status ok";
+  }
+  if (el.updateNowBtn) el.updateNowBtn.disabled = !swUpdateAvailable;
+}
+
+async function checkForUpdate() {
+  if (!swRegistration) {
+    if (el.updateStatus) {
+      el.updateStatus.textContent = "Service worker indisponível";
+      el.updateStatus.className = "settings-update-status warn";
+    }
+    if (el.updateNowBtn) el.updateNowBtn.disabled = true;
+    return;
+  }
+  if (el.updateStatus) {
+    el.updateStatus.textContent = "Verificando…";
+    el.updateStatus.className = "settings-update-status";
+  }
+  lastSwUpdateCheck = Date.now();
+  try {
+    await swRegistration.update();
+  } catch {
+    // offline: mantém o estado conhecido
+  }
+  // O worker novo pode levar alguns ms para chegar em "waiting".
+  if (!swUpdateAvailable && swRegistration.waiting) markUpdateAvailable();
+  if (!swUpdateAvailable) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    if (swRegistration.waiting) markUpdateAvailable();
+  }
+  renderUpdateStatus();
+}
+
+function applyUpdate() {
+  if (swRegistration?.waiting && swUpdateAvailable) {
+    swRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
+    return;
+  }
+  checkForUpdate();
+}
+
+async function hardRefresh() {
+  const confirmed = window.confirm(
+    "Limpar todos os caches e recarregar o app? Você precisará de internet no próximo carregamento."
+  );
+  if (!confirmed) return;
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } finally {
+    window.location.reload();
   }
 }
 
@@ -536,29 +981,12 @@ function bindEvents() {
     showScreen("mode");
   });
   el.profileSwitchBtn.addEventListener("click", switchProfile);
-  el.settingsBtn.addEventListener("click", () => el.settingsDialog.showModal());
-  el.closeSettingsBtn.addEventListener("click", () => el.settingsDialog.close());
-  el.settingsDialog.addEventListener("click", (event) => {
-    const rect = el.settingsDialog.getBoundingClientRect();
-    const isOutside =
-      event.clientX < rect.left ||
-      event.clientX > rect.right ||
-      event.clientY < rect.top ||
-      event.clientY > rect.bottom;
-    if (isOutside) el.settingsDialog.close();
-  });
+  bindSettingsEvents();
   el.goControlBtnTop.addEventListener("click", goToControl);
   el.goControlBtnBottom.addEventListener("click", goToControl);
   el.backToFilterBtn.addEventListener("click", () => showScreen("filter"));
   if (el.exportBtn) {
     el.exportBtn.addEventListener("click", handleExportResults);
-  }
-  el.refreshAppBtn.addEventListener("click", handleAppRefresh);
-  if (el.downloadLogBtn) {
-    el.downloadLogBtn.addEventListener("click", () => {
-      downloadActivityLog();
-      logAction("Exportação do log de atividade requisitada pelo usuário.");
-    });
   }
 
   el.startLapBtn.addEventListener("click", handleChronoStartLap);
@@ -581,26 +1009,93 @@ function bindEvents() {
   el.modeSwimBaseBtn.addEventListener("click", () => enterMode("swimbase"));
 }
 
-async function handleAppRefresh() {
-  try {
-    if (swRegistration?.waiting && swUpdateAvailable) {
-      swRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
+function openSettingsDialog() {
+  renderUpdateStatus();
+  renderNotifStatus();
+  loadZoomLabel();
+  populateExportAtletas();
+  checkForUpdate();
+  el.settingsDialog.showModal();
+}
+
+function bindSettingsEvents() {
+  el.settingsBtn.addEventListener("click", openSettingsDialog);
+  el.closeSettingsBtn.addEventListener("click", () => el.settingsDialog.close());
+  el.settingsDialog.addEventListener("click", (event) => {
+    // target === dialog significa clique no ::backdrop (independe de zoom/coordenadas).
+    if (event.target === el.settingsDialog) {
+      el.settingsDialog.close();
       return;
     }
+    // cliques sintéticos (isTrusted false) vêm com clientX/Y = 0 e fechariam o dialog.
+    if (!event.isTrusted) return;
+    const rect = el.settingsDialog.getBoundingClientRect();
+    const isOutside =
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom;
+    if (isOutside) el.settingsDialog.close();
+  });
 
-    if (swRegistration) {
-      await swRegistration.update();
-    }
-
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-    }
-
-    window.location.reload();
-  } catch {
-    window.location.reload();
+  // Card Exportar — sub-abas
+  document.querySelectorAll(".settings-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.expTab;
+      document.querySelectorAll(".settings-tab").forEach((t) => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".settings-panel").forEach((panel) => {
+        panel.hidden = panel.dataset.expPanel !== target;
+      });
+    });
+  });
+  if (el.expResultadosBtn) el.expResultadosBtn.addEventListener("click", handleExportFromSettings);
+  if (el.expRegistrosBtn) el.expRegistrosBtn.addEventListener("click", () => handleExportSwimBaseFromSettings("registros"));
+  if (el.expPrsBtn) el.expPrsBtn.addEventListener("click", () => handleExportSwimBaseFromSettings("prs"));
+  if (el.downloadLogBtn) {
+    el.downloadLogBtn.addEventListener("click", () => {
+      downloadActivityLog();
+      logAction("Exportação do log de atividade requisitada pelo usuário.");
+    });
   }
+
+  // Card Notificações
+  if (el.notifToggle) el.notifToggle.addEventListener("change", handleNotifToggle);
+  if (el.notifPrefsBtn) el.notifPrefsBtn.addEventListener("click", openNotifPrefs);
+  if (el.notifTestBtn) el.notifTestBtn.addEventListener("click", sendTestNotification);
+  if (el.closeNotifPrefsBtn) el.closeNotifPrefsBtn.addEventListener("click", () => el.notifPrefsDialog.close());
+  if (el.notifPrefsDialog) {
+    el.notifPrefsDialog.addEventListener("click", (event) => {
+      if (event.target === el.notifPrefsDialog) {
+        el.notifPrefsDialog.close();
+        return;
+      }
+      if (!event.isTrusted) return;
+      const rect = el.notifPrefsDialog.getBoundingClientRect();
+      const isOutside =
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom;
+      if (isOutside) el.notifPrefsDialog.close();
+    });
+  }
+  if (el.notifPrefsForm) el.notifPrefsForm.addEventListener("submit", saveNotifPrefs);
+  if (el.notifPrefsDias) {
+    el.notifPrefsDias.addEventListener("click", (event) => {
+      const chip = event.target.closest(".sb-day-chip");
+      if (chip) chip.classList.toggle("active");
+    });
+  }
+
+  // Card Acessibilidade — zoom
+  if (el.zoomOutBtn) el.zoomOutBtn.addEventListener("click", () => stepZoom(-10));
+  if (el.zoomInBtn) el.zoomInBtn.addEventListener("click", () => stepZoom(10));
+  if (el.zoomResetBtn) el.zoomResetBtn.addEventListener("click", () => setZoom(100));
+
+  // Card Atualizações
+  if (el.checkUpdateBtn) el.checkUpdateBtn.addEventListener("click", checkForUpdate);
+  if (el.updateNowBtn) el.updateNowBtn.addEventListener("click", applyUpdate);
+  if (el.hardRefreshBtn) el.hardRefreshBtn.addEventListener("click", hardRefresh);
 }
 
 function bindDeviceGuard() {

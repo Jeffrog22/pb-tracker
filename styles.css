@@ -345,6 +345,28 @@ body.dark button:hover {
   background: rgba(37, 99, 235, 0.15);
 }
 
+/* body.dark button (0,1,2) vence button.primary/button.ghost (0,1,1) —
+   sem estas regras, no dark todo primary vira cinza e todo ghost ganha borda. */
+body.dark button.primary {
+  background-color: var(--primary-600);
+  border-color: var(--primary-600);
+  color: #ffffff;
+}
+
+body.dark button.primary:hover {
+  background-color: var(--primary-700);
+}
+
+body.dark button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dark);
+}
+
+body.dark .btn-start { background-color: var(--btn-start); color: #fff; }
+body.dark .btn-reset { background-color: var(--btn-reset); color: #fff; }
+body.dark .btn-save { background-color: var(--btn-save); color: #fff; }
+
 button.primary {
   background-color: var(--primary-600);
   color: #ffffff;
@@ -1181,7 +1203,7 @@ body.dark .lane-dropzone.drop-active {
    DIALOG DE CONFIGURAÇÕES
    ============================================================ */
 .settings-dialog {
-  width: min(420px, 94vw);
+  width: min(720px, 96vw);
   border: none;
   border-radius: var(--radius-card);
   padding: 0;
@@ -1209,15 +1231,168 @@ body.dark .settings-dialog::backdrop {
   gap: 0.6rem;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-light);
+  flex: 0 0 auto;
 }
 
 .settings-head h3 { margin: 0; font-size: 1rem; }
 
 .settings-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 56px);
+}
+
+@media (min-width: 768px) {
+  .settings-body { grid-template-columns: 1fr 1fr; }
+}
+
+/* --- Card base --- */
+.settings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+}
+
+.settings-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-card-head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.settings-card-emoji {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.settings-card-desc {
+  margin: 0.35rem 0 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.settings-card-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  padding: 16px;
+  gap: 0.6rem;
+}
+
+.settings-card-controls .settings-toggle:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-card .actions-row {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.settings-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.settings-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--badge-bg);
+  color: var(--primary-700);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+body.dark .settings-badge { color: var(--primary-400); }
+
+.settings-device,
+.settings-update-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.settings-update-status.ok { color: var(--ok); font-weight: 600; }
+.settings-update-status.available { color: var(--primary-600); font-weight: 600; }
+.settings-update-status.warn { color: var(--danger); font-weight: 600; }
+
+/* --- Sub-abas do card Exportar --- */
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-tab {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.settings-tab.active {
+  background: var(--btn-start);
+  border-color: var(--btn-start);
+  color: #fff;
+}
+
+.settings-tab:hover:not(.active) { background: var(--badge-bg); }
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.settings-panel[hidden] { display: none; }
+
+.settings-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.settings-filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+@media (min-width: 480px) {
+  .settings-filters { grid-template-columns: 1fr 1fr; }
+}
+
+/* --- Zoom (card Acessibilidade) --- */
+.zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zoom-group button {
+  min-width: 44px;
+  padding: 0.4rem 0.7rem;
 }
 
 /* ============================================================
@@ -1897,6 +2072,7 @@ body.dark .sb-onda-badge { background: rgba(37, 99, 235, 0.1); }
 
 .settings-toggle {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;

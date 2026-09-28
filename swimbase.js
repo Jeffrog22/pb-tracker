@@ -3046,6 +3046,38 @@ async function handleExportPrs() {
   if (!res.ok) window.alert(res.reason || "Não foi possível exportar.");
 }
 
+/* ==== Exportação via Configurações (card Exportar) ==== */
+
+export async function listAtletasForExport() {
+  await ensureLoaded();
+  return sw.atletas
+    .map((a) => ({ id: a.id, nome: a.nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+function filterForExport(items, { periodo, atletaId }, dateField) {
+  const cutoff = periodoCutoff(periodo);
+  return items
+    .filter((item) => (atletaId ? item.atletaId === atletaId : true))
+    .filter((item) => (cutoff ? new Date(item[dateField]).getTime() >= cutoff : true));
+}
+
+export async function exportSwimBaseFiltered({ tipo, periodo = "all", atletaId = "" }) {
+  await ensureLoaded();
+  if (tipo === "registros") {
+    const registros = filterForExport(sw.registros, { periodo, atletaId }, "dataHora");
+    if (!registros.length) return { ok: false, reason: "Nenhum registro para exportar com os filtros atuais." };
+    const res = await exportSwimBaseRegistros({ registros, getAtletaName });
+    api.logAction(res.ok ? `Exportou registros SwimBase (${res.format}, filtros Configurações).` : "Falha ao exportar registros SwimBase.");
+    return res;
+  }
+  const prs = filterForExport(sw.prs, { periodo, atletaId }, "data");
+  if (!prs.length) return { ok: false, reason: "Nenhum PR para exportar com os filtros atuais." };
+  const res = await exportSwimBasePRs({ prs, getAtletaName });
+  api.logAction(res.ok ? `Exportou PRs SwimBase (${res.format}, filtros Configurações).` : "Falha ao exportar PRs SwimBase.");
+  return res;
+}
+
 /* ==== ABA 2: Comparação de atletas ==== */
 
 function cmpAthleteAge(a) {

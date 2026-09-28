@@ -7,6 +7,51 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-09-28
+### Changed
+- **Tela de Configurações reorganizada em grid de cards**: `#settingsDialog`
+  alargado (720px) com `h1`-título + grid `1 coluna` → `2 colunas` em ≥768px.
+  Cada card é um bloco independente (header com emoji + título, descrição e
+  controles): 📤 Exportar, 🔔 Notificações, 🌓 Tema, ♿ Acessibilidade e
+  🔄 Atualizações. Base do card: `bg`/`border`/`radius` dos tokens do design
+  system (dark mode e alto contraste vêm dos tokens).
+
+### Added
+- **Card Exportar com sub-abas e filtros**: Resultados (todas as provas vs.
+  somente as selecionadas), Registros e PRs (período + atleta, via novos
+  exports `listAtletasForExport`/`exportSwimBaseFiltered` em `swimbase.js`) e
+  Log de atividade. XLSX via SheetJS (lazy-load) com fallback CSV — sem
+  backend.
+- **Card Notificações**: status da permissão (`default`/`granted`/`denied`),
+  interruptor de ativar, indicador do dispositivo atual e modal de
+  horários/dias/frequência (`#notifPrefsDialog`). Lembrete local agendado em
+  wall-clock (`startNotifScheduler`, intervalo de 60s) disparado via
+  `showNotification` do SW enquanto o app estiver aberto + botão de
+  "Notificação de teste". Push entre dispositivos não existe (sem servidor).
+- **Card Tema**: interruptor claro/escuro (lógica `body.dark` +
+  `pbtracker_dark_mode` existente, movida para o card).
+- **Card Acessibilidade**: zoom A−/Padrão/A+ (80–150%, passo 10) aplicado via
+  `document.documentElement.style.zoom` + `localStorage["pbtracker_zoom"]`, e
+  alto contraste (beira de piscina) — antes solto no dialog.
+- **Card Atualizações**: mostra `APP_VERSION`, status de update
+  (`checkForUpdate` → `registration.update()`), "Atualizar agora"
+  (`applyUpdate` → `SKIP_WAITING`, só habilitado quando há update) e
+  "Hard Refresh" (`hardRefresh` → apaga todos os caches com confirm e
+  recarrega). Substitui o antigo botão único "Atualizar app".
+- **SW**: handler `notificationclick` (fecha e foca/abere a janela do app).
+- `cache do SW` → `pbtracker-v77`.
+
+### Fixed
+- **Dark mode não pinta mais os botões certos**: `body.dark button` (0,1,2)
+  vencia `button.primary`/`button.ghost`/`.btn-start`/`.btn-save` (0,1,1/0,1,0)
+  e deixava primary cinza e ghost com borda. Regras compensatórias em
+  `styles.css`.
+- **Clique sintético não fecha mais o dialog de Configurações**: a checagem de
+  backdrop por coordenadas ignora eventos `!isTrusted` (vêm com
+  `clientX/Y = 0`), que fechavam `#settingsDialog`/`#notifPrefsDialog` em
+  `.click()` programático (abas, testes). `target === dialog` continua fechando
+  em clique real no ::backdrop.
+
 ## [0.37.1] - 2026-09-28
 ### Fixed
 - **Atualização não derruba mais o app em uso**: removido `skipWaiting()` do
