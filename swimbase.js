@@ -187,16 +187,36 @@ export function initSwimBase(appApi) {
   initM2RowDrag();
   const chronoDialog = document.getElementById("sbChronoDialog");
   if (chronoDialog) {
+    chronoDialog.addEventListener(
+      "pointerdown",
+      (event) => {
+        const rect = chronoDialog.getBoundingClientRect();
+        chronoPressInside =
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.top &&
+          event.clientY <= rect.bottom;
+      },
+      true
+    );
     chronoDialog.addEventListener("click", (event) => {
-      if (event.detail === 0) return;
+      if (event.detail === 0) {
+        chronoPressInside = false;
+        return;
+      }
       if (hudDragMoved) {
         hudDragMoved = false;
+        chronoPressInside = false;
         return;
       }
       if (m2Drag.suppressBackdrop) {
         m2Drag.suppressBackdrop = false;
+        chronoPressInside = false;
         return;
       }
+      const startedInside = chronoPressInside;
+      chronoPressInside = false;
+      if (startedInside) return;
       const rect = chronoDialog.getBoundingClientRect();
       const outside =
         event.clientX < rect.left ||
@@ -210,6 +230,7 @@ export function initSwimBase(appApi) {
       closeTreino();
     });
     chronoDialog.addEventListener("close", () => {
+      chronoPressInside = false;
       stopMasterTicker();
       releaseWakeLock();
     });
@@ -1140,6 +1161,7 @@ let hudStartY = 0;
 let hudOrigLeft = 0;
 let hudOrigTop = 0;
 let hudDragMoved = false;
+let chronoPressInside = false;
 
 function initHudDrag() {
   const layer = document.getElementById("sbHudLayer");
@@ -2606,9 +2628,7 @@ function closeTreino() {
   const inProgress =
     tr.masterRunning ||
     tr.continuousStartedAt > 0 ||
-    [...tr.raias.values()].some(
-      (r) => r.tempos.length || r.waiting || r.startedAt > 0
-    );
+    tr.raias.size > 0;
   if (
     inProgress &&
     !window.confirm(

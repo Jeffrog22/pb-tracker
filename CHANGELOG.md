@@ -7,6 +7,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-09-28
+### Fixed
+- **SwimBase — cronômetro fechava por cliques "fora" do modal (M3)**: o
+  backdrop do `#sbChronoDialog` agora só roteia para `closeTreino()` quando o
+  gesto **começa** fora do retângulo do dialog (`chronoPressInside` gravado no
+  `pointerdown` em capture). Toque que começa numa row/HUD/lista e termina na
+  área de backdrop (ancestral comum = `<dialog>`, coordenadas do mouseup fora
+  do retângulo) não fecha mais — era a "sensibilidade de cliques fora do
+  modal" que quebrava o treino no M3, mais exposto porque ali cada registro é
+  um toque na row. Guards anteriores mantidos (`detail===0`, `hudDragMoved`,
+  `m2Drag.suppressBackdrop`) e a flag é zerada também no `close`.
+- **SwimBase — fecho silencioso perdia a configuração**: `inProgress` de
+  `closeTreino()` passa a incluir `tr.raias.size > 0` — com o dialog aberto,
+  backdrop/Esc sempre pedem confirm. No M3 pré-Iniciar a distribuição de
+  ondas era apagada sem aviso (`raia.startedAt` nunca é setado no Modo 3 e o
+  resto do `inProgress` ficava false).
+- `cache do SW` → `pbtracker-v73`.
+
 ## [0.35.0] - 2026-09-28
 ### Added
 - **SwimBase M3 — layout dos cards igual ao M2**: alça de arraste (⠿), linha
