@@ -7,6 +7,35 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-28
+### Added
+- **SwimBase M3 — layout dos cards igual ao M2**: alça de arraste (⠿), linha
+  de parciais (`.sb-raia-splits`) com tempos + badge `PR!`, mostrador "Pronto"
+  antes da largada e tag com o nº da onda; a terceira linha (`.sb-raia-last`)
+  sai do M3 — contador/hint vivem no relógio e nas pills, como no M2. Drag
+  ativo e restrito à mesma onda (`data-onda`); `commitM2Order` renumera
+  `lane` mas **não** sobrescreve o badge de onda no M3.
+- **SwimBase M3 — contador ≤5s com alerta**: na espera de largada da onda e
+  no descanso entre séries, `restAlert` (limiar `M3_ALERT_MS = 5000`) aplica
+  `.rest-alert` (pulso vermelho) e o badge `.rest-countdown` com os segundos
+  no mostrador; as pills de onda ganham `.alert` quando faltam ≤5s para a
+  largada da onda.
+- **SwimBase M3 — descanso entre séries**: novo campo "Descanso entre séries
+  (s)" no Passo 4 (lido em `readTreinoConfig`). O descanso inicia no **último
+  registro da 1ª onda** (`startM3SeriesRest`, wall-clock `tr.m3Rest.waitEndsAt`)
+  e a virada ocorre em `max(fim do descanso, todas as ondas concluídas)`
+  (`m3RestSatisfied`). Cards concluídos ficam em `.resting` (azul) com o
+  contador, e a pill `Descanso entre séries · Xs` aparece no topo (vermelha
+  ≤5s). Pausa preserva o restante do descanso (`stopMaster`/`startMaster`).
+
+### Fixed
+- **SwimBase M3 — escalonamento das ondas na virada de série**: `startedAt`
+  agora é recalculado a partir de `Date.now()` (antes usava `masterStartedAt`
+  fixo e todas as ondas largavam juntas a partir da 2ª série).
+- **SwimBase M3 — rollover de registro entre séries**: `tempos`/`registroId`
+  são zerados na virada (antes a 2ª série appendava no registro da 1ª).
+- `cache do SW` → `pbtracker-v72`.
+
 ## [0.34.0] - 2026-09-26
 ### Added
 - **SwimBase M1 — contador de alerta decrescente (≤10s)**: quando faltam 10s

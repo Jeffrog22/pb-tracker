@@ -704,6 +704,7 @@ const tr = {
   waves: [],
   group: null,
   modo3Serie: 1,
+  m3Rest: { waitEndsAt: 0, pausedRemaining: 0 },
   raias: new Map(),
   masterTimerId: null,
   masterRunning: false,
@@ -912,9 +913,14 @@ function stepConfig() {
         <input id="sbTreinoDescansoOndas" type="number" min="0" max="600" value="${c.descansoOndas}" />
       </label>
     </div>
-    <label>Séries
-      <input id="sbTreinoSeries" type="number" min="1" max="10" value="${c.series}" />
-    </label>
+    <div class="sb-grid-2">
+      <label>Séries
+        <input id="sbTreinoSeries" type="number" min="1" max="10" value="${c.series}" />
+      </label>
+      <label>Descanso entre séries (s)
+        <input id="sbTreinoIntervalo" type="number" min="0" max="1800" value="${c.intervaloSeries}" />
+      </label>
+    </div>
     <p class="muted">Dica: para uma única onda, use o Modo 2 (Tempo/Parcial).</p>
     <div id="sbOndaDist"></div>`
   );
@@ -1063,6 +1069,8 @@ function readTreinoConfig() {
     tr.config.ondas = num("sbTreinoOndas", 3);
     tr.config.descansoOndas =
       Number(document.getElementById("sbTreinoDescansoOndas").value) || 0;
+    tr.config.intervaloSeries =
+      Number(document.getElementById("sbTreinoIntervalo").value) || 0;
     if (tr.config.ondas < 2 || tr.config.ondas > 6) {
       alert("Número de ondas deve estar entre 2 e 6. Para uma onda, use o Modo 2.");
       return;
@@ -1188,6 +1196,8 @@ function initHudDrag() {
 
 const M2_DRAG_THRESHOLD = 6;
 const M1_ALERT_MS = 10000;
+const M3_ALERT_MS = 5000;
+let m3PrevRestMs = 0;
 
 const m2Drag = {
   pointerId: null,
@@ -1211,7 +1221,7 @@ function initM2RowDrag() {
 }
 
 function onM2RowPointerDown(event) {
-  if (tr.config.modo !== 2) return;
+  if (tr.config.modo !== 2 && tr.config.modo !== 3) return;
   const handle = event.target.closest(".sb-raia-handle");
   if (!handle) return;
   if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -1246,6 +1256,11 @@ function onM2RowPointerMove(event) {
   const under = document.elementFromPoint(event.clientX, event.clientY);
   const target = under ? under.closest("#sbChronoList .sb-raia") : null;
   if (list && target && target !== m2Drag.source) {
+    if (
+      tr.config.modo === 3 &&
+      target.dataset.onda !== m2Drag.source.dataset.onda
+    )
+      return;
     const targetRect = target.getBoundingClientRect();
     if (event.clientY < targetRect.top + targetRect.height / 2) {
       if (m2Drag.source.nextElementSibling !== target) list.insertBefore(m2Drag.source, target);
@@ -1342,14 +1357,19 @@ function commitM2Order() {
   if (rows.length < 2) return;
   const order = rows.map((row) => tr.raias.get(row.dataset.id));
   if (order.some((raia) => !raia)) return;
+  const isM3 = tr.config.modo === 3;
   tr.raias.clear();
   order.forEach((raia, idx) => {
     raia.lane = idx + 1;
     tr.raias.set(raia.atletaId, raia);
-    const laneEl = rows[idx].querySelector(".sb-raia-lane");
-    if (laneEl) laneEl.textContent = String(idx + 1);
+    if (!isM3) {
+      const laneEl = rows[idx].querySelector(".sb-raia-lane");
+      if (laneEl) laneEl.textContent = String(idx + 1);
+    }
   });
-  api.logAction(`SwimBase M2: ordem dos atletas reorganizada (${order.length} atletas).`);
+  api.logAction(
+    `SwimBase ${isM3 ? "M3" : "M2"}: ordem dos atletas reorganizada (${order.length} atletas).`
+  );
 }
 
 function startTreino() {
@@ -1366,7 +1386,7 @@ function startTreino() {
       tr.config.modo === 1
         ? "Toque na raia para registrar · avanço automático"
         : tr.config.modo === 3
-          ? "Toque na linha do atleta para registrar"
+          ? "Toque na linha para registrar · arraste ⠿ para reordenar"
           : "Toque para selecionar · arraste o ícone ⠿ para reordenar · Split para volta";
   }
   const chronoTitle = document.getElementById("sbChronoTitle");
@@ -1608,6 +1628,7 @@ function autoSelectNextM2(currentAtletaId = null) {
 function initWaves() {
   tr.modo3Serie = 1;
   tr.waves = [];
+  tr.m3Rest = { waitEndsAt: 0, pausedRemaining: 0 };
   const raias = [...tr.raias.values()];
   for (let i = 1; i <= tr.config.ondas; i++) {
     tr.waves.push({
@@ -1670,6 +1691,10 @@ function startMaster() {
     });
   }
   if (tr.config.modo === 3) {
+    if (tr.m3Rest.waitEndsAt > 0 && tr.m3Rest.pausedRemaining > 0) {
+      tr.m3Rest.waitEndsAt = Date.now() + tr.m3Rest.pausedRemaining;
+      tr.m3Rest.pausedRemaining = 0;
+    }
     tr.waves.forEach((w) => {
       if (!w.started) {
         w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
@@ -1694,6 +1719,10 @@ function startMaster() {
 function stopMaster() {
   tr.masterRunning = false;
   stopMasterTicker();
+  if (tr.config.modo === 3 && tr.m3Rest.waitEndsAt > Date.now()) {
+    tr.m3Rest.pausedRemaining = tr.m3Rest.waitEndsAt - Date.now();
+    tr.m3Rest.waitEndsAt = 0;
+  }
   syncStateBadge(false);
   syncStartBtn(false);
   syncStopBtn(true, "Zerar");
@@ -1744,6 +1773,7 @@ function resetMaster() {
   }
   if (tr.config.modo === 3) {
     tr.modo3Serie = 1;
+    tr.m3Rest = { waitEndsAt: 0, pausedRemaining: 0 };
     tr.waves.forEach((w) => {
       w.started = false;
       w.done = false;
@@ -1969,7 +1999,37 @@ function updateModo1Ui() {
   if (groupEl) groupEl.textContent = groupText;
 }
 
+function m3RestMs(now = Date.now()) {
+  if (tr.m3Rest.waitEndsAt > 0) return Math.max(0, tr.m3Rest.waitEndsAt - now);
+  return tr.m3Rest.pausedRemaining;
+}
+
+function m3RestSatisfied(now = Date.now()) {
+  if (tr.m3Rest.waitEndsAt > 0) return now >= tr.m3Rest.waitEndsAt;
+  return tr.m3Rest.pausedRemaining === 0;
+}
+
+function startM3SeriesRest() {
+  if (
+    tr.config.series <= 1 ||
+    tr.modo3Serie >= tr.config.series ||
+    !(tr.config.intervaloSeries > 0) ||
+    tr.m3Rest.waitEndsAt !== 0 ||
+    tr.m3Rest.pausedRemaining !== 0
+  )
+    return false;
+  tr.m3Rest.waitEndsAt = Date.now() + tr.config.intervaloSeries * 1000;
+  hapticFeedback([80, 60, 160]);
+  api.logAction(
+    `SwimBase: descanso entre séries (${tr.config.intervaloSeries}s) iniciado após a onda 1.`
+  );
+  return true;
+}
+
 function tickModo3(now) {
+  const restMs = m3RestMs(now);
+  const restEnding = m3PrevRestMs > 0 && restMs === 0;
+  m3PrevRestMs = restMs;
   tr.waves.forEach((wave) => {
     if (!wave.started) {
       wave.countdownMs = Math.max(wave.startedAt - now, 0);
@@ -1992,46 +2052,66 @@ function tickModo3(now) {
       if (!wave.started) {
         r.waiting = true;
         r.waitMs = wave.countdownMs;
+        r.restAlert = wave.countdownMs <= M3_ALERT_MS;
         r.waitLabel = `Onda ${wave.index} em ${Math.ceil(wave.countdownMs / 1000)}s`;
+        r.serie = tr.modo3Serie;
+        updateRaiaRow(r);
       } else if (!r.done) {
         r.running = true;
         r.waiting = false;
+        r.restAlert = false;
         r.waitLabel = "";
         r.elapsedMs = wave.elapsedMs;
+        r.serie = tr.modo3Serie;
+        updateRaiaRow(r);
+      } else if (restMs > 0 || restEnding) {
+        r.waiting = false;
+        r.running = false;
+        r.serie = tr.modo3Serie;
+        updateRaiaRow(r);
       }
-      r.serie = tr.modo3Serie;
-      updateRaiaRow(r);
     });
   });
-  if (
-    tr.config.series > 1 &&
-    tr.modo3Serie < tr.config.series &&
-    tr.waves.every((w) => w.done)
-  ) {
-    tr.modo3Serie += 1;
-    tr.seriesStartedAt = Date.now();
-    tr.raias.forEach((r) => {
-      r.done = false;
-      r.running = false;
-      r.waiting = false;
-      r.waitLabel = "";
-      r.lastSplitMs = null;
-      r.lastIsPr = false;
-    });
-    tr.waves.forEach((w) => {
-      w.started = false;
-      w.done = false;
-      w.startedAt = tr.masterStartedAt + (w.index - 1) * tr.config.descansoOndas * 1000;
-      w.countdownMs = (w.index - 1) * tr.config.descansoOndas * 1000;
-    });
-    hapticFeedback([80, 60, 160]);
-    api.logAction(`SwimBase: série ${tr.modo3Serie}/${tr.config.series} das ondas iniciada.`);
-  } else if (tr.waves.every((w) => w.done)) {
-    tr.masterRunning = false;
-    stopMasterTicker();
-    syncStateBadge(false);
-    syncStartBtn(false);
-    syncStopBtn(true, "Zerar");
+  const allDone = tr.waves.every((w) => w.done);
+  if (allDone) {
+    const canAdvance =
+      tr.config.series > 1 && tr.modo3Serie < tr.config.series;
+    if (canAdvance && m3RestSatisfied(now)) {
+      tr.modo3Serie += 1;
+      tr.seriesStartedAt = Date.now();
+      tr.m3Rest = { waitEndsAt: 0, pausedRemaining: 0 };
+      m3PrevRestMs = 0;
+      tr.raias.forEach((r) => {
+        r.done = false;
+        r.running = false;
+        r.waiting = false;
+        r.waitMs = 0;
+        r.waitEndsAt = 0;
+        r.elapsedMs = 0;
+        r.waitKind = "";
+        r.waitLabel = "";
+        r.restAlert = false;
+        r.frozen = false;
+        r.lastSplitMs = null;
+        r.lastIsPr = false;
+        r.tempos = [];
+        r.registroId = null;
+      });
+      tr.waves.forEach((w) => {
+        w.started = false;
+        w.done = false;
+        w.startedAt = Date.now() + (w.index - 1) * tr.config.descansoOndas * 1000;
+        w.countdownMs = (w.index - 1) * tr.config.descansoOndas * 1000;
+      });
+      hapticFeedback([80, 60, 160]);
+      api.logAction(`SwimBase: série ${tr.modo3Serie}/${tr.config.series} das ondas iniciada.`);
+    } else if (!canAdvance) {
+      tr.masterRunning = false;
+      stopMasterTicker();
+      syncStateBadge(false);
+      syncStartBtn(false);
+      syncStopBtn(true, "Zerar");
+    }
   }
   updateModo3Status();
 }
@@ -2121,28 +2201,42 @@ function renderChronoModo2(list) {
 }
 
 function renderChronoModo3(list) {
+  if (m2Drag.active) cancelM2RowDrag();
   list.innerHTML = `
     <div class="sb-wave-status" id="sbWaveStatus"></div>
     ${[...tr.raias.values()]
       .sort((a, b) => a.onda - b.onda || a.lane - b.lane)
       .map(
         (raia) => `
-      <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}">
+      <div class="sb-raia" data-id="${escapeHtml(raia.atletaId)}" data-onda="${raia.onda}">
+        <span class="sb-raia-handle" role="button" aria-label="Reordenar atleta" title="Arraste para reordenar">
+          <svg viewBox="0 0 12 18" width="12" height="18" aria-hidden="true" focusable="false">
+            <circle cx="3" cy="4" r="1.4" /><circle cx="9" cy="4" r="1.4" />
+            <circle cx="3" cy="9" r="1.4" /><circle cx="9" cy="9" r="1.4" />
+            <circle cx="3" cy="14" r="1.4" /><circle cx="9" cy="14" r="1.4" />
+          </svg>
+        </span>
         <div class="sb-raia-left">
           <div class="sb-raia-lane">${raia.onda}</div>
           <div class="sb-raia-body">
             <div class="sb-raia-name">${escapeHtml(raia.nome)}</div>
-            <div class="sb-raia-last">Toque para registrar</div>
+            <div class="sb-raia-splits" hidden></div>
           </div>
         </div>
         <div class="sb-raia-center"><span class="sb-raia-tag">—</span></div>
-        <div class="sb-raia-right"><span class="sb-raia-time">—</span></div>
+        <div class="sb-raia-right"><span class="sb-raia-time">00'00"00</span></div>
       </div>`
       )
       .join("")}
   `;
   list.querySelectorAll(".sb-raia").forEach((btn) =>
-    btn.addEventListener("click", () => recordSplit(btn.dataset.id))
+    btn.addEventListener("click", () => {
+      if (m2Drag.suppressClick) {
+        m2Drag.suppressClick = false;
+        return;
+      }
+      recordSplit(btn.dataset.id);
+    })
   );
   tr.raias.forEach(updateRaiaRow);
   updateModo3Status();
@@ -2151,16 +2245,28 @@ function renderChronoModo3(list) {
 function updateModo3Status() {
   const el = document.getElementById("sbWaveStatus");
   if (!el) return;
-  el.innerHTML = tr.waves
-    .map((w) => {
-      const label = w.done
-        ? "concluída"
-        : w.started
-          ? "em andamento"
-          : `inicia em ${Math.ceil(w.countdownMs / 1000)}s`;
-      return `<span class="sb-wave-pill ${w.done ? "done" : w.started ? "running" : ""}">Onda ${w.index} · ${label}</span>`;
-    })
-    .join("");
+  const restMs = m3RestMs();
+  const restPill =
+    restMs > 0
+      ? `<span class="sb-wave-pill rest ${restMs <= M3_ALERT_MS ? "alert" : ""}">Descanso entre séries · ${Math.ceil(restMs / 1000)}s</span>`
+      : "";
+  el.innerHTML =
+    restPill +
+    tr.waves
+      .map((w) => {
+        const label = w.done
+          ? "concluída"
+          : w.started
+            ? "em andamento"
+            : `inicia em ${Math.ceil(w.countdownMs / 1000)}s`;
+        const alertCls =
+          !w.started && w.countdownMs > 0 && w.countdownMs <= M3_ALERT_MS
+            ? "alert"
+            : "";
+        const state = w.done ? "done" : w.started ? "running" : "";
+        return `<span class="sb-wave-pill ${state} ${alertCls}">Onda ${w.index} · ${label}</span>`;
+      })
+      .join("");
 }
 
 function updateRaiaRow(raia) {
@@ -2197,29 +2303,47 @@ function updateRaiaRow(raia) {
   }
 
   if (tr.config.modo === 3) {
+    const restMs = m3RestMs();
+    const inRest = restMs > 0 && raia.done;
+    row.classList.toggle("done", raia.done && !inRest);
+    row.classList.toggle("resting", (!!raia.waiting && !raia.done) || inRest);
+    row.classList.toggle(
+      "rest-alert",
+      !!raia.restAlert || (inRest && restMs <= M3_ALERT_MS)
+    );
     if (timeEl) {
-      if (raia.done) timeEl.textContent = "✓";
-      else if (raia.waiting) timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
-      else timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
+      if (inRest || (raia.waiting && raia.restAlert)) {
+        const ms = inRest ? restMs : raia.waitMs;
+        timeEl.innerHTML = `<span class="rest-countdown">${Math.ceil(ms / 1000)}</span>`;
+      } else if (raia.waiting) {
+        timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.waitMs));
+      } else if (raia.done) {
+        timeEl.innerHTML =
+          raia.lastSplitMs != null
+            ? maskTimeHTML(msToDisplay(raia.lastSplitMs))
+            : "✓";
+      } else if (raia.running || raia.elapsedMs > 0) {
+        timeEl.innerHTML = maskTimeHTML(msToDisplay(raia.elapsedMs));
+      } else {
+        timeEl.textContent = "Pronto";
+      }
     }
-    if (tagEl) tagEl.textContent = raia.waiting ? Math.ceil(raia.waitMs / 1000) : `O${raia.onda}`;
+    if (tagEl) {
+      if (inRest) tagEl.textContent = `${tr.modo3Serie}/${tr.config.series}`;
+      else if (raia.done) tagEl.textContent = "✓";
+      else if (raia.waiting) tagEl.textContent = Math.ceil(raia.waitMs / 1000);
+      else tagEl.textContent = `O${raia.onda}`;
+    }
     if (splitsEl) {
-      if (raia.tempos.length > 0) {
-        splitsEl.innerHTML = raia.tempos.map((t) => maskTimeHTML(t)).join("/");
+      const tempos = raia.tempos.map((t) => maskTimeHTML(t));
+      if (tempos.length > 0) {
+        splitsEl.innerHTML = `${
+          raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""
+        }${tempos.join("/")}`;
         splitsEl.hidden = false;
       } else {
         splitsEl.hidden = true;
       }
-    }
-    if (lastEl) {
-      if (raia.waiting) lastEl.textContent = raia.waitLabel;
-      else
-        lastEl.innerHTML =
-          raia.lastSplitMs != null
-            ? `${raia.lastIsPr ? '<span class="pr-badge">PR!</span> ' : ""}Último ${msToDisplay(
-                raia.lastSplitMs
-              )}`
-            : "Toque para registrar";
     }
     return;
   }
@@ -2311,6 +2435,16 @@ async function recordSplit(atletaId) {
 
   if (tr.config.modo === 3) {
     raia.done = true;
+    const wave1 = tr.waves[0];
+    if (
+      wave1 &&
+      wave1.atletas.every((id) => {
+        const r = tr.raias.get(id);
+        return r && r.done;
+      })
+    ) {
+      startM3SeriesRest();
+    }
     updateRaiaRow(raia);
     updateModo3Status();
     return;

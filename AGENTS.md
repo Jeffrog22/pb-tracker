@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.34.0"` em `app.js`; cache SW `pbtracker-v71` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.35.0"` em `app.js`; cache SW `pbtracker-v72` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -46,7 +46,7 @@
 | `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
 | `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs SwimBase |
 | `styles.css` | Tema, layout mobile-first, design system (dark mode, alto contraste) |
-| `sw.js` | Service worker: cache offline (`pbtracker-v71`) — **atualizar nome ao subir versão** |
+| `sw.js` | Service worker: cache offline (`pbtracker-v72`) — **atualizar nome ao subir versão** |
 | `index.html` | Telas, dialogs (cronômetro com HUD layer, SwimBase), manifest |
 | `manifest.webmanifest` | Metadados PWA (sem trava de orientação; sigue o dispositivo) |
 | `icons/` | Ícones PWA (SVG) |
@@ -89,6 +89,9 @@
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `dist < 50`; botão mostra "Iniciar" (não "Split") para dist < 50m.
 - **M2 drag & drop de ordem**: alça `.sb-raia-handle` (única área com `touch-action: none`) no 1º filho de cada card; `initM2RowDrag()` delega `pointerdown` em `#sbChronoList` (sobrevive ao `innerHTML` do re-render). Reordenação ao vivo (`insertBefore` + ghost clonado `pointer-events:none` em `#sbChronoDialog`, auto-scroll nas bordas) e `commitM2Order()` renumera `lane` 1..N e reconstrói `tr.raias` na ordem do DOM. A ordem só reseta em `buildRaias` (novo treino); `resetMaster` (Zerar) preserva. **Não remover** `m2Drag.suppressClick`/`suppressBackdrop`: sem eles o clique pós-drag seleciona atleta e o backdrop fecha o dialog.
 - **M2 sem terceira linha**: card = handle + raia + nome + parciais. Descanso vive no relógio, repetição na pill central, seleção na borda ciano e registro na linha de parciais; badge `PR!` não é exibido em M2 (só em M1/M3).
+- **M3 layout = M2**: mesmo template (handle + badge + nome + parciais + tag + relógio), sem `.sb-raia-last` — o countdown/hint vive no relógio e nas pills. Drag habilitado no M3 (guard `modo !== 2 && modo !== 3` em `onM2RowPointerDown`) mas **restrito à mesma onda** (`data-onda` na row); `commitM2Order` renumera `lane` porém **não** escreve no badge de onda quando `modo === 3`.
+- **M3 descanso entre séries**: campo "Descanso entre séries (s)" no Passo 4 (lido em `readTreinoConfig`). `startM3SeriesRest()` dispara no **último registro da 1ª onda** (wall-clock `tr.m3Rest.waitEndsAt`; guard `waitEndsAt !== 0 || pausedRemaining !== 0` contra retrigger) e a virada exige `waves.every(done) && m3RestSatisfied(now)` — **nunca avançar só com `waves.every(done)`**. Pausa preserva o restante (`stopMaster` grava `pausedRemaining`, `startMaster` renormaliza `waitEndsAt`). Na virada: zera `tempos`/`registroId` (rollover por série) e recalcula `startedAt` das ondas a partir de `Date.now()` (senão o escalonamento some a partir da 2ª série).
+- **M3 alerta ≤5s**: `M3_ALERT_MS = 5000` → `r.restAlert` na espera de largada da onda e no descanso entre séries; `.rest-alert`/`.rest-countdown` aplicados no ramo M3 de `updateRaiaRow` (antes do `return`), pills `.sb-wave-pill.rest`/`.alert` em `updateModo3Status`. Linhas `done` só repintam durante o descanso via `restMs > 0 || restEnding` no `tickModo3` (sem isso o badge não tica).
 - **Descanso ativo = fundo azul**: `updateRaiaRow` alterna `.resting` (`--sb-rest-bg`/`--sb-rest-border`, defs em `#sbChronoDialog`) enquanto `raia.waiting`; `.rest-alert` (≤5s) é `!important` e posterior no CSS → prevalece sobre o azul e sobre `.selected`.
 - **M1 alerta ≤10s**: `updateModo1Ui()` aplica `red` + `alert` (pulso) em `#sbCountdown` quando `tr.masterRunning && phase !== "done" && remainingMs <= M1_ALERT_MS` (10000); badge `.rest-countdown` com os segundos **só na fase `rep`** (na `serieInt` o mostrador já é regressivo, ali só vermelho/pulso). Classes são removidas ao avançar de fase e em `done`; `stopMaster()` chama `updateModo1Ui()` no final. O botão Parar fica `disabled` em M1 durante a execução (`syncStopBtn(false, "Parar")`), então `stopMaster()` só é alcançável via M2.
 - **Comparador de Atletas**: 3 abas na Análise — Análise (individual), Comparação (VS, 2 atletas), Desempenho (Chart.js via CDN). Dados reais do IndexedDB.
