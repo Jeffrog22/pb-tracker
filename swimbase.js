@@ -1039,7 +1039,10 @@ function bindTreinoStep() {
   });
 
   document.getElementById("sbStepBackBtn")?.addEventListener("click", () => {
-    tr.step -= 1;
+    tr.step = 1;
+    tr.atletas = [];
+    tr.waveAssigned = {};
+    tr.ondaAtiva = 1;
     renderSbTreino();
   });
 
@@ -2639,16 +2642,19 @@ function closeTreino() {
   }
   stopMasterTicker();
   releaseWakeLock();
-  resetTreinoSession();
+  resetTreinoSession(true);
   document.getElementById("sbChronoDialog").close();
+  renderSbTreino();
 }
 
-function resetTreinoSession() {
-  tr.step = 1;
-  tr.turmaId = "";
-  tr.atletas = [];
-  tr.waveAssigned = {};
-  tr.ondaAtiva = 1;
+function resetTreinoSession(keepSelection = false) {
+  if (!keepSelection) {
+    tr.step = 1;
+    tr.turmaId = "";
+    tr.atletas = [];
+    tr.waveAssigned = {};
+    tr.ondaAtiva = 1;
+  }
   tr.waves = [];
   tr.group = null;
   tr.modo3Serie = 1;

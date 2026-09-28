@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.35.1"` em `app.js`; cache SW `pbtracker-v73` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.36.0"` em `app.js`; cache SW `pbtracker-v74` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -85,6 +85,7 @@
 - **M2 sync de descanso (≤10s)**: atletas com diferença ≤10s são congelados/liberados juntos; relógio mestre para quando todos liberados.
 - **M2 descanso/intervalo em wall-clock**: `raia.waitEndsAt = Date.now() + waitMs`; o tick calcula `waitEndsAt - now` — **nunca voltar a `waitMs -= 30`** (deriva; falha em 2º plano). `raia.waitKind` (`"descanso"`/`"intervalo"`) decide o label.
 - **Cronômetro não fecha sozinho**: `#sbChronoDialog` tem listener `cancel` (Esc/Voltar) → `preventDefault` + `closeTreino()` com confirm; backdrop fecha **só se o gesto começar fora** do retângulo (`chronoPressInside` gravado no `pointerdown` capture — clique que começa em row/HUD/lista e termina na área de backdrop não fecha) e ignora `detail===0`, `hudDragMoved` (drag do HUD) e `m2Drag.suppressBackdrop`; `closeTreino` sempre pede confirm com dialog aberto (`inProgress` inclui `tr.raias.size > 0`); listener `close` derruba ticker/wake lock e zera `chronoPressInside`. Não remover esses guards.
+- **Retoma do treino após Cancelar**: `resetTreinoSession(keepSelection = false)` — `closeTreino()` chama com `true` (mantém `tr.step`/`turmaId`/`atletas`/`waveAssigned`/`ondaAtiva`, zera só runtime e chama `renderSbTreino()` → wizard volta ao Passo 4 pronto para "Iniciar treino"); `finalizeTreino()` (Salvar) mantém o reset completo (limpa seleção). **Botão "Voltar" do wizard** zera `atletas`/`waveAssigned`/`ondaAtiva` e volta ao Passo 1 (turma e `tr.config` preservados). Próximo no Passo 1 continua zerando `tr.atletas`.
 - **Rollover de registro por série (M2)**: após a última rep da série, `persistRegistro` snapshota `tempos` síncrono antes de `raia.tempos = []`/`registroId = null` (senão a rep final é perdida). `resetMaster` também zera `registroId`.
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `dist < 50`; botão mostra "Iniciar" (não "Split") para dist < 50m.
 - **M2 drag & drop de ordem**: alça `.sb-raia-handle` (única área com `touch-action: none`) no 1º filho de cada card; `initM2RowDrag()` delega `pointerdown` em `#sbChronoList` (sobrevive ao `innerHTML` do re-render). Reordenação ao vivo (`insertBefore` + ghost clonado `pointer-events:none` em `#sbChronoDialog`, auto-scroll nas bordas) e `commitM2Order()` renumera `lane` 1..N e reconstrói `tr.raias` na ordem do DOM. A ordem só reseta em `buildRaias` (novo treino); `resetMaster` (Zerar) preserva. **Não remover** `m2Drag.suppressClick`/`suppressBackdrop`: sem eles o clique pós-drag seleciona atleta e o backdrop fecha o dialog.

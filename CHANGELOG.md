@@ -7,6 +7,25 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-09-28
+### Added
+- **SwimBase — cancelar treino mantém a seleção de atletas (M1/M2/M3)**:
+  `resetTreinoSession(keepSelection)` — o Cancelar (`closeTreino`, incluindo
+  Esc e backdrop) preserva `tr.step`/`turmaId`/`atletas`/`waveAssigned`/
+  `ondaAtiva` e re-renderiza o wizard no Passo 4; "Iniciar treino" retoma
+  direto com os atletas (e a distribuição de ondas do M3) já selecionados,
+  sem refazer o fluxo.
+- **SwimBase — "Voltar" reinicia o processo de seleção**: o botão Voltar do
+  wizard zera `atletas`, `waveAssigned` e `ondaAtiva` e volta direto ao
+  Passo 1 (Turma). Turma pré-selecionada e configuração (modo/estilo/distância)
+  são mantidas.
+
+### Changed
+- **SwimBase — "Salvar" limpa a seleção**: `finalizeTreino()` segue com
+  `resetTreinoSession()` completo (comportamento anterior mantido — só o
+  Cancelar preserva).
+- `cache do SW` → `pbtracker-v74`.
+
 ## [0.35.1] - 2026-09-28
 ### Fixed
 - **SwimBase — cronômetro fechava por cliques "fora" do modal (M3)**: o
