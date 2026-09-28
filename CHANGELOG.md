@@ -7,6 +7,28 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-09-28
+### Fixed
+- **Atualização não derruba mais o app em uso**: removido `skipWaiting()` do
+  `install` do SW — a nova versão fica `waiting` e só é ativada pelo botão
+  "Atualizar app" (fluxo `SKIP_WAITING` já existente). `controllerchange`
+  agora só recarrega quando uma atualização foi aplicada (guardas
+  `swUpdateAvailable` + `refreshingPage`): acaba o reload surpresa no meio
+  da Análise que voltava para a tela de seleção de modo (e o reload duplo
+  na primeira visita).
+
+### Added
+- **Restauração de sessão após reload**: modo + tela em
+  `sessionStorage["pbtracker_session"]` (gravado em `showScreen`;
+  restaura apenas telas `sb-*`, com fallback para "mode") e estado da
+  Análise em `pbtracker_session_analise` (aba, atleta, filtros, período e
+  seleção do comparador; salvo em `pagehide`/aba oculta). Um reload causado
+  pelo sistema (memória/SW) devolve o usuário de onde ele estava.
+- **Checagem de atualização ao voltar para o 1º plano**:
+  `registration.update()` com throttle de 30 min — só prepara o botão
+  "Atualizar app", nunca recarrega sozinho.
+- `cache do SW` → `pbtracker-v76`.
+
 ## [0.37.0] - 2026-09-28
 ### Fixed
 - **SwimBase — Análise/Comparador: distâncias NaN**: `parseProvaLabel` usa

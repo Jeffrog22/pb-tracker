@@ -2702,6 +2702,53 @@ const cmp = {
 
 const CMP_METRICAS = ["tempo", "indice", "consistencia"];
 
+const ANALISE_SESSION_KEY = "pbtracker_session_analise";
+
+function saveAnaliseSession() {
+  try {
+    window.sessionStorage.setItem(
+      ANALISE_SESSION_KEY,
+      JSON.stringify({ an, cmp })
+    );
+  } catch {
+    // storage indisponível
+  }
+}
+
+function restoreAnaliseSession() {
+  let saved = null;
+  try {
+    saved = JSON.parse(window.sessionStorage.getItem(ANALISE_SESSION_KEY) || "null");
+  } catch {
+    saved = null;
+  }
+  if (!saved || typeof saved !== "object") return;
+
+  const a = saved.an;
+  if (a && typeof a === "object") {
+    if (["individual", "comparador", "desempenho"].includes(a.activeTab)) an.activeTab = a.activeTab;
+    if (typeof a.atletaId === "string") an.atletaId = a.atletaId;
+    if (typeof a.estilo === "string") an.estilo = a.estilo;
+    if (a.distancia !== undefined && a.distancia !== null) an.distancia = String(a.distancia);
+    if (["all", "7d", "30d", "3m", "6m", "1a"].includes(a.periodo)) an.periodo = a.periodo;
+  }
+
+  const c = saved.cmp;
+  if (c && typeof c === "object") {
+    if (Array.isArray(c.ids) && c.ids.length === 2) cmp.ids = [String(c.ids[0] || ""), String(c.ids[1] || "")];
+    if (typeof c.estilo === "string") cmp.estilo = c.estilo;
+    if (c.distancia !== undefined && c.distancia !== null) cmp.distancia = String(c.distancia);
+    if (CMP_METRICAS.includes(c.metrica)) cmp.metrica = c.metrica;
+    if (Array.isArray(c.legendHidden) && c.legendHidden.length === 2) cmp.legendHidden = [!!c.legendHidden[0], !!c.legendHidden[1]];
+  }
+}
+
+restoreAnaliseSession();
+window.addEventListener("pagehide", saveAnaliseSession);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveAnaliseSession();
+});
+
 function parseProvaLabel(prova) {
   const [dStr, ...eParts] = prova.split(" ");
   return { dist: parseInt(dStr, 10), estilo: eParts.join(" ") };

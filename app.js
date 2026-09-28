@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.37.0";
+const APP_VERSION = "0.37.1";
 
 const state = {
   teamName: "",
@@ -47,6 +47,38 @@ const state = {
 
 let swRegistration = null;
 let swUpdateAvailable = false;
+let refreshingPage = false;
+let lastSwUpdateCheck = 0;
+
+const SCREEN_SESSION_KEY = "pbtracker_session";
+const RESTORABLE_SCREENS = ["sb-home", "sb-atletas", "sb-treino", "sb-analise"];
+
+function saveScreenSession() {
+  try {
+    window.sessionStorage.setItem(
+      SCREEN_SESSION_KEY,
+      JSON.stringify({ appMode: state.appMode, screen: state.screen })
+    );
+  } catch {
+    // storage indisponível
+  }
+}
+
+function restoreScreenSession() {
+  let saved = null;
+  try {
+    saved = JSON.parse(window.sessionStorage.getItem(SCREEN_SESSION_KEY) || "null");
+  } catch {
+    saved = null;
+  }
+  const mode = saved?.appMode === "swimbase" ? "swimbase" : "balizamento";
+  const screen = RESTORABLE_SCREENS.includes(saved?.screen) ? saved.screen : "mode";
+  state.appMode = mode;
+  if (el.exportBtn) el.exportBtn.hidden = mode !== "balizamento";
+  renderNav();
+  applyDeviceGuard();
+  showScreen(screen);
+}
 
 const el = {
   screenLogin: document.getElementById("screenLogin"),
@@ -147,7 +179,7 @@ function init() {
   const active = getActiveProfile();
   if (active) {
     activateProfile(active.id, { skipLog: true });
-    showScreen("mode");
+    restoreScreenSession();
   } else {
     renderProfileList();
     showScreen("login");
@@ -441,6 +473,7 @@ function registerServiceWorker() {
       .register(`./sw.js?v=${APP_VERSION}`)
       .then((registration) => {
         swRegistration = registration;
+        lastSwUpdateCheck = Date.now();
         setupServiceWorkerUpdateFlow(registration);
       })
       .catch(() => {
@@ -449,7 +482,17 @@ function registerServiceWorker() {
   });
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!swUpdateAvailable || refreshingPage) return;
+    refreshingPage = true;
     window.location.reload();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (!swRegistration || swUpdateAvailable) return;
+    if (Date.now() - lastSwUpdateCheck < 30 * 60 * 1000) return;
+    lastSwUpdateCheck = Date.now();
+    swRegistration.update().catch(() => {});
   });
 }
 
@@ -576,6 +619,7 @@ function applyDeviceGuard() {
 function showScreen(screen) {
   if (screen === "mode" && !state.activeProfile) screen = "login";
   state.screen = screen;
+  saveScreenSession();
 
   el.screenLogin.classList.toggle("active", screen === "login");
   el.screenMode.classList.toggle("active", screen === "mode");

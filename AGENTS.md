@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.36.0"` em `app.js`; cache SW `pbtracker-v75` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.37.1"` em `app.js`; cache SW `pbtracker-v76` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -80,6 +80,8 @@
 - **Wake Lock**: acionado em `startTreino`, liberado em `finalizeTreino`/`closeTreino` (re-adquirido em `visibilitychange`).
 - **Alto contraste**: `body.high-contrast` + persistência em `localStorage["pbtracker_high_contrast"]`.
 - **Indicador offline**: `#offlineBadge` no topbar via `bindOnlineStatus`.
+- **Fluxo de atualização (sem reload surpresa)**: o SW **não** usa `skipWaiting()` no install — update fica `waiting` até o usuário tocar em "Atualizar app" (`handleAppRefresh` → `SKIP_WAITING` → `controllerchange` → reload). `controllerchange` (app.js) **só** recarrega se `swUpdateAvailable && !refreshingPage`; primeiro `registration.update()` roda no retorno ao 1º plano (throttle 30 min) só para preparar o botão. **Não reintroduzir** `skipWaiting()` no install nem reload incondicional — causava reload no meio do uso voltando pra tela de modos.
+- **Restauração de sessão**: `sessionStorage["pbtracker_session"]` = `{appMode, screen}` gravado em `showScreen`; `restoreScreenSession()` no boot só restaura telas `sb-*` (fallback `mode`). `sessionStorage["pbtracker_session_analise"]` = `an`/`cmp` gravado em `pagehide` e na aba oculta, restaurado na carga de `swimbase.js` (`restoreAnaliseSession`).
 - **Export SwimBase**: `exportSwimBaseRegistros`/`exportSwimBasePRs` em `exporter.js` (XLSX via SheetJS, fallback CSV).
 - **Categoria automática** por idade: Pré-Mirim → M80+; hint atualizada no campo nascimento.
 - **M2 sync de descanso (≤10s)**: atletas com diferença ≤10s são congelados/liberados juntos; relógio mestre para quando todos liberados.
