@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered } from "./swimbase.js";
 
-const APP_VERSION = "0.38.0";
+const APP_VERSION = "0.39.0";
 
 const state = {
   teamName: "",
@@ -2702,3 +2702,441 @@ function getTeamTokens(normalizedTeam) {
 }
 
 init();
+
+/* =====================================================================
+   GameSir X5 Lite → controle físico do PBTracker (Gamepad API)
+   ---------------------------------------------------------------------------
+   Bloco isolado no fim de app.js — NENHUMA função existente é alterada.
+   Usa apenas navigator.getGamepads() + requestAnimationFrame (sem libs).
+   Sem controle conectado, o comportamento do app não muda em nada.
+
+   D-Pad/LS/RS = cursor de foco (Tab) · L3/R3 = Enter
+   A = fecha dialog · X = primário (Registrar/Salvar) · Y = Análise (SwimBase)
+   B = Controle (Balizamento) · Menu = Configurações · Home = tela de modo
+   M = passo Modo 1/2/3 do treino (SwimBase) · View = history.back()
+   L1/L2 = tela anterior/próxima · R1/R2 = Iniciar/Parar do cronômetro
+   ===================================================================== */
+
+/* ===== AJUSTE AQUI: índices dos botões =====
+   Padrão Gamepad API (mapping "standard"):
+     0=A 1=B 2=X 3=Y · 4=L1 5=R1 6=L2 7=R2 · 8=View 9=Menu
+     10=L3 11=R3 · 12=↑ 13=↓ 14=← 15=→ · 16=Home/Guide
+   Para descobrir o índice real de um botão (ex.: o M Button, que é de
+   firmware e pode nem aparecer): ligue window.gamepadDebug = true e
+   aperte o botão — o console loga "[gamepad/debug] index=N".
+   Use null para DESATIVAR um botão. */
+const GP = {
+  a: 0,
+  b: 1,
+  x: 2,
+  y: 3,
+  l1: 4,
+  r1: 5,
+  l2: 6,
+  r2: 7,
+  view: 8,
+  menu: 9,
+  l3: 10,
+  r3: 11,
+  up: 12,
+  down: 13,
+  left: 14,
+  right: 15,
+  home: 16, // só existe se o controle reportar o Guide/Home
+  m: null, // M Button: rode o debug, aperte o M e preencha o número aqui
+};
+
+const GP_DEBOUNCE_MS = 200; // debounce por ação (bounce do hardware)
+const GP_NAV_DELAY_MS = 400; // espera antes de repetir navegação segurada
+const GP_NAV_REPEAT_MS = 180; // ritmo da repetição (0 = só 1 passo por pressão)
+const GP_STICK_DEADZONE = 0.5; // zona morta dos analógicos
+
+/* Ordem de navegação das telas (apague uma entrada para desabilitar). */
+const GP_TELAS = {
+  balizamento: ["mode", "import", "filter", "control"],
+  swimbase: ["mode", "sb-home", "sb-atletas", "sb-treino", "sb-analise"],
+};
+
+let gpRafId = null;
+let gpPressionado = new Map(); // índice → estado anterior (edge trigger)
+let gpDebounce = {}; // ação → timestamp do último disparo
+let gpNav = { dir: 0, proximo: 0 }; // repetição da navegação
+let gpFocoEl = null; // elemento focado pelo cursor
+let gpFocoOutline = ""; // outline anterior (para restaurar)
+let gpPresente = false; // há controle respondendo
+let gpPriming = true; // primeiro frame só sincroniza, não dispara
+let gpUltimaBusca = 0; // varredura throttlada quando não há controle
+let gpLogadoId = null; // id já logado (evita diagnóstico duplicado)
+let gpMExecutando = false; // evita reentrar no avanço do wizard
+let gpSbDialog = null; // #sbChronoDialog
+
+function initGamepadControle() {
+  // Navegador sem Gamepad API → nada muda no app.
+  if (typeof navigator.getGamepads !== "function") {
+    console.log("[gamepad] Gamepad API indisponível — recurso ignorado.");
+    return;
+  }
+
+  gpSbDialog = document.getElementById("sbChronoDialog");
+
+  // TEMPORÁRIO (debug) — pode apagar depois de calibrar os índices:
+  window.gamepadAtivo = null; // id do controle conectado
+  window.gamepadDebug = false; // true → loga TODA pressão de botão
+
+  // Diagnóstico exigido: id + quantidade de botões ao reconhecer.
+  window.addEventListener("gamepadconnected", (e) => {
+    logarConexao(e.gamepad);
+    gpPresente = true;
+    gpPriming = true; // segurar um botão ao conectar não pode disparar
+  });
+
+  window.addEventListener("gamepaddisconnected", (e) => {
+    console.log(`[gamepad] Desconectado ✘ id="${e.gamepad.id}"`);
+    window.gamepadAtivo = null;
+    gpLogadoId = null;
+    gpPresente = false;
+    gpPressionado.clear();
+    limparFoco();
+  });
+
+  // Toque real na tela → o jogador assumiu o controle: solta o cursor.
+  window.addEventListener("pointerdown", limparFoco, { capture: true });
+
+  iniciarLoopGamepad();
+}
+
+function logarConexao(gp) {
+  window.gamepadAtivo = gp.id;
+  gpLogadoId = gp.id;
+  console.log(
+    `[gamepad] Conectado ✔ id="${gp.id}" | botões=${gp.buttons.length}` +
+      ` | eixos=${gp.axes.length} | mapping=${gp.mapping || "(custom)"}`
+  );
+}
+
+function obterGamepad() {
+  if (gpPresente) {
+    const gp = primeiroGamepad();
+    if (!gp) gpPresente = false; // desconectou sem evento
+    return gp;
+  }
+  // Sem controle: varre ~2x/s (evita getGamepads() 60x/s no celular).
+  if (performance.now() - gpUltimaBusca < 500) return null;
+  gpUltimaBusca = performance.now();
+  const gp = primeiroGamepad();
+  if (gp) {
+    gpPresente = true;
+    gpPriming = true;
+    if (gp.id !== gpLogadoId) logarConexao(gp); // cobre navegador sem evento
+  }
+  return gp;
+}
+
+function primeiroGamepad() {
+  const pads = navigator.getGamepads();
+  for (const gp of pads) if (gp) return gp;
+  return null;
+}
+
+function iniciarLoopGamepad() {
+  if (gpRafId !== null) return;
+  gpRafId = requestAnimationFrame(loopGamepad);
+}
+
+function loopGamepad() {
+  gpRafId = requestAnimationFrame(loopGamepad);
+
+  const gp = obterGamepad();
+  if (!gp) return;
+
+  // 1) Estado (edge) + debug — SEMPRE para todos os botões, mesmo com o
+  //    gate fechado, para não criar bordas fantasma quando o gate abrir.
+  const novos = new Set();
+  for (let i = 0; i < gp.buttons.length; i++) {
+    const b = gp.buttons[i];
+    const pressionado = b.pressed || b.value > 0.5; // gatilhos analógicos
+    const antes = gpPressionado.get(i) === true;
+    gpPressionado.set(i, pressionado);
+    if (pressionado && !antes) {
+      novos.add(i);
+      if (window.gamepadDebug) {
+        console.log(`[gamepad/debug] index=${i} pressionado (value=${b.value.toFixed(2)})`);
+      }
+    }
+  }
+  if (gpPriming) {
+    gpPriming = false;
+    novos.clear(); // primeiro frame com o controle só sincroniza
+  }
+
+  const agora = performance.now();
+  const dialog = document.querySelector("dialog[open]");
+  const modo = cronometroVisivel();
+
+  // 2) Navegação do cursor de foco (D-Pad + analógicos, com repetição)
+  moverFocoSePreciso(gp, agora);
+
+  // 3) Ações (edge trigger + debounce de 200 ms por ação)
+  if (novos.has(GP.l3) || novos.has(GP.r3)) acionar("enter", ativarFoco);
+  if (novos.has(GP.a) && dialog) acionar("a", () => fecharDialog(dialog));
+  if (novos.has(GP.x) && dialog) acionar("x", () => acaoPrimaria(dialog));
+  if (novos.has(GP.y) && !dialog && state.appMode === "swimbase") {
+    acionar("y", () => showScreen("sb-analise"));
+  }
+  if (novos.has(GP.b) && !dialog && state.appMode === "balizamento") {
+    acionar("b", goToControl); // mesma função do botão "Ir para controle"
+  }
+  if (novos.has(GP.menu) && !dialog) acionar("menu", openSettingsDialog);
+  if (novos.has(GP.home) && !dialog) acionar("home", () => showScreen("mode"));
+  if (novos.has(GP.m) && !dialog && state.appMode === "swimbase") {
+    acionar("m", irParaModoCronometro);
+  }
+  if (novos.has(GP.view)) {
+    acionar("view", () => {
+      if (history.length > 1) history.back(); // "voltar página vista"
+    });
+  }
+
+  // 4) Ombros: L1/L2 navegam fora do cronômetro; R1/R2 só dentro dele
+  if (modo) {
+    if (novos.has(GP.r1)) acionar("iniciar", () => acionarIniciar(modo));
+    if (novos.has(GP.r2)) acionar("parar", () => acionarParar(modo));
+  } else {
+    if (novos.has(GP.l1)) acionar("voltar", () => navegarTela(-1));
+    if (novos.has(GP.l2)) acionar("avancar", () => navegarTela(1));
+  }
+}
+
+function acionar(chave, fn) {
+  const agora = performance.now();
+  if (agora - (gpDebounce[chave] || 0) < GP_DEBOUNCE_MS) return; // bounce
+  gpDebounce[chave] = agora;
+  fn();
+}
+
+function botaoPressionado(gp, idx) {
+  if (idx == null) return false;
+  const b = gp.buttons[idx];
+  return !!b && (b.pressed || b.value > 0.5);
+}
+
+/* ---------------- Cursor de foco (D-Pad / LS / RS) ---------------- */
+
+function direcaoNavegacao(gp) {
+  if (botaoPressionado(gp, GP.up) || botaoPressionado(gp, GP.left)) return -1;
+  if (botaoPressionado(gp, GP.down) || botaoPressionado(gp, GP.right)) return 1;
+  const eixos = gp.axes || [];
+  for (const base of [0, 2]) {
+    const y = eixos[base + 1];
+    if (typeof y === "number" && Math.abs(y) >= GP_STICK_DEADZONE) return y < 0 ? -1 : 1;
+    const x = eixos[base];
+    if (typeof x === "number" && Math.abs(x) >= GP_STICK_DEADZONE) return x < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+function moverFocoSePreciso(gp, agora) {
+  const dir = direcaoNavegacao(gp);
+  if (dir === 0) {
+    gpNav.dir = 0;
+    return;
+  }
+  if (dir !== gpNav.dir) {
+    moverFoco(dir); // borda: solto → pressionado
+    gpNav.dir = dir;
+    gpNav.proximo = agora + GP_NAV_DELAY_MS;
+    return;
+  }
+  if (GP_NAV_REPEAT_MS > 0 && agora >= gpNav.proximo) {
+    moverFoco(dir); // mantido: repetição
+    gpNav.proximo = agora + GP_NAV_REPEAT_MS;
+  }
+}
+
+function elementosFocaveis() {
+  const raiz = document.querySelector("dialog[open]") || document;
+  return Array.from(
+    raiz.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]),' +
+        ' textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((e) => e.getClientRects().length > 0); // só elementos visíveis
+}
+
+function moverFoco(passo) {
+  const lista = elementosFocaveis();
+  if (!lista.length) return;
+  let i = gpFocoEl ? lista.indexOf(gpFocoEl) : -1;
+  if (i < 0) i = passo > 0 ? -1 : 0; // sem foco válido: começa na borda
+  const alvo = lista[(i + passo + lista.length) % lista.length]; // cicla
+  pintarFoco(alvo);
+  alvo.focus();
+  alvo.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+function pintarFoco(el) {
+  if (gpFocoEl && gpFocoEl !== el) gpFocoEl.style.outline = gpFocoOutline;
+  gpFocoOutline = el.style.outline;
+  gpFocoEl = el;
+  // outline inline: indicador visível sem tocar no styles.css
+  el.style.outline = "3px solid #3b82f6";
+  el.style.outlineOffset = "2px";
+}
+
+function limparFoco() {
+  if (gpFocoEl) {
+    gpFocoEl.style.outline = gpFocoOutline;
+    gpFocoEl.style.outlineOffset = "";
+  }
+  gpFocoEl = null;
+}
+
+function ativarFoco() {
+  const alvo = gpFocoEl;
+  if (!alvo) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(alvo.tagName)) {
+    const form = alvo.closest("form");
+    if (form) form.requestSubmit(); // Enter num formulário = submeter
+    else if (alvo.type === "checkbox" || alvo.type === "radio") cliqueSintetico(alvo);
+    return;
+  }
+  cliqueSintetico(alvo); // Enter = ativar o elemento focado
+}
+
+/* ---------------- Botões A (fechar) e X (primário) ---------------- */
+
+function fecharDialog(dialog) {
+  const cancelar = dialog.querySelector(".btn-cancel");
+  if (cancelar) cliqueSintetico(cancelar); // usa o handler real de fechar
+  else dialog.close();
+}
+
+function acaoPrimaria(dialog) {
+  const form = dialog.querySelector("form");
+  if (form) {
+    form.requestSubmit(); // validação + listener submit nativos (Salvar)
+    return;
+  }
+  const salvar = dialog.querySelector(".btn-save");
+  if (salvar) cliqueSintetico(salvar); // Registrar (cronômetro) / Salvar treino
+}
+
+/* ---------------- Navegação de tela (L1/L2) ---------------- */
+
+function navegarTela(passo) {
+  if (document.querySelector("dialog[open]")) return; // modal aberto → não navega
+  const chave = state.appMode === "swimbase" ? "swimbase" : "balizamento";
+  const lista = GP_TELAS[chave];
+  const atual = lista.indexOf(state.screen);
+  if (atual < 0) return; // tela fora do fluxo (ex.: login) → nada
+  const alvo = lista[atual + passo];
+  if (!alvo) return; // sem ciclagem: para na primeira/última tela
+  if (alvo === "import" && !state.activeProfile) {
+    showScreen("login"); // mesma guarda do botão do menu inferior
+    return;
+  }
+  showScreen(alvo); // mesma função chamada pelo menu inferior
+}
+
+/* ---------------- M Button: direto para o passo "Modo" ---------------- */
+
+function irParaModoCronometro() {
+  if (gpMExecutando) return;
+  gpMExecutando = true;
+  showScreen("sb-treino");
+  avancarWizardAteModo().finally(() => {
+    gpMExecutando = false;
+  });
+}
+
+async function avancarWizardAteModo() {
+  for (let i = 0; i < 20 && !document.querySelector("dialog[open]"); i++) {
+    await dormir(50); // espera o render assíncrono do wizard
+    const passo = passoDoWizard();
+    if (!passo) continue;
+    if (passo >= 3) return; // já está no passo "Modo" (1/2/3)
+    // Só avança se a etapa anterior estiver preenchida — evita os alert()
+    // de validação de swimbase.js ("Selecione uma turma/atleta").
+    if (passo === 1 && !document.getElementById("sbTreinoTurma")?.value) return;
+    if (passo === 2 && !document.querySelector("#sbAtletaGrid input:checked")) return;
+    const proximo = document.getElementById("sbStepNextBtn");
+    if (!proximo) return;
+    const antes = passo;
+    cliqueSintetico(proximo);
+    for (let j = 0; j < 20; j++) {
+      await dormir(50);
+      if (passoDoWizard() !== antes) break;
+    }
+    if (passoDoWizard() === antes) return; // validação barrou → fica na tela
+  }
+}
+
+function passoDoWizard() {
+  const ativo = document.querySelector(".sb-step.active");
+  if (!ativo || !ativo.parentNode) return null;
+  return Array.prototype.indexOf.call(ativo.parentNode.children, ativo) + 1;
+}
+
+function dormir(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* ---------------- Clínica geral: cliques/teclas seguros ---------------- */
+
+// Clique sintético com coordenadas DENTRO do elemento: os guards de backdrop
+// (app.js:998 e swimbase.js:203) fecham o dialog se clientX/Y = 0,0.
+// detail:0 faz o guard do #sbChronoDialog retornar cedo (não fecha).
+function cliqueSintetico(alvo) {
+  if (!alvo) return;
+  const r = alvo.getBoundingClientRect();
+  alvo.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      detail: 0,
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+    })
+  );
+}
+
+/* ---------------- Cronômetros (R1/R2) ---------------- */
+
+function cronometroVisivel() {
+  if (el.chronoDialog.open) return "balizamento";
+  if (gpSbDialog && gpSbDialog.open) return "swimbase";
+  return null;
+}
+
+function acionarIniciar(modo) {
+  if (modo === "balizamento") {
+    handleChronoStartLap(); // mesmo listener de #startLapBtn ("Iniciar/Voltas")
+    return;
+  }
+  // Mesmo efeito do clique em #sbMasterStartBtn ("Iniciar/Split").
+  cliqueSintetico(document.getElementById("sbMasterStartBtn"));
+}
+
+function acionarParar(modo) {
+  if (modo === "balizamento") {
+    handleChronoStopReset(); // mesmo listener de #stopResetBtn ("Parar/Reiniciar")
+    return;
+  }
+  // #sbMasterStopBtn usa pointerdown/pointerup (não click). Disparamos SÓ o
+  // pointerup: roda a lógica rápida (para se rodando / zera se parado) e NÃO
+  // inicia o arraste do HUD (que chamaria setPointerCapture e quebraria).
+  const btn = document.getElementById("sbMasterStopBtn");
+  if (!btn) return;
+  const r = btn.getBoundingClientRect();
+  btn.dispatchEvent(
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 9001, // id sintético: não colide com drags ativos
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+    })
+  );
+}
+
+initGamepadControle(); // ← última linha (após init();)
