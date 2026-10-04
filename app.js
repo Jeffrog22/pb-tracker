@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered } from "./swimbase.js";
 
-const APP_VERSION = "0.39.0";
+const APP_VERSION = "0.39.1";
 
 const state = {
   teamName: "",
@@ -2714,12 +2714,12 @@ init();
    A = fecha dialog · X = primário (Registrar/Salvar) · Y = Análise (SwimBase)
    B = Controle (Balizamento) · Menu = Configurações · Home = tela de modo
    M = passo Modo 1/2/3 do treino (SwimBase) · View = history.back()
-   L1/L2 = tela anterior/próxima · R1/R2 = Iniciar/Parar do cronômetro
+   LB/RB = tela anterior/próxima · LT/RT = Iniciar/Parar do cronômetro
    ===================================================================== */
 
 /* ===== AJUSTE AQUI: índices dos botões =====
    Padrão Gamepad API (mapping "standard"):
-     0=A 1=B 2=X 3=Y · 4=L1 5=R1 6=L2 7=R2 · 8=View 9=Menu
+     0=A 1=B 2=X 3=Y · 4=LB 5=RB 6=LT 7=RT · 8=View 9=Menu
      10=L3 11=R3 · 12=↑ 13=↓ 14=← 15=→ · 16=Home/Guide
    Para descobrir o índice real de um botão (ex.: o M Button, que é de
    firmware e pode nem aparecer): ligue window.gamepadDebug = true e
@@ -2730,10 +2730,10 @@ const GP = {
   b: 1,
   x: 2,
   y: 3,
-  l1: 4,
-  r1: 5,
-  l2: 6,
-  r2: 7,
+  lb: 4, // ombro esquerdo = tela anterior
+  rb: 5, // ombro direito = tela próxima
+  lt: 6, // gatilho esquerdo = Iniciar/Voltas
+  rt: 7, // gatilho direito = Parar/Reiniciar
   view: 8,
   menu: 9,
   l3: 10,
@@ -2897,13 +2897,13 @@ function loopGamepad() {
     });
   }
 
-  // 4) Ombros: L1/L2 navegam fora do cronômetro; R1/R2 só dentro dele
+  // 4) LB/RB navegam fora do cronômetro; LT/RT só dentro dele
   if (modo) {
-    if (novos.has(GP.r1)) acionar("iniciar", () => acionarIniciar(modo));
-    if (novos.has(GP.r2)) acionar("parar", () => acionarParar(modo));
+    if (novos.has(GP.lt)) acionar("iniciar", () => acionarIniciar(modo));
+    if (novos.has(GP.rt)) acionar("parar", () => acionarParar(modo));
   } else {
-    if (novos.has(GP.l1)) acionar("voltar", () => navegarTela(-1));
-    if (novos.has(GP.l2)) acionar("avancar", () => navegarTela(1));
+    if (novos.has(GP.lb)) acionar("voltar", () => navegarTela(-1));
+    if (novos.has(GP.rb)) acionar("avancar", () => navegarTela(1));
   }
 }
 
@@ -3021,7 +3021,7 @@ function acaoPrimaria(dialog) {
   if (salvar) cliqueSintetico(salvar); // Registrar (cronômetro) / Salvar treino
 }
 
-/* ---------------- Navegação de tela (L1/L2) ---------------- */
+/* ---------------- Navegação de tela (LB/RB) ---------------- */
 
 function navegarTela(passo) {
   if (document.querySelector("dialog[open]")) return; // modal aberto → não navega
@@ -3100,7 +3100,7 @@ function cliqueSintetico(alvo) {
   );
 }
 
-/* ---------------- Cronômetros (R1/R2) ---------------- */
+/* ---------------- Cronômetros (LT/RT) ---------------- */
 
 function cronometroVisivel() {
   if (el.chronoDialog.open) return "balizamento";
