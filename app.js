@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino } from "./swimbase.js";
 
-const APP_VERSION = "0.40.0";
+const APP_VERSION = "0.40.1";
 
 const state = {
   teamName: "",
@@ -2776,6 +2776,16 @@ const GP_RS_SCROLL_DEADZONE = 0.15; // zona morta do RS no scroll
 const GP_RS_SCROLL_MAX = 16; // px/frame em deflexão total
 const GP_SCROLL_CHECK_MS = 300; // reavalia o alvo rolável a cada 300 ms
 
+/* ===== TEMP — overlay de log do gamepad (calibrar GP.m) =====
+   Ligar/desligar: 5 toques rápidos na tag de versão do topbar.
+   Persiste só na sessão (sessionStorage). REMOVER após preencher GP.m. */
+const GP_LOG_KEY = "pbtracker_gp_log";
+const GP_LOG_MAX = 10; // eventos mantidos na fila
+const GP_LOG_RENDER_MS = 150; // throttle de redesenho do overlay
+const GP_LOG_EIXO_DEADZONE = 0.25; // a partir daqui um eixo vira evento
+const GP_LOG_EIXO_DELTA = 0.15; // variação mínima entre eventos do mesmo eixo
+const GP_LOG_EIXO_MS = 400; // ou registra de novo após 400 ms parado
+
 let gpRafId = null;
 let gpPressionado = new Map(); // índice → estado anterior (edge trigger)
 let gpDebounce = {}; // ação → timestamp do último disparo
@@ -2792,6 +2802,16 @@ let gpScrollAlvo = null; // alvo rolável cacheado (RS)
 let gpScrollCheck = 0; // timestamp da última varredura do alvo
 let gpScrollDialog = null; // dialog usado no cache (null = página)
 
+/* ===== TEMP — overlay de log (ver constante GP_LOG_KEY acima) ===== */
+let gpLogEl = null; // div do overlay
+let gpLogAtivo = false; // ligado nesta sessão
+let gpLogEventos = []; // strings (mais nova no topo)
+let gpLogAxesVal = []; // último valor registrado por eixo
+let gpLogAxesTime = []; // timestamp do último evento por eixo
+let gpLogRenderTime = 0; // throttle de redesenho
+let gpLogToques = 0; // toques consecutivos na tag de versão
+let gpLogToqueTimer = null; // janela de1.5s dos toques
+
 function initGamepadControle() {
   // Navegador sem Gamepad API → nada muda no app.
   if (typeof navigator.getGamepads !== "function") {
@@ -2800,6 +2820,16 @@ function initGamepadControle() {
   }
 
   gpSbDialog = document.getElementById("sbChronoDialog");
+
+  // TEMP overlay de log: gatilho = 5 toques rápidos na tag de versão do topbar
+  // (área ampliada para o h1 inteiro). Persiste só nesta sessão.
+  gpLogAtivo = sessionStorage.getItem(GP_LOG_KEY) === "1";
+  document.addEventListener("click", (e) => {
+    if (e.target && e.target.closest && e.target.closest("#appVersionTag, .topbar h1")) {
+      toqueTagGpLog();
+    }
+  });
+  if (gpLogAtivo) criarGpLog();
 
   // TEMPORÁRIO (debug) — pode apagar depois de calibrar os índices:
   window.gamepadAtivo = null; // id do controle conectado
@@ -2869,7 +2899,14 @@ function loopGamepad() {
   gpRafId = requestAnimationFrame(loopGamepad);
 
   const gp = obterGamepad();
-  if (!gp) return;
+  if (!gp) {
+    // TEMP overlay sem controle: mantém o painel vivo mostrando "(sem controle)"
+    if (gpLogAtivo && gpLogEl && performance.now() - gpLogRenderTime >= GP_LOG_RENDER_MS) {
+      gpLogRender(null);
+      gpLogRenderTime = performance.now();
+    }
+    return;
+  }
 
   // 1) Estado (edge) + debug — SEMPRE para todos os botões, mesmo com o
   //    gate fechado, para não criar bordas fantasma quando o gate abrir.
@@ -2884,6 +2921,9 @@ function loopGamepad() {
       if (window.gamepadDebug) {
         console.log(`[gamepad/debug] index=${i} pressionado (value=${b.value.toFixed(2)})`);
       }
+      if (gpLogAtivo) {
+        gpLogRegistrar(`index=${i} → ${gpNomeIndice(i)} (value=${b.value.toFixed(2)})`);
+      }
     }
   }
   if (gpPriming) {
@@ -2894,6 +2934,15 @@ function loopGamepad() {
   const agora = performance.now();
   const dialog = document.querySelector("dialog[open]");
   const modo = cronometroVisivel();
+
+  // TEMP overlay: re-anexa à raiz certa todo frame — o <dialog> vive na top
+  // layer, então uma div em body ficaria ATRÁS do backdrop; e se algum
+  // innerHTML de dialog limpar o nó, no próximo frame ele volta.
+  if (gpLogAtivo) {
+    if (!gpLogEl) criarGpLog();
+    const raiz = dialog || document.body;
+    if (gpLogEl.parentNode !== raiz) raiz.appendChild(gpLogEl);
+  }
 
   // 2) Navegação do cursor de foco (D-Pad + LS) e scroll (RS)
   moverFocoSePreciso(gp, agora);
@@ -2933,6 +2982,26 @@ function loopGamepad() {
   } else {
     if (novos.has(GP.lb)) acionar("voltar", voltarTela);
     if (novos.has(GP.rb)) acionar("avancar", () => navegarTela(1));
+  }
+
+  // TEMP overlay: eventos de eixo + redesenho com throttle
+  if (gpLogAtivo && gpLogEl) {
+    const eixos = gp.axes || [];
+    for (let k = 0; k < eixos.length; k++) {
+      const v = eixos[k];
+      if (typeof v !== "number" || Math.abs(v) < GP_LOG_EIXO_DEADZONE) continue;
+      const antes = gpLogAxesVal[k];
+      const t = gpLogAxesTime[k] || 0;
+      if (antes === undefined || Math.abs(v - antes) >= GP_LOG_EIXO_DELTA || agora - t > GP_LOG_EIXO_MS) {
+        gpLogAxesVal[k] = v;
+        gpLogAxesTime[k] = agora;
+        gpLogRegistrar(`axes[${k}]=${v.toFixed(2)} (${gpNomeEixo(k)})`);
+      }
+    }
+    if (agora - gpLogRenderTime >= GP_LOG_RENDER_MS) {
+      gpLogRender(gp);
+      gpLogRenderTime = agora;
+    }
   }
 }
 
@@ -3259,6 +3328,129 @@ function acionarParar(modo) {
       clientY: r.top + r.height / 2,
     })
   );
+}
+
+/* ---------------- TEMP: overlay de log do gamepad ----------------
+   Desligar/ remover este bloco inteiro assim que GP.m for calibrado. */
+
+function toqueTagGpLog() {
+  clearTimeout(gpLogToqueTimer);
+  gpLogToques += 1;
+  gpLogToqueTimer = setTimeout(() => {
+    gpLogToques = 0;
+  }, 1500);
+  if (gpLogToques >= 5) {
+    gpLogToques = 0;
+    setGpLog(!gpLogAtivo);
+  }
+}
+
+function setGpLog(on) {
+  gpLogAtivo = on;
+  if (on) {
+    sessionStorage.setItem(GP_LOG_KEY, "1");
+    criarGpLog();
+    gpLogRegistrar("overlay ligado — aperte os botões");
+    gpLogRender(null);
+  } else {
+    sessionStorage.removeItem(GP_LOG_KEY);
+    gpLogEventos = [];
+    gpLogAxesVal = [];
+    gpLogAxesTime = [];
+    if (gpLogEl) {
+      gpLogEl.remove();
+      gpLogEl = null;
+    }
+  }
+  // feedback visual na tag de versão (verde = ligou, vermelho = desligou)
+  const tag = document.getElementById("appVersionTag");
+  if (tag) {
+    tag.style.outline = on ? "2px solid #22c55e" : "2px solid #f87171";
+    tag.style.borderRadius = "6px";
+    setTimeout(() => {
+      tag.style.outline = "";
+    }, 700);
+  }
+}
+
+function criarGpLog() {
+  if (gpLogEl) return;
+  const d = document.createElement("div");
+  d.id = "gpLogOverlay"; // TEMP
+  d.style.cssText =
+    "position:fixed;left:8px;right:8px;bottom:8px;max-height:45vh;overflow:hidden;" +
+    "background:rgba(4,8,18,.93);color:#9fe3ff;" +
+    "font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;" +
+    "padding:6px 26px 6px 8px;border:1px solid #3b82f6;border-radius:8px;" +
+    "z-index:999;pointer-events:none;white-space:pre-wrap;word-break:break-word;";
+
+  // ✕ de fechar: span com tabindex=-1 → fica FORA de elementosFocaveis()
+  // (o seletor ignora [tabindex="-1"]), então o D-Pad nunca o foca.
+  const fechar = document.createElement("span");
+  fechar.textContent = "✕";
+  fechar.tabIndex = -1;
+  fechar.setAttribute("role", "button");
+  fechar.setAttribute("aria-label", "Fechar log do gamepad");
+  fechar.style.cssText =
+    "position:absolute;top:4px;right:8px;pointer-events:auto;cursor:pointer;" +
+    "color:#fff;font-size:13px;padding:2px 4px;";
+  fechar.addEventListener("click", () => setGpLog(false));
+
+  const corpo = document.createElement("div");
+  corpo.textContent = "GP DEBUG — ligando…";
+
+  d.appendChild(fechar);
+  d.appendChild(corpo);
+  gpLogEl = d;
+  gpLogEl._corpo = corpo;
+  gpLogEventos = [];
+  gpLogAxesVal = [];
+  gpLogAxesTime = [];
+  gpLogRenderTime = 0;
+}
+
+function gpLogRegistrar(txt) {
+  const hora = new Date().toTimeString().slice(0, 8);
+  gpLogEventos.unshift(`${hora} ${txt}`);
+  if (gpLogEventos.length > GP_LOG_MAX) gpLogEventos.length = GP_LOG_MAX;
+}
+
+function gpLogRender(gp) {
+  const corpo = gpLogEl && gpLogEl._corpo;
+  if (!corpo) return;
+  const linhas = [];
+  linhas.push("GP DEBUG · 5 toques na tag da versão = desligar");
+  linhas.push(`pad: ${window.gamepadAtivo || "(sem controle)"}`);
+  if (gp) {
+    const press = [];
+    gpPressionado.forEach((v, i) => {
+      if (v) press.push(i);
+    });
+    const eixos = (gp.axes || []).map((v) => (typeof v === "number" ? v.toFixed(2) : "-"));
+    linhas.push(`pressed: ${press.length ? "[" + press.join("] [") + "]" : "[]"}`);
+    linhas.push(`axes: [${eixos.join(", ")}]`);
+  } else {
+    linhas.push("pressed: []");
+    linhas.push("axes: []");
+  }
+  linhas.push("— eventos —");
+  linhas.push(...gpLogEventos);
+  corpo.textContent = linhas.join("\n");
+}
+
+function gpNomeIndice(idx) {
+  const nomes = {
+    a: "A", b: "B", x: "X", y: "Y", lb: "LB", rb: "RB", lt: "LT", rt: "RT",
+    view: "View", menu: "Menu/Config", l3: "L3", r3: "R3",
+    up: "D-Pad ↑", down: "D-Pad ↓", left: "D-Pad ←", right: "D-Pad →",
+    home: "Home", m: "M/Mode",
+  };
+  for (const k of Object.keys(GP)) if (GP[k] === idx) return nomes[k] || k;
+  return "?";
+}
+
+function gpNomeEixo(k) {
+  return ["LS x", "LS y", "RS x", "RS y"][k] || `eixo ${k}`;
 }
 
 initGamepadControle(); // ← última linha (após init();)

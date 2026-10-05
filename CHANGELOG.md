@@ -6,6 +6,15 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+### Added
+- **Overlay temporário de log do gamepad** (`GP DEBUG`): painel flutuante no
+  rodapé que mostra `index=N → nome` de cada botão, valores de `pressed`/
+  `axes` ao vivo e eventos recentes — criado para calibrar o índice do botão
+  M (Mode) no celular, sem console. Liga/desliga com **5 toques rápidos na
+  tag de versão** do topbar; estado só na sessão (`sessionStorage`). Fica
+  por cima de dialogs (re-anexado por frame à top layer) e é removível com
+  ✕. **Código TEMP em `app.js` — remover após calibrar `GP.m`.**
+
 ### Changed
 - **Gamepad — navegação geral expandida** (bloco GameSir X5 Lite em `app.js`):
   - **Sistema View/Config/Home/Mode** agora ficam ativos em qualquer tela e
