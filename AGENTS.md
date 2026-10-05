@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.38.0"` em `app.js`; cache SW `pbtracker-v77` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.40.0"` em `app.js`; cache SW `pbtracker-v78` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -46,7 +46,7 @@
 | `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
 | `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs SwimBase |
 | `styles.css` | Tema, layout mobile-first, design system (dark mode, alto contraste) |
-| `sw.js` | Service worker: cache offline (`pbtracker-v77`) — **atualizar nome ao subir versão** |
+| `sw.js` | Service worker: cache offline (`pbtracker-v78`) — **atualizar nome ao subir versão** |
 | `index.html` | Telas, dialogs (cronômetro com HUD layer, SwimBase), manifest |
 | `manifest.webmanifest` | Metadados PWA (sem trava de orientação; sigue o dispositivo) |
 | `icons/` | Ícones PWA (SVG) |
@@ -71,7 +71,7 @@
 - **Correspondência de equipe é fuzzy** (`isSameTeam`/`getTeamTokens`): remove acentos e stop-words; pede interseção de tokens.
 - **Importação em duas passadas**: estrita (só equipe conhecida) → se vazia, tolerante (`allowUnknownTeam: true`).
 - **Exportação**: XLSX via SheetJS (CDN, lazy-load no clique); fallback CSV (BOM UTF-8, separador `;`). `#exportBtn` no topbar exporta **todas** as provas (`groupedEvents`). Células de parcial sem metragem viram `--`.
-- **Cache do service worker**: nome `pbtracker-v77` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
+- **Cache do service worker**: nome `pbtracker-v78` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
 - **Tag de versão no topbar** (`#appVersionTag`) renderiza `PBTracker v0.32.7` a partir de `APP_VERSION` — manter sincronizado em cada release.
 - **Configurações (v0.38+)**: engrenagem `#settingsBtn` → `#settingsDialog` largo (720px) com **grid de 5 cards** (`grid-template-columns: 1fr` → `1fr 1fr` em ≥768px): 📤 Exportar (sub-abas Resultados/Registros/PRs/Log, filtros período+atleta, chama `exportSwimBaseFiltered`), 🔔 Notificações (permissão + lembrete local agendado), 🌓 Tema (dark mode), ♿ Acessibilidade (zoom + alto contraste), 🔄 Atualizações (versão, `checkForUpdate`, `applyUpdate`, `hardRefresh`). Cada card é `.settings-card` independente (header emoji+título, descrição, controles). Abre via `openSettingsDialog()` (renderiza status, popula atletas, checa update).
 - **Zoom (card Acessibilidade)**: `document.documentElement.style.zoom` (80–150%, passo 10) + `localStorage["pbtracker_zoom"]`. **Não trocar por `font-size` no html** — o CSS do app é majoritariamente px (~398 usos) e font-size não escala paddings/cards.
@@ -107,6 +107,7 @@
 - **SwimBase — `deleteAtleta` é cascata**: apaga também `registros` e `prs` do atleta (confirm avisa; log conta removidos).
 - **Cronômetro do Balizamento**: visual unificado com SwimBase (frame escuro `#0c101c`, clock icon, status badge). Display usa `maskTimeHTML` (formato `MM'SS"CC` com centésimos em `<span class="cc-mini">`).
 - **Cores de baliza**: aleatórias por série (`LANE_COLORS`), estáveis durante a série. Balizas extrapoladas ficam opacas (`.lane-draft`) até atribuição.
+- **Gamepad (GameSir X5 Lite)**: bloco isolado no fim de `app.js` (Gamepad API + rAF). Sistema **View/Config/Home/Mode** ativos em qualquer tela **exceto com cronômetro aberto** (`cronometroVisivel()` — lá LT/RT são Iniciar/Parar); Home/Mode/View fecham modal aberto antes de agir, Config nunca reabre sobre si. **B** fecha qualquer modal (sem modal: `goToControl` no Balizamento). **LB** = `voltarTela()`: ignora com modal aberto → wizard `sb-treino` passo > 1 volta 1 passo via `voltarPassoTreino()` (export de `swimbase.js`, preserva seleção) → senão mapa estático `GP_VOLTAR` (tela → tela pai). **RB** continua o ciclo `GP_TELAS`. **RS** = scroll vertical (`rolarComRs`/`alvoRolagem`, alvo rolável cacheado 300ms: dialog → descendente com overflow → página); D-Pad + LS = cursor de foco. `GP.m` (Mode) segue `null` até achar o index real com `window.gamepadDebug = true`.
 
 ## Configuração do Ambiente
 

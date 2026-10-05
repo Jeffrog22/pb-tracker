@@ -11,9 +11,9 @@ import {
   slugify,
   escapeHtml,
 } from "./utils.js";
-import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered } from "./swimbase.js";
+import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino } from "./swimbase.js";
 
-const APP_VERSION = "0.39.1";
+const APP_VERSION = "0.40.0";
 
 const state = {
   teamName: "",
@@ -2710,11 +2710,14 @@ init();
    Usa apenas navigator.getGamepads() + requestAnimationFrame (sem libs).
    Sem controle conectado, o comportamento do app não muda em nada.
 
-   D-Pad/LS/RS = cursor de foco (Tab) · L3/R3 = Enter
-   A = fecha dialog · X = primário (Registrar/Salvar) · Y = Análise (SwimBase)
-   B = Controle (Balizamento) · Menu = Configurações · Home = tela de modo
-   M = passo Modo 1/2/3 do treino (SwimBase) · View = history.back()
-   LB/RB = tela anterior/próxima · LT/RT = Iniciar/Parar do cronômetro
+   D-Pad/LS = cursor de foco (Tab) · RS = scroll vertical da tela/dialog
+   L3/R3 = Enter · A = fecha dialog · X = primário (Registrar/Salvar)
+   Y = Análise (SwimBase) · B = fecha modal (ou Controle, sem modal)
+   Sistema — ativos em qualquer tela EXCETO com cronômetro aberto:
+     View = fecha modal / history.back() · Menu = Configurações
+     Home = tela de modo · M = passo Modo 1/2/3 do treino (SwimBase)
+   LB = voltar genérico (contexto: wizard → tela pai) · RB = próxima tela
+   LT/RT = Iniciar/Parar do cronômetro
    ===================================================================== */
 
 /* ===== AJUSTE AQUI: índices dos botões =====
@@ -2730,7 +2733,7 @@ const GP = {
   b: 1,
   x: 2,
   y: 3,
-  lb: 4, // ombro esquerdo = tela anterior
+  lb: 4, // ombro esquerdo = voltar (contexto: wizard → tela pai)
   rb: 5, // ombro direito = tela próxima
   lt: 6, // gatilho esquerdo = Iniciar/Voltas
   rt: 7, // gatilho direito = Parar/Reiniciar
@@ -2743,7 +2746,7 @@ const GP = {
   left: 14,
   right: 15,
   home: 16, // só existe se o controle reportar o Guide/Home
-  m: null, // M Button: rode o debug, aperte o M e preencha o número aqui
+  m: null, // M Button: ligue window.gamepadDebug, aperte o M e preencha aqui o index
 };
 
 const GP_DEBOUNCE_MS = 200; // debounce por ação (bounce do hardware)
@@ -2757,6 +2760,22 @@ const GP_TELAS = {
   swimbase: ["mode", "sb-home", "sb-atletas", "sb-treino", "sb-analise"],
 };
 
+/* Mapa estático do LB ("voltar"): tela → tela pai. Sem entrada = nada.
+   sb-treino passo > 1 é tratado antes (volta 1 passo do wizard). */
+const GP_VOLTAR = {
+  control: "filter",
+  filter: "mode",
+  import: "mode",
+  "sb-atletas": "sb-home",
+  "sb-treino": "sb-home",
+  "sb-analise": "sb-home",
+  "sb-home": "mode",
+};
+
+const GP_RS_SCROLL_DEADZONE = 0.15; // zona morta do RS no scroll
+const GP_RS_SCROLL_MAX = 16; // px/frame em deflexão total
+const GP_SCROLL_CHECK_MS = 300; // reavalia o alvo rolável a cada 300 ms
+
 let gpRafId = null;
 let gpPressionado = new Map(); // índice → estado anterior (edge trigger)
 let gpDebounce = {}; // ação → timestamp do último disparo
@@ -2769,6 +2788,9 @@ let gpUltimaBusca = 0; // varredura throttlada quando não há controle
 let gpLogadoId = null; // id já logado (evita diagnóstico duplicado)
 let gpMExecutando = false; // evita reentrar no avanço do wizard
 let gpSbDialog = null; // #sbChronoDialog
+let gpScrollAlvo = null; // alvo rolável cacheado (RS)
+let gpScrollCheck = 0; // timestamp da última varredura do alvo
+let gpScrollDialog = null; // dialog usado no cache (null = página)
 
 function initGamepadControle() {
   // Navegador sem Gamepad API → nada muda no app.
@@ -2873,28 +2895,35 @@ function loopGamepad() {
   const dialog = document.querySelector("dialog[open]");
   const modo = cronometroVisivel();
 
-  // 2) Navegação do cursor de foco (D-Pad + analógicos, com repetição)
+  // 2) Navegação do cursor de foco (D-Pad + LS) e scroll (RS)
   moverFocoSePreciso(gp, agora);
+  rolarComRs(gp, dialog);
 
   // 3) Ações (edge trigger + debounce de 200 ms por ação)
   if (novos.has(GP.l3) || novos.has(GP.r3)) acionar("enter", ativarFoco);
   if (novos.has(GP.a) && dialog) acionar("a", () => fecharDialog(dialog));
   if (novos.has(GP.x) && dialog) acionar("x", () => acaoPrimaria(dialog));
+  if (novos.has(GP.b)) {
+    // B fecha QUALQUER modal aberto; sem modal, mantém o atalho do Balizamento.
+    if (dialog) acionar("b", () => fecharDialog(dialog));
+    else if (state.appMode === "balizamento") acionar("b", goToControl);
+  }
   if (novos.has(GP.y) && !dialog && state.appMode === "swimbase") {
     acionar("y", () => showScreen("sb-analise"));
   }
-  if (novos.has(GP.b) && !dialog && state.appMode === "balizamento") {
-    acionar("b", goToControl); // mesma função do botão "Ir para controle"
-  }
-  if (novos.has(GP.menu) && !dialog) acionar("menu", openSettingsDialog);
-  if (novos.has(GP.home) && !dialog) acionar("home", () => showScreen("mode"));
-  if (novos.has(GP.m) && !dialog && state.appMode === "swimbase") {
-    acionar("m", irParaModoCronometro);
-  }
-  if (novos.has(GP.view)) {
-    acionar("view", () => {
-      if (history.length > 1) history.back(); // "voltar página vista"
-    });
+
+  // Sistema (View/Config/Home/Mode): ativos em QUALQUER tela, exceto com o
+  // cronômetro aberto (lá L1/L2/R1/R2 já são Iniciar/Parar — não conflitar).
+  if (!modo) {
+    if (novos.has(GP.view)) acionar("view", fecharOuHistoryBack);
+    if (novos.has(GP.menu)) acionar("menu", abrirConfiguracoes);
+    if (novos.has(GP.home)) acionar("home", () => irParaTela("mode"));
+    if (novos.has(GP.m) && state.appMode === "swimbase") {
+      acionar("m", () => {
+        fecharDialogAberto();
+        irParaModoCronometro();
+      });
+    }
   }
 
   // 4) LB/RB navegam fora do cronômetro; LT/RT só dentro dele
@@ -2902,7 +2931,7 @@ function loopGamepad() {
     if (novos.has(GP.lt)) acionar("iniciar", () => acionarIniciar(modo));
     if (novos.has(GP.rt)) acionar("parar", () => acionarParar(modo));
   } else {
-    if (novos.has(GP.lb)) acionar("voltar", () => navegarTela(-1));
+    if (novos.has(GP.lb)) acionar("voltar", voltarTela);
     if (novos.has(GP.rb)) acionar("avancar", () => navegarTela(1));
   }
 }
@@ -2920,19 +2949,58 @@ function botaoPressionado(gp, idx) {
   return !!b && (b.pressed || b.value > 0.5);
 }
 
-/* ---------------- Cursor de foco (D-Pad / LS / RS) ---------------- */
+/* ---------------- Cursor de foco (D-Pad / LS) — RS é scroll (rolarComRs) ---- */
 
 function direcaoNavegacao(gp) {
   if (botaoPressionado(gp, GP.up) || botaoPressionado(gp, GP.left)) return -1;
   if (botaoPressionado(gp, GP.down) || botaoPressionado(gp, GP.right)) return 1;
   const eixos = gp.axes || [];
-  for (const base of [0, 2]) {
-    const y = eixos[base + 1];
-    if (typeof y === "number" && Math.abs(y) >= GP_STICK_DEADZONE) return y < 0 ? -1 : 1;
-    const x = eixos[base];
-    if (typeof x === "number" && Math.abs(x) >= GP_STICK_DEADZONE) return x < 0 ? -1 : 1;
-  }
+  // eixo 0/1 = analógico esquerdo (o direito é dedicado ao scroll vertical)
+  const y = eixos[1];
+  if (typeof y === "number" && Math.abs(y) >= GP_STICK_DEADZONE) return y < 0 ? -1 : 1;
+  const x = eixos[0];
+  if (typeof x === "number" && Math.abs(x) >= GP_STICK_DEADZONE) return x < 0 ? -1 : 1;
   return 0;
+}
+
+/* ---------------- Scroll da tela (RS) ---------------- */
+
+function rolarComRs(gp, dialog) {
+  const eixos = gp.axes || [];
+  const v = eixos[3]; // RS vertical
+  if (typeof v !== "number" || Math.abs(v) < GP_RS_SCROLL_DEADZONE) return;
+  const forca = (Math.abs(v) - GP_RS_SCROLL_DEADZONE) / (1 - GP_RS_SCROLL_DEADZONE);
+  const alvo = alvoRolagem(dialog);
+  if (alvo) alvo.scrollTop += Math.sign(v) * forca * GP_RS_SCROLL_MAX;
+}
+
+// Dialog aberto → primeiro elemento rolável (o dialog ou um descendente,
+// ex.: .settings-body / #sbChronoList); sem dialog → a página.
+function alvoRolagem(dialog) {
+  const agora = performance.now();
+  if (
+    gpScrollAlvo &&
+    (dialog || null) === gpScrollDialog &&
+    agora - gpScrollCheck < GP_SCROLL_CHECK_MS
+  ) {
+    return gpScrollAlvo;
+  }
+  gpScrollCheck = agora;
+  gpScrollDialog = dialog || null;
+  gpScrollAlvo = null;
+
+  if (!dialog) {
+    gpScrollAlvo = document.scrollingElement || document.documentElement;
+  } else {
+    const candidatos = [dialog, ...dialog.querySelectorAll("*")];
+    gpScrollAlvo =
+      candidatos.find(
+        (e) =>
+          e.scrollHeight > e.clientHeight + 1 &&
+          !/(visible)/.test(getComputedStyle(e).overflowY)
+      ) || dialog;
+  }
+  return gpScrollAlvo;
 }
 
 function moverFocoSePreciso(gp, agora) {
@@ -3022,6 +3090,60 @@ function acaoPrimaria(dialog) {
 }
 
 /* ---------------- Navegação de tela (LB/RB) ---------------- */
+
+// "Voltar" genérico do LB — lê o contexto atual (não hardcode de tela):
+//  1) cronômetro aberto → LB nem chega aqui (ramo dos LT/RT);
+//  2) modal aberto → ignora (fechar é papel do B);
+//  3) wizard do treino em passo > 1 → volta 1 passo preservando seleção;
+//  4) mapa estático tela → tela pai (GP_VOLTAR); sem entrada → nada.
+function voltarTela() {
+  if (document.querySelector("dialog[open]")) return;
+
+  if (state.screen === "sb-treino") {
+    const passo = passoDoWizard();
+    if (passo && passo > 1) {
+      voltarPassoTreino(); // swimbase.js: tr.step -= 1 (mantém turma/atletas)
+      return;
+    }
+  }
+
+  const pai = GP_VOLTAR[state.screen];
+  if (!pai) return; // mode/login: raiz do fluxo → nada
+  if (pai === "import" && !state.activeProfile) {
+    showScreen("login"); // mesma guarda do botão do menu inferior
+    return;
+  }
+  showScreen(pai);
+}
+
+// Fecha o modal aberto (se houver) e vai para a tela.
+function irParaTela(tela) {
+  fecharDialogAberto();
+  showScreen(tela);
+}
+
+// Configurações: não reabre sobre si mesmo (showModal em dialog aberto
+// lançaria InvalidStateError); fecha qualquer outro modal antes.
+function abrirConfiguracoes() {
+  if (el.settingsDialog.open) return;
+  fecharDialogAberto();
+  openSettingsDialog();
+}
+
+// View: fecha o modal aberto; sem modal, volta na história do navegador.
+function fecharOuHistoryBack() {
+  const d = document.querySelector("dialog[open]");
+  if (d) {
+    fecharDialog(d);
+    return;
+  }
+  if (history.length > 1) history.back();
+}
+
+function fecharDialogAberto() {
+  const d = document.querySelector("dialog[open]");
+  if (d) fecharDialog(d);
+}
 
 function navegarTela(passo) {
   if (document.querySelector("dialog[open]")) return; // modal aberto → não navega

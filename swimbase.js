@@ -259,6 +259,15 @@ export function renderSwimBaseScreen(screen) {
   if (screen === "sb-analise") return renderSbAnalise();
 }
 
+// Voltar 1 passo do wizard do treino PRESERVANDO seleção (turma/atletas/waves).
+// Usado pelo LB do controle — diferente do botão "Voltar" nativo, que limpa tudo.
+export function voltarPassoTreino() {
+  if (tr.step > 1) {
+    tr.step -= 1;
+    renderSbTreino();
+  }
+}
+
 function inActiveProfile(item) {
   const profileId = api?.state?.activeProfile?.id || null;
   if (!profileId) return true;

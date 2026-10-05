@@ -6,6 +6,25 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+### Changed
+- **Gamepad — navegação geral expandida** (bloco GameSir X5 Lite em `app.js`):
+  - **Sistema View/Config/Home/Mode** agora ficam ativos em qualquer tela e
+    só são ignorados com o cronômetro aberto (não conflitam com LT/RT).
+    View fecha o modal aberto ou faz `history.back()`; Config fecha outro
+    modal antes de abrir (nunca reabre sobre si mesmo); Home fecha o modal
+    e vai para o modo; Mode (botão M) fecha o modal e avança o wizard até o
+    passo Modo 1/2/3 — só com turma e atletas já selecionados.
+  - **B fecha qualquer modal/dialog aberto** (antes só funcionava sem modal
+    aberto); sem modal, mantém o atalho "Ir para controle" do Balizamento.
+  - **LB = "voltar" genérico com contexto** (`voltarTela`): modal aberto →
+    ignora; wizard do treino em passo > 1 → volta 1 passo preservando a
+    seleção (novo export `voltarPassoTreino` em `swimbase.js`); senão mapa
+    estático tela → tela pai (`GP_VOLTAR`: `control→filter→mode`,
+    `sb-atletas/treino/analise→sb-home→mode`). Acaba com o salto direto do
+    LB para a tela de Atletas.
+  - **RS passa a rolar a tela** (scroll vertical proporcional): o alvo é o
+    elemento rolável aberto (dialog, `.settings-body`, lista do cronômetro)
+    ou a página; o analógico esquerdo e o D-Pad continuam no cursor de foco.
 
 ## [0.38.0] - 2026-09-28
 ### Changed
