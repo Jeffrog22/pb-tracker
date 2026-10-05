@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino } from "./swimbase.js";
 
-const APP_VERSION = "0.40.1";
+const APP_VERSION = "0.41.0";
 
 const state = {
   teamName: "",
@@ -2715,8 +2715,11 @@ init();
    Y = Análise (SwimBase) · B = fecha modal (ou Controle, sem modal)
    Sistema — ativos em qualquer tela EXCETO com cronômetro aberto:
      View = fecha modal / history.back() · Menu = Configurações
-     Home = tela de modo · M = passo Modo 1/2/3 do treino (SwimBase)
-   LB = voltar genérico (contexto: wizard → tela pai) · RB = próxima tela
+     Home = curto: tela de modo · segurado ≥700ms: Modo 1/2/3 (SwimBase)
+     (o M Button é de firmware — Turbo/screenshot — e NUNCA chega à API)
+   LB = voltar genérico (contexto: wizard → tela pai)
+   RB = avançar genérico (modal → Próximo/OK · wizard passo 2-3 → Próximo
+       · senão próxima tela)
    LT/RT = Iniciar/Parar do cronômetro
    ===================================================================== */
 
@@ -2724,9 +2727,8 @@ init();
    Padrão Gamepad API (mapping "standard"):
      0=A 1=B 2=X 3=Y · 4=LB 5=RB 6=LT 7=RT · 8=View 9=Menu
      10=L3 11=R3 · 12=↑ 13=↓ 14=← 15=→ · 16=Home/Guide
-   Para descobrir o índice real de um botão (ex.: o M Button, que é de
-   firmware e pode nem aparecer): ligue window.gamepadDebug = true e
-   aperte o botão — o console loga "[gamepad/debug] index=N".
+   Para descobrir o índice real de um botão: ligue window.gamepadDebug = true
+   (ou use o overlay GP DEBUG) e aperte o botão — aparece "index=N".
    Use null para DESATIVAR um botão. */
 const GP = {
   a: 0,
@@ -2734,7 +2736,7 @@ const GP = {
   x: 2,
   y: 3,
   lb: 4, // ombro esquerdo = voltar (contexto: wizard → tela pai)
-  rb: 5, // ombro direito = tela próxima
+  rb: 5, // ombro direito = avançar (contexto: modal/wizard → próxima tela)
   lt: 6, // gatilho esquerdo = Iniciar/Voltas
   rt: 7, // gatilho direito = Parar/Reiniciar
   view: 8,
@@ -2745,14 +2747,14 @@ const GP = {
   down: 13,
   left: 14,
   right: 15,
-  home: 16, // só existe se o controle reportar o Guide/Home
-  m: null, // M Button: ligue window.gamepadDebug, aperte o M e preencha aqui o index
+  home: 16, // Logo/Guide: curto = modo · segurado ≥700ms = Modo 1/2/3
 };
 
 const GP_DEBOUNCE_MS = 200; // debounce por ação (bounce do hardware)
 const GP_NAV_DELAY_MS = 400; // espera antes de repetir navegação segurada
 const GP_NAV_REPEAT_MS = 180; // ritmo da repetição (0 = só 1 passo por pressão)
 const GP_STICK_DEADZONE = 0.5; // zona morta dos analógicos
+const GP_HOME_LONG_MS = 700; // Home segurado ≥ isto = Modo 1/2/3 (senão = tela de modo)
 
 /* Ordem de navegação das telas (apague uma entrada para desabilitar). */
 const GP_TELAS = {
@@ -2776,9 +2778,10 @@ const GP_RS_SCROLL_DEADZONE = 0.15; // zona morta do RS no scroll
 const GP_RS_SCROLL_MAX = 16; // px/frame em deflexão total
 const GP_SCROLL_CHECK_MS = 300; // reavalia o alvo rolável a cada 300 ms
 
-/* ===== TEMP — overlay de log do gamepad (calibrar GP.m) =====
+/* ===== TEMP — overlay de log do gamepad (diagnóstico de índices) =====
    Ligar/desligar: 5 toques rápidos na tag de versão do topbar.
-   Persiste só na sessão (sessionStorage). REMOVER após preencher GP.m. */
+   Persiste só na sessão (sessionStorage). REMOVER quando a calibração/
+   validação dos índices terminar (ex.: confirmar Home/Guide = 16). */
 const GP_LOG_KEY = "pbtracker_gp_log";
 const GP_LOG_MAX = 10; // eventos mantidos na fila
 const GP_LOG_RENDER_MS = 150; // throttle de redesenho do overlay
@@ -2811,6 +2814,8 @@ let gpLogAxesTime = []; // timestamp do último evento por eixo
 let gpLogRenderTime = 0; // throttle de redesenho
 let gpLogToques = 0; // toques consecutivos na tag de versão
 let gpLogToqueTimer = null; // janela de1.5s dos toques
+let gpHomeInicio = 0; // timestamp do pressionamento do Home (curto/longo)
+let gpHomeDisparado = false; // long-press já consumido nesta segurar
 
 function initGamepadControle() {
   // Navegador sem Gamepad API → nada muda no app.
@@ -2848,6 +2853,8 @@ function initGamepadControle() {
     gpLogadoId = null;
     gpPresente = false;
     gpPressionado.clear();
+    gpHomeInicio = 0;
+    gpHomeDisparado = false;
     limparFoco();
   });
 
@@ -2966,22 +2973,46 @@ function loopGamepad() {
   if (!modo) {
     if (novos.has(GP.view)) acionar("view", fecharOuHistoryBack);
     if (novos.has(GP.menu)) acionar("menu", abrirConfiguracoes);
-    if (novos.has(GP.home)) acionar("home", () => irParaTela("mode"));
-    if (novos.has(GP.m) && state.appMode === "swimbase") {
-      acionar("m", () => {
-        fecharDialogAberto();
-        irParaModoCronometro();
-      });
+
+    // Home: toque curto (<700ms) = tela de modo; segurar ≥700ms = Modo 1/2/3
+    // (dispara uma vez por segurar). O M Button é de firmware e nunca chega
+    // aqui — este long-press é o substituto do M.
+    if (novos.has(GP.home)) {
+      gpHomeInicio = agora;
+      gpHomeDisparado = false;
+    }
+    if (gpHomeInicio) {
+      if (botaoPressionado(gp, GP.home)) {
+        if (!gpHomeDisparado && agora - gpHomeInicio >= GP_HOME_LONG_MS) {
+          gpHomeDisparado = true;
+          acionar("home-long", () => {
+            if (gpLogAtivo) gpLogRegistrar("Home long → Mode (passo Modo 1/2/3)");
+            fecharDialogAberto();
+            if (state.appMode === "swimbase") irParaModoCronometro();
+          });
+        }
+      } else {
+        const dur = agora - gpHomeInicio;
+        gpHomeInicio = 0;
+        if (!gpHomeDisparado && dur < GP_HOME_LONG_MS) {
+          acionar("home", () => {
+            if (gpLogAtivo) gpLogRegistrar("Home curto → tela de modo");
+            irParaTela("mode");
+          });
+        }
+      }
     }
   }
 
   // 4) LB/RB navegam fora do cronômetro; LT/RT só dentro dele
   if (modo) {
+    gpHomeInicio = 0; // gesto de Home em andamento não sobrevive ao cronômetro
+    gpHomeDisparado = false;
     if (novos.has(GP.lt)) acionar("iniciar", () => acionarIniciar(modo));
     if (novos.has(GP.rt)) acionar("parar", () => acionarParar(modo));
   } else {
     if (novos.has(GP.lb)) acionar("voltar", voltarTela);
-    if (novos.has(GP.rb)) acionar("avancar", () => navegarTela(1));
+    if (novos.has(GP.rb)) acionar("avancar", avancarContexto);
   }
 
   // TEMP overlay: eventos de eixo + redesenho com throttle
@@ -3185,6 +3216,47 @@ function voltarTela() {
   showScreen(pai);
 }
 
+// "Avançar" genérico do RB — espelha o voltarTela() com leitura de contexto:
+//  1) modal aberto → botão Próximo/OK/primário do dialog;
+//  2) wizard do treino no passo 2 ou 3 → "Próximo";
+//  3) senão → próxima tela (lista GP_TELAS).
+// Passos 1 e 4 caem de propósito na regra 3: a navegação home → atletas →
+// treino → análise continua funcionando e "Iniciar treino" NUNCA dispara
+// pelo controle (abriria o cronômetro e prenderia a wake lock).
+function avancarContexto() {
+  const dialog = document.querySelector("dialog[open]");
+  if (dialog) {
+    pressionarBotaoPrimario(dialog);
+    return;
+  }
+  if (state.screen === "sb-treino") {
+    const passo = passoDoWizard();
+    if (passo === 2 || passo === 3) {
+      cliqueSintetico(document.getElementById("sbStepNextBtn")); // validação nativa
+      return;
+    }
+  }
+  navegarTela(1);
+}
+
+// Rótulos positivos que o RB assume numa tela/modal ("lê próximo/ok").
+const GP_BOTAO_POSITIVO =
+  /^(pr[óo]ximo|ok|salvar|confirmar|continuar|avan[çc]ar|registrar|iniciar)/i;
+
+function pressionarBotaoPrimario(dialog) {
+  const alvo = Array.from(dialog.querySelectorAll("button")).find(
+    (b) =>
+      !b.disabled &&
+      b.getClientRects().length > 0 && // só visíveis (evita aba oculta)
+      GP_BOTAO_POSITIVO.test(b.textContent.trim())
+  );
+  if (alvo) {
+    cliqueSintetico(alvo);
+    return;
+  }
+  acaoPrimaria(dialog); // fallback: form/.btn-save — mesmo caminho do X
+}
+
 // Fecha o modal aberto (se houver) e vai para a tela.
 function irParaTela(tela) {
   fecharDialogAberto();
@@ -3229,7 +3301,7 @@ function navegarTela(passo) {
   showScreen(alvo); // mesma função chamada pelo menu inferior
 }
 
-/* ---------------- M Button: direto para o passo "Modo" ---------------- */
+/* ---------- Home long-press (≥700ms): direto para o passo "Modo" ---------- */
 
 function irParaModoCronometro() {
   if (gpMExecutando) return;
@@ -3331,7 +3403,8 @@ function acionarParar(modo) {
 }
 
 /* ---------------- TEMP: overlay de log do gamepad ----------------
-   Desligar/ remover este bloco inteiro assim que GP.m for calibrado. */
+   Desligar/remover este bloco inteiro quando a validação dos índices
+   (Home/Guide etc.) estiver concluída. */
 
 function toqueTagGpLog() {
   clearTimeout(gpLogToqueTimer);
@@ -3443,7 +3516,7 @@ function gpNomeIndice(idx) {
     a: "A", b: "B", x: "X", y: "Y", lb: "LB", rb: "RB", lt: "LT", rt: "RT",
     view: "View", menu: "Menu/Config", l3: "L3", r3: "R3",
     up: "D-Pad ↑", down: "D-Pad ↓", left: "D-Pad ←", right: "D-Pad →",
-    home: "Home", m: "M/Mode",
+    home: "Home/Logo",
   };
   for (const k of Object.keys(GP)) if (GP[k] === idx) return nomes[k] || k;
   return "?";

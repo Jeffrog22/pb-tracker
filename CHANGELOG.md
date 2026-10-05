@@ -6,6 +6,23 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+### Changed
+- **Home com toque curto/longo — substitui o botão M (Mode)**: o M Button do
+  GameSir X5 Lite é de **firmware** (manual: M+botão = Turbo, duplo M =
+  screenshot) e nunca chega à Gamepad API — `GP.m` (que era `null`) foi
+  removido. Agora: **Home curto (<700ms) = tela de Modos**; **Home segurado
+  ≥700ms** (`GP_HOME_LONG_MS`) = fecha modal e avança o wizard até o passo
+  **Modo 1/2/3** (SwimBase, dispara uma vez por segurar; ignorado com
+  cronômetro aberto; gesto em andamento é cancelado se o cronômetro abrir).
+- **RB = avançar genérico com leitura de contexto** (`avancarContexto`),
+  espelhando o LB: modal aberto → clica o botão **visível** com rótulo
+  positivo (`Próximo/OK/Salvar/Confirmar/Continuar/Avançar/Registrar/Iniciar`),
+  com fallback para a ação primária do form/`.btn-save` (mesmo caminho do X);
+  wizard do Treino nos **passos 2–3** → clica "Próximo" (validação nativa);
+  demais telas → próxima tela da lista (`GP_TELAS`). Passos 1 e 4 caem na
+  navegação de propósito — home → atletas → treino → análise continua
+  funcionando e "Iniciar treino" nunca dispara pelo controle.
+
 ### Added
 - **Overlay temporário de log do gamepad** (`GP DEBUG`): painel flutuante no
   rodapé que mostra `index=N → nome` de cada botão, valores de `pressed`/
@@ -13,7 +30,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   M (Mode) no celular, sem console. Liga/desliga com **5 toques rápidos na
   tag de versão** do topbar; estado só na sessão (`sessionStorage`). Fica
   por cima de dialogs (re-anexado por frame à top layer) e é removível com
-  ✕. **Código TEMP em `app.js` — remover após calibrar `GP.m`.**
+  ✕. **Código TEMP em `app.js` — remover após concluída a validação dos
+  índices (ex.: Home/Guide = 16).**
 
 ### Changed
 - **Gamepad — navegação geral expandida** (bloco GameSir X5 Lite em `app.js`):
