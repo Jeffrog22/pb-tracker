@@ -771,6 +771,8 @@ const tr = {
   seriesStartedAt: 0,
   currentGroupSerieM2: 1,
   blinkTimeout: null,
+  stagedRegistros: [], // staging em memória — só o Salvar persiste
+  stagedPrs: [], // PRs candidatos da sessão — só o Salvar persiste
 };
 
 async function renderSbTreino() {
@@ -1433,6 +1435,8 @@ function commitM2Order() {
 
 function startTreino() {
   buildRaias();
+  tr.stagedRegistros = []; // sessão nova nunca herda staging da anterior
+  tr.stagedPrs = [];
   tr.currentGroupSerieM2 = 1;
   const modoTag = document.getElementById("sbTreinoModeTag");
   if (modoTag) {
@@ -2517,25 +2521,28 @@ async function recordSplit(atletaId) {
   updateRaiaRow(raia);
 }
 
+// PR = melhor tempo por atleta + estilo + distância. Calcula contra o melhor
+// commitado (sw.prs) E contra os candidatos da sessão (tr.stagedPrs), mas NÃO
+// grava nada: flagPr vai no registro staged e o candidato em tr.stagedPrs —
+// só o Salvar (flushStagedTreino) persiste. Mesmo retorno de antes (badge/haptics).
 async function checkPrAndFlag(raia, splitMs, registroId = raia.registroId) {
-  const existing = sw.prs.find(
-    (p) =>
-      p.atletaId === raia.atletaId &&
-      p.estilo === tr.config.estilo &&
-      p.distancia === tr.config.distancia
-  );
+  const mesmaChave = (p) =>
+    p.atletaId === raia.atletaId &&
+    p.estilo === tr.config.estilo &&
+    p.distancia === tr.config.distancia;
+  const committed = sw.prs.find(mesmaChave);
+  const staged = tr.stagedPrs.find(mesmaChave);
+  const existing = staged || committed;
   const isPr = !existing || splitMs < existing.melhorTempo;
   if (!isPr) return false;
 
-  const registro = await get(STORES.RECORDS, registroId);
-  if (registro) {
-    registro.flagPr = true;
-    await put(STORES.RECORDS, registro);
-    const cached = sw.registros.find((r) => r.id === registro.id);
-    if (cached) cached.flagPr = true;
-  }
+  // registroId pode vir null no 1º registro do M2 (capturado antes do
+  // persist) — fallback para o id que o persist acabou de criar.
+  const registro = tr.stagedRegistros.find(
+    (r) => r.id === (registroId || raia.registroId)
+  );
+  if (registro) registro.flagPr = true;
 
-  const now = new Date().toISOString();
   const pr = {
     id: existing?.id || uid("pr"),
     atletaId: raia.atletaId,
@@ -2545,19 +2552,20 @@ async function checkPrAndFlag(raia, splitMs, registroId = raia.registroId) {
     melhorTempo: splitMs,
     tempoAnterior: existing?.melhorTempo ?? null,
     melhoria: existing ? ((existing.melhorTempo - splitMs) / existing.melhorTempo) * 100 : 0,
-    data: now,
+    data: new Date().toISOString(),
     local: "treino",
-    registroId,
+    registroId: registroId || raia.registroId,
   };
-  await put(STORES.PRS, pr);
-  if (existing) {
-    Object.assign(existing, pr);
-  } else {
-    sw.prs.push(pr);
-  }
+  const iStaged = tr.stagedPrs.findIndex(mesmaChave);
+  if (iStaged >= 0) tr.stagedPrs[iStaged] = pr;
+  else tr.stagedPrs.push(pr);
   return true;
 }
 
+// Staging em memória — NÃO grava no IndexedDB. O registro fica em
+// tr.stagedRegistros até o Salvar (flushStagedTreino); Cancelar/Fechar
+// descartam. `raia.registroId` aponta para o registro staged (rollover M2
+// zera para criar um novo por série). Mantém o snapshot síncrono de tempos.
 async function persistRegistro(raia) {
   const temposSnapshot = [...raia.tempos];
   if (!raia.registroId) {
@@ -2586,17 +2594,30 @@ async function persistRegistro(raia) {
       syncStatus: "pending",
       createdAt: tr.sessionStartedAt || new Date().toISOString(),
     };
-    await put(STORES.RECORDS, registro);
-    sw.registros.push(registro);
+    tr.stagedRegistros.push(registro);
   } else {
-    const registro = await get(STORES.RECORDS, raia.registroId);
-    if (registro) {
-      registro.tempos = temposSnapshot;
-      await put(STORES.RECORDS, registro);
-      const cached = sw.registros.find((r) => r.id === registro.id);
-      if (cached) cached.tempos = temposSnapshot;
-    }
+    const registro = tr.stagedRegistros.find((r) => r.id === raia.registroId);
+    if (registro) registro.tempos = temposSnapshot;
   }
+}
+
+// Único ponto de gravação do treino (chamado pelo Salvar). Em caso de falha
+// o caller aborta o finalize com o dialog aberto — staged continua intacto.
+// Snapshot antes de gravar: um toque novo durante o put não é perdido nem
+// duplicado (sw.* só sincroniza depois de TODOS os puts).
+async function flushStagedTreino() {
+  const registros = tr.stagedRegistros.slice();
+  const prs = tr.stagedPrs.slice();
+  for (const r of registros) await put(STORES.RECORDS, r);
+  for (const p of prs) await put(STORES.PRS, p);
+  for (const r of registros) sw.registros.push(r);
+  for (const p of prs) {
+    const existing = sw.prs.find((x) => x.id === p.id);
+    if (existing) Object.assign(existing, p);
+    else sw.prs.push(p);
+  }
+  tr.stagedRegistros = tr.stagedRegistros.filter((r) => !registros.includes(r));
+  tr.stagedPrs = tr.stagedPrs.filter((p) => !prs.includes(p));
 }
 
 function hapticFeedback(ms) {
@@ -2634,9 +2655,16 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-function finalizeTreino() {
+async function finalizeTreino() {
   if (!window.confirm("Finalizar o treino? Raias não concluídas terão os tempos já registrados mantidos.")) {
     return;
+  }
+  try {
+    await flushStagedTreino(); // grava staged (só aqui registros/PRs vão ao BD)
+  } catch (err) {
+    console.warn("SwimBase: falha ao salvar os tempos do treino.", err);
+    window.alert("Não foi possível salvar os tempos do treino. Tente novamente.");
+    return; // dialog continua aberto; staged intacto para nova tentativa
   }
   stopMasterTicker();
   releaseWakeLock();
@@ -2651,18 +2679,22 @@ function closeTreino() {
     tr.masterRunning ||
     tr.continuousStartedAt > 0 ||
     tr.raias.size > 0;
-  if (
-    inProgress &&
-    !window.confirm(
-      "Fechar o cronômetro? Os tempos registrados ficam salvos."
-    )
-  ) {
-    return;
+  const tinhaStaged = tr.stagedRegistros.length > 0;
+  if (inProgress) {
+    const msg = tinhaStaged
+      ? "Descartar este treino? Os tempos registrados NÃO serão salvos."
+      : "Fechar o cronômetro?";
+    if (!window.confirm(msg)) return;
   }
   stopMasterTicker();
   releaseWakeLock();
-  resetTreinoSession(true);
+  resetTreinoSession(true); // descarta staged — Cancelar NUNCA grava nada
   document.getElementById("sbChronoDialog").close();
+  api.logAction(
+    tinhaStaged
+      ? "Treino cancelado no SwimBase — tempos descartados (nada salvo)."
+      : "Treino fechado no SwimBase (sem tempos registrados)."
+  );
   renderSbTreino();
 }
 
@@ -2678,6 +2710,8 @@ function resetTreinoSession(keepSelection = false) {
   tr.group = null;
   tr.modo3Serie = 1;
   tr.raias.clear();
+  tr.stagedRegistros = []; // descarta staging (cancel) ou pós-flush (salvar)
+  tr.stagedPrs = [];
   tr.masterElapsedMs = 0;
   tr.masterRunning = false;
   tr.masterStartedAt = 0;

@@ -7,6 +7,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Changed
+- **SwimBase — Cancelar/Fechar NUNCA salvam; só o Salvar grava**: o
+  `persistRegistro` deixou de escrever no IndexedDB a cada tempo — registros
+  e PRs da sessão ficam em staging em memória (`tr.stagedRegistros` /
+  `tr.stagedPrs`, `flagPr` resolvido no registro staged). O único ponto de
+  gravação é `finalizeTreino` → `flushStagedTreino()` (upsert em
+  `registros`/`prs` + sync de `sw.registros`/`sw.prs`); falha na gravação →
+  alerta e o cronômetro continua aberto com o staged intacto. `closeTreino`
+  (botão Cancelar, Esc/Voltar e backdrop) descarta o staged e agora avisa
+  **"Descartar este treino? Os tempos registrados NÃO serão salvos."** (ou
+  "Fechar o cronômetro?" se nenhum tempo foi registrado). `startTreino`
+  zera o staged; `resetMaster` (Zerar) não mexe nele — tempos pré-Zerar só
+  caem no Salvar ou no Cancelar. O Fechar do Balizamento nunca gravou (sem
+  mudança). Consequência aceita: crash/kill do app no meio do treino perde
+  os tempos (acabou a gravação incremental). Borda corrigida: PR batido no
+  **1º registro do M2** agora marca `flagPr` no registro (o id era capturado
+  nulo antes do persist e o flag se perdia).
 - **Home com toque curto/longo — substitui o botão M (Mode)**: o M Button do
   GameSir X5 Lite é de **firmware** (manual: M+botão = Turbo, duplo M =
   screenshot) e nunca chega à Gamepad API — `GP.m` (que era `null`) foi

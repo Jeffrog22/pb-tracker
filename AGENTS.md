@@ -33,7 +33,7 @@
 - **Stack:** HTML + CSS + JS puro (ES modules, sem build) + PWA (manifest + SW) + IndexedDB (SwimBase) + Canvas (gráficos). Sem backend, sem testes automatizados. Validação via `node --check`.
 - **Repositório:** git ativo; remote `origin https://github.com/Jeffrog22/pb-tracker.git`.
 - **Deploy:** Vercel (integração git, push em master publica automaticamente, Output Directory na raiz).
-- **Versão atual:** APP_VERSION `"0.40.0"` em `app.js`; cache SW `pbtracker-v78` em `sw.js`.
+- **Versão atual:** APP_VERSION `"0.42.0"` em `app.js`; cache SW `pbtracker-v79` em `sw.js`.
 
 ## Estrutura de Arquivos
 
@@ -46,7 +46,7 @@
 | `charts.js` | Gráficos Canvas nativos (progressão temporal + evolução de PR) |
 | `exporter.js` | Exportação CSV/XLSX (SheetJS sob demanda, fallback CSV) + registros/PRs SwimBase |
 | `styles.css` | Tema, layout mobile-first, design system (dark mode, alto contraste) |
-| `sw.js` | Service worker: cache offline (`pbtracker-v78`) — **atualizar nome ao subir versão** |
+| `sw.js` | Service worker: cache offline (`pbtracker-v79`) — **atualizar nome ao subir versão** |
 | `index.html` | Telas, dialogs (cronômetro com HUD layer, SwimBase), manifest |
 | `manifest.webmanifest` | Metadados PWA (sem trava de orientação; sigue o dispositivo) |
 | `icons/` | Ícones PWA (SVG) |
@@ -71,15 +71,15 @@
 - **Correspondência de equipe é fuzzy** (`isSameTeam`/`getTeamTokens`): remove acentos e stop-words; pede interseção de tokens.
 - **Importação em duas passadas**: estrita (só equipe conhecida) → se vazia, tolerante (`allowUnknownTeam: true`).
 - **Exportação**: XLSX via SheetJS (CDN, lazy-load no clique); fallback CSV (BOM UTF-8, separador `;`). `#exportBtn` no topbar exporta **todas** as provas (`groupedEvents`). Células de parcial sem metragem viram `--`.
-- **Cache do service worker**: nome `pbtracker-v78` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
+- **Cache do service worker**: nome `pbtracker-v79` em `sw.js`. Ao subir versão, atualizar o nome do cache para forçar o app a baixar a nova versão.
 - **Tag de versão no topbar** (`#appVersionTag`) renderiza `PBTracker v0.32.7` a partir de `APP_VERSION` — manter sincronizado em cada release.
 - **Configurações (v0.38+)**: engrenagem `#settingsBtn` → `#settingsDialog` largo (720px) com **grid de 5 cards** (`grid-template-columns: 1fr` → `1fr 1fr` em ≥768px): 📤 Exportar (sub-abas Resultados/Registros/PRs/Log, filtros período+atleta, chama `exportSwimBaseFiltered`), 🔔 Notificações (permissão + lembrete local agendado), 🌓 Tema (dark mode), ♿ Acessibilidade (zoom + alto contraste), 🔄 Atualizações (versão, `checkForUpdate`, `applyUpdate`, `hardRefresh`). Cada card é `.settings-card` independente (header emoji+título, descrição, controles). Abre via `openSettingsDialog()` (renderiza status, popula atletas, checa update).
 - **Zoom (card Acessibilidade)**: `document.documentElement.style.zoom` (80–150%, passo 10) + `localStorage["pbtracker_zoom"]`. **Não trocar por `font-size` no html** — o CSS do app é majoritariamente px (~398 usos) e font-size não escala paddings/cards.
 - **Backdrop dos dialogs de Configurações**: fecha em `target === dialog` **ou** fora do retângulo, mas só com `event.isTrusted` — clique sintético (`.click()` programático em aba/botão) vem com `clientX/Y = 0` e fecharia o dialog. Mesma guarda em `#notifPrefsDialog`. Não remover.
 - **`body.dark button` (0,1,2) vence `button.primary`/`button.ghost`**: no dark mode os `!important`/regras compensatórias em `styles.css` mantêm primary azul e ghost sem borda; qualquer novo estilo de botão precisa de especificidade ≥ 0,1,2 ou ser coberto ali.
 - **Perfil**: cadastro/login local (sem senha), uma equipe por perfil, persistido em `localStorage["pbtracker_profiles"]` / `localStorage["pbtracker_active_profile"]`.
-- **PR = melhor tempo por `atletaId + estilo + distância`** (prova ou treino). `checkPrAndFlag` grava `flagPr`; badge `PR!` dourado + haptics.
-- **`sw.registros`** é a fonte da Análise (não re-lê IndexedDB por tela); `persistRegistro` mantém sincronia em memória.
+- **PR = melhor tempo por `atletaId + estilo + distância`** (prova ou treino). `checkPrAndFlag` **não grava**: compara contra `sw.prs` **+** `tr.stagedPrs` (candidatos da sessão), resolve `flagPr` no registro **staged** e deixa o PR candidato em `tr.stagedPrs`; badge `PR!` dourado + haptics iguais.
+- **`sw.registros`** é a fonte da Análise (não re-lê IndexedDB por tela); durante o treino ele **não** muda — só o Salvar sincroniza (`flushStagedTreino`).
 - **Wake Lock**: acionado em `startTreino`, liberado em `finalizeTreino`/`closeTreino` (re-adquirido em `visibilitychange`).
 - **Alto contraste**: `body.high-contrast` + persistência em `localStorage["pbtracker_high_contrast"]`.
 - **Indicador offline**: `#offlineBadge` no topbar via `bindOnlineStatus`.
@@ -90,8 +90,9 @@
 - **Categoria automática** por idade: Pré-Mirim → M80+; hint atualizada no campo nascimento.
 - **M2 sync de descanso (≤10s)**: atletas com diferença ≤10s são congelados/liberados juntos; relógio mestre para quando todos liberados.
 - **M2 descanso/intervalo em wall-clock**: `raia.waitEndsAt = Date.now() + waitMs`; o tick calcula `waitEndsAt - now` — **nunca voltar a `waitMs -= 30`** (deriva; falha em 2º plano). `raia.waitKind` (`"descanso"`/`"intervalo"`) decide o label.
-- **Cronômetro não fecha sozinho**: `#sbChronoDialog` tem listener `cancel` (Esc/Voltar) → `preventDefault` + `closeTreino()` com confirm; backdrop fecha **só se o gesto começar fora** do retângulo (`chronoPressInside` gravado no `pointerdown` capture — clique que começa em row/HUD/lista e termina na área de backdrop não fecha) e ignora `detail===0`, `hudDragMoved` (drag do HUD) e `m2Drag.suppressBackdrop`; `closeTreino` sempre pede confirm com dialog aberto (`inProgress` inclui `tr.raias.size > 0`); listener `close` derruba ticker/wake lock e zera `chronoPressInside`. Não remover esses guards.
-- **Retoma do treino após Cancelar**: `resetTreinoSession(keepSelection = false)` — `closeTreino()` chama com `true` (mantém `tr.step`/`turmaId`/`atletas`/`waveAssigned`/`ondaAtiva`, zera só runtime e chama `renderSbTreino()` → wizard volta ao Passo 4 pronto para "Iniciar treino"); `finalizeTreino()` (Salvar) mantém o reset completo (limpa seleção). **Botão "Voltar" do wizard** zera `atletas`/`waveAssigned`/`ondaAtiva` e volta ao Passo 1 (turma e `tr.config` preservados). Próximo no Passo 1 continua zerando `tr.atletas`.
+- **Cronômetro não fecha sozinho**: `#sbChronoDialog` tem listener `cancel` (Esc/Voltar) → `preventDefault` + `closeTreino()` com confirm; backdrop fecha **só se o gesto começar fora** do retângulo (`chronoPressInside` gravado no `pointerdown` capture — clique que começa em row/HUD/lista e termina na área de backdrop não fecha) e ignora `detail===0`, `hudDragMoved` (drag do HUD) e `m2Drag.suppressBackdrop`; `closeTreino` sempre pede confirm com dialog aberto (`inProgress` inclui `tr.raias.size > 0`; texto = **"Descartar este treino? Os tempos registrados NÃO serão salvos."** se há staged, senão "Fechar o cronômetro?"); listener `close` derruba ticker/wake lock e zera `chronoPressInside`. Não remover esses guards.
+- **Staging do treino — só o Salvar persiste**: `persistRegistro`/`checkPrAndFlag` **nunca** escrevem no IndexedDB — montam objetos em `tr.stagedRegistros`/`tr.stagedPrs` (registro novo via `uid`, update por `raia.registroId`, snapshot síncrono de `tempos`). **Único ponto de gravação**: `finalizeTreino` (Salvar) → `flushStagedTreino()` (snapshot dos arrays → `put` em `STORES.RECORDS`/`PRS` → só então push em `sw.registros`/`sw.prs` → filtra o que foi; falha → alert + **aborta com dialog aberto** e staged intacto). `closeTreino` (Cancelar/Esc/backdrop) e `resetTreinoSession` descartam o staged — **Cancelar/Fechar NUNCA salvam nada**. `startTreino` zera staged (sessão nova); `resetMaster` (Zerar) **não** mexe nele (tempos pré-Zerar caem no Salvar ou no Cancelar). Consequência: crash/kill do app no meio do treino perde os tempos. O `closeChrono` do Balizamento nunca gravou (sem mudança lá).
+- **Retoma do treino após Cancelar**: `resetTreinoSession(keepSelection = false)` — `closeTreino()` chama com `true` (mantém `tr.step`/`turmaId`/`atletas`/`waveAssigned`/`ondaAtiva`, zera só runtime **e descarta o staged** e chama `renderSbTreino()` → wizard volta ao Passo 4 pronto para "Iniciar treino"); `finalizeTreino()` (Salvar) faz o flush **antes** do reset completo (limpa seleção). **Botão "Voltar" do wizard** zera `atletas`/`waveAssigned`/`ondaAtiva` e volta ao Passo 1 (turma e `tr.config` preservados). Próximo no Passo 1 continua zerando `tr.atletas`.
 - **Rollover de registro por série (M2)**: após a última rep da série, `persistRegistro` snapshota `tempos` síncrono antes de `raia.tempos = []`/`registroId = null` (senão a rep final é perdida). `resetMaster` também zera `registroId`.
 - **M2 split só ≥ 50m**: `recordM2Split` retorna se `dist < 50`; botão mostra "Iniciar" (não "Split") para dist < 50m.
 - **M2 drag & drop de ordem**: alça `.sb-raia-handle` (única área com `touch-action: none`) no 1º filho de cada card; `initM2RowDrag()` delega `pointerdown` em `#sbChronoList` (sobrevive ao `innerHTML` do re-render). Reordenação ao vivo (`insertBefore` + ghost clonado `pointer-events:none` em `#sbChronoDialog`, auto-scroll nas bordas) e `commitM2Order()` renumera `lane` 1..N e reconstrói `tr.raias` na ordem do DOM. A ordem só reseta em `buildRaias` (novo treino); `resetMaster` (Zerar) preserva. **Não remover** `m2Drag.suppressClick`/`suppressBackdrop`: sem eles o clique pós-drag seleciona atleta e o backdrop fecha o dialog.

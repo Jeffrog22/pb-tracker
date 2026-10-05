@@ -119,10 +119,15 @@ stores
  └── settings   (key/value)
 ```
 
-PR é a chave `atletaId + estilo + distancia`; `checkPrAndFlag` grava
-`flagPr` no registro e faz upsert no store `prs`. `sw.registros`/`sw.prs`
-são mantidos em memória (fonte da tela Análise), sincronizados por
-`persistRegistro`.
+PR é a chave `atletaId + estilo + distancia`. Durante o Modo Treino **nada
+é gravado**: `persistRegistro`/`checkPrAndFlag` montam registros e PRs em
+staging em memória (`tr.stagedRegistros`/`tr.stagedPrs`; `flagPr` resolvido
+no staged; PR comparado contra `sw.prs` **+** staged da sessão). O único
+ponto de gravação é o **Salvar** (`finalizeTreino` → `flushStagedTreino`):
+snapshot dos arrays → `put` nos stores → só então sync de
+`sw.registros`/`sw.prs` (fonte da tela Análise) → limpeza do staged;
+falha aborta o finalize com o dialog aberto. **Cancelar/Fechar**
+(`closeTreino`, incl. Esc/backdrop) descarta o staged e nunca grava.
 
 ### Modelo do atleta (linha normalizada)
 
