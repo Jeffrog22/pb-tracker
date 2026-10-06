@@ -6,6 +6,30 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+### Added
+- **Filtros interligados Turma → Horário (SwimBase)**: a turma passa a ser
+  identificada por **nome + horário** — "Sub-10 · 16:00" e "Sub-10 · 18:00"
+  são turmas distintas (antes o 2º horário era descartado em silêncio no
+  import). Novo select `#sbHorarioSelect` ao lado de `#sbTurmaSelect` na tela
+  Atletas (cascata: escolher turma habilita os horários; "Todas as turmas"
+  mantém o horário desabilitado; um horário só já vem marcado; `Todos os
+  horários` filtra por nome em qualquer horário) e o **Passo 1 do wizard do
+  Treino** virou cascata `#sbTreinoTurma` (nome, com placeholder) +
+  `#sbTreinoHorario` (horário → `tr.turmaId`), com placeholder de horário e
+  auto-seleção quando o nome tem um horário só. Labels de turma em todos os
+  selects/linhas passam a usar `turmaLabel` (`Nome · Horário`), inclusive
+  Análise, Comparador e título do cronômetro. "Nova turma" pré-preenche o
+  nome filtrado; atleta novo já nasce na turma/horário filtrados.
+- **CSV de import com modelo novo de colunas**: `Turma;Dias;Horario;Atleta;
+  Data Nasc.;Gênero` — cabeçalhos são normalizados (sem acento/ponto/espaço)
+  e têm apelidos, então o modelo antigo (`Nascimento`, `Sexo`, `Duracao`)
+  continua aceito. Datas `DD/MM/AAAA` são convertidas para ISO (antes geravam
+  `categoria: ""` silenciosamente), sexo aceita `M/F/Masculino/Feminino/...`,
+  horário inválido vira "sem horário" e datas inválidas são contadas no
+  feedback final. **Fix**: preenchimento de `dias`/`duracao` em turma já
+  existente agora é persistido (antes só as turmas novas eram gravadas e a
+  mutação se perdia no reload).
+
 ### Changed
 - **SwimBase — Cancelar/Fechar NUNCA salvam; só o Salvar grava**: o
   `persistRegistro` deixou de escrever no IndexedDB a cada tempo — registros

@@ -69,7 +69,8 @@ const sw = {
   registros: [],
   prs: [],
   loaded: false,
-  selectedTurmaId: "",
+  selectedTurmaNome: "",
+  selectedHorario: "*",
 };
 
 let editingAtletaId = null;
@@ -130,7 +131,15 @@ export function initSwimBase(appApi) {
   document
     .getElementById("sbTurmaSelect")
     ?.addEventListener("change", (event) => {
-      sw.selectedTurmaId = event.target.value;
+      sw.selectedTurmaNome = event.target.value;
+      sw.selectedHorario = "*";
+      renderTurmaSelects();
+      renderAtletasList();
+    });
+  document
+    .getElementById("sbHorarioSelect")
+    ?.addEventListener("change", (event) => {
+      sw.selectedHorario = event.target.value;
       renderAtletasList();
     });
   document
@@ -317,9 +326,46 @@ function renderSbHome() {
 
 /* ---- Atletas e Turmas ---- */
 
+// Label canônico de turma: nome + horário (modelo nome+horário, v0.43.0).
+function turmaLabel(turma) {
+  if (!turma) return "";
+  return turma.horario ? `${turma.nome} · ${turma.horario}` : turma.nome;
+}
+
 function nomeDaTurma(turmaId) {
   const turma = sw.turmas.find((t) => t.id === turmaId);
-  return turma ? turma.nome : "";
+  return turma ? turmaLabel(turma) : "";
+}
+
+function turmaNomeOptions() {
+  const seen = new Map();
+  for (const t of sw.turmas) {
+    const norm = normalizeText(t.nome);
+    if (norm && !seen.has(norm)) seen.set(norm, t.nome);
+  }
+  return seen;
+}
+
+function turmasDoNome(nomeNorm) {
+  return sw.turmas.filter((t) => normalizeText(t.nome) === nomeNorm);
+}
+
+// Horários distintos de um nome ("" = sem horário), ordenados.
+function horariosDoNome(nomeNorm) {
+  const horarios = [...new Set(turmasDoNome(nomeNorm).map((t) => t.horario || ""))];
+  return horarios.sort((a, b) => {
+    if (!a && b) return 1;
+    if (a && !b) return -1;
+    return String(a).localeCompare(String(b));
+  });
+}
+
+// turmaId resolvido pelo filtro atual da tela Atletas (nome + horário).
+function resolveFilteredTurmaId() {
+  if (!sw.selectedTurmaNome) return "";
+  const nomes = turmasDoNome(sw.selectedTurmaNome);
+  if (sw.selectedHorario === "*") return nomes[0]?.id || "";
+  return nomes.find((t) => (t.horario || "") === sw.selectedHorario)?.id || "";
 }
 
 async function renderSbAtletas() {
@@ -330,19 +376,56 @@ async function renderSbAtletas() {
 
 function renderTurmaSelects() {
   const sel = document.getElementById("sbTurmaSelect");
+  const selHorario = document.getElementById("sbHorarioSelect");
   const selAtleta = document.getElementById("sbAtletaTurma");
   if (!sel) return;
-  const options = sw.turmas
-    .map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.nome)}</option>`)
-    .join("");
+
+  const nomes = [...turmaNomeOptions().entries()].map(([norm, nome]) => ({ norm, nome }));
+  if (sw.selectedTurmaNome && !nomes.some((n) => n.norm === sw.selectedTurmaNome)) {
+    sw.selectedTurmaNome = "";
+    sw.selectedHorario = "*";
+  }
   sel.innerHTML = sw.turmas.length
-    ? `<option value="">Todas as turmas</option>${options}`
+    ? `<option value="">Todas as turmas</option>${nomes
+        .map(({ norm, nome }) => `<option value="${escapeHtml(norm)}">${escapeHtml(nome)}</option>`)
+        .join("")}`
     : '<option value="">Nenhuma turma</option>';
-  if (sw.selectedTurmaId) sel.value = sw.selectedTurmaId;
+  sel.value = sw.selectedTurmaNome;
+
+  if (selHorario) {
+    if (!sw.selectedTurmaNome) {
+      sw.selectedHorario = "*";
+      selHorario.innerHTML = '<option value="*">Todos os horários</option>';
+      selHorario.value = "*";
+      selHorario.disabled = true;
+    } else {
+      const horarios = horariosDoNome(sw.selectedTurmaNome);
+      if (sw.selectedHorario !== "*" && !horarios.includes(sw.selectedHorario)) {
+        sw.selectedHorario = "*";
+      }
+      if (horarios.length === 1) sw.selectedHorario = horarios[0];
+      selHorario.disabled = false;
+      selHorario.innerHTML = `<option value="*">Todos os horários</option>${horarios
+        .map(
+          (h) =>
+            `<option value="${escapeHtml(h)}">${escapeHtml(h || "Sem horário")}</option>`
+        )
+        .join("")}`;
+      selHorario.value = sw.selectedHorario;
+    }
+  }
+
   if (selAtleta) {
     selAtleta.innerHTML = sw.turmas.length
-      ? options
+      ? sw.turmas
+          .map(
+            (t) =>
+              `<option value="${escapeHtml(t.id)}">${escapeHtml(turmaLabel(t))}</option>`
+          )
+          .join("")
       : '<option value="">Crie uma turma primeiro</option>';
+    const filtroId = resolveFilteredTurmaId();
+    if (filtroId) selAtleta.value = filtroId;
   }
 }
 
@@ -350,8 +433,21 @@ function renderAtletasList() {
   const list = document.getElementById("sbAtletasList");
   if (!list) return;
   const search = normalizeText(document.getElementById("sbAtletaSearch").value);
-  const turmaId = document.getElementById("sbTurmaSelect").value;
-  let atletas = sw.atletas.filter((a) => !turmaId || a.turmaId === turmaId);
+  const nomeFiltro = document.getElementById("sbTurmaSelect").value;
+  const horarioFiltro = document.getElementById("sbHorarioSelect")?.value || "*";
+  let atletas = sw.atletas;
+  if (nomeFiltro) {
+    const ids = new Set(
+      sw.turmas
+        .filter(
+          (t) =>
+            normalizeText(t.nome) === nomeFiltro &&
+            (horarioFiltro === "*" || (t.horario || "") === horarioFiltro)
+        )
+        .map((t) => t.id)
+    );
+    atletas = atletas.filter((a) => ids.has(a.turmaId));
+  }
   if (search) {
     atletas = atletas.filter(
       (a) =>
@@ -363,9 +459,11 @@ function renderAtletasList() {
 
   if (!atletas.length) {
     list.innerHTML = `<p class="muted">${
-      sw.turmas.length
-        ? "Nenhum atleta cadastrado nesta turma."
-        : "Cadastre uma turma e depois os atletas."
+      !sw.turmas.length
+        ? "Cadastre uma turma e depois os atletas."
+        : nomeFiltro
+          ? "Nenhum atleta neste filtro de turma/horário."
+          : "Nenhum atleta cadastrado."
     }</p>`;
     return;
   }
@@ -429,7 +527,8 @@ function openAtletaDialog(atleta) {
   document.getElementById("sbAtletaObs").value = atleta?.observacoes || "";
   const turmaSel = document.getElementById("sbAtletaTurma");
   if (turmaSel) {
-    turmaSel.value = atleta?.turmaId || sw.selectedTurmaId || turmaSel.value || "";
+    turmaSel.value =
+      atleta?.turmaId || resolveFilteredTurmaId() || turmaSel.value || "";
   }
   document.getElementById("sbDeleteAtletaBtn").hidden = !atleta;
   updateCategoriaHint();
@@ -493,7 +592,11 @@ async function deleteAtleta(id) {
 
 function openTurmaDialog(turma = null) {
   editingTurmaId = turma?.id || null;
-  document.getElementById("sbTurmaNome").value = turma?.nome || "";
+  const nomeFiltro =
+    !turma && sw.selectedTurmaNome
+      ? turmasDoNome(sw.selectedTurmaNome)[0]?.nome || ""
+      : "";
+  document.getElementById("sbTurmaNome").value = turma?.nome || nomeFiltro;
   document.querySelectorAll("#sbTurmaDias .sb-day-chip").forEach((chip) => {
     chip.classList.toggle(
       "active",
@@ -539,6 +642,17 @@ async function saveTurma(event) {
   const existing = editingTurmaId
     ? sw.turmas.find((t) => t.id === editingTurmaId)
     : null;
+  if (!existing) {
+    const duplicada = sw.turmas.find(
+      (t) =>
+        normalizeText(t.nome) === normalizeText(nome) &&
+        (t.horario || "") === (horario || "")
+    );
+    if (duplicada) {
+      alert(`A turma ${turmaLabel(duplicada)} já existe. Informe um horário diferente.`);
+      return;
+    }
+  }
   const now = new Date().toISOString();
   const turma = {
     id: existing?.id || uid("turma"),
@@ -552,7 +666,10 @@ async function saveTurma(event) {
   };
   await put(STORES.GROUPS, turma);
   sw.turmas = (await getAll(STORES.GROUPS)).filter(inActiveProfile);
-  if (!editingTurmaId) sw.selectedTurmaId = turma.id;
+  if (!editingTurmaId) {
+    sw.selectedTurmaNome = normalizeText(turma.nome);
+    sw.selectedHorario = turma.horario || "";
+  }
   document.getElementById("sbTurmaDialog").close();
   renderTurmaSelects();
   renderAtletasList();
@@ -599,12 +716,83 @@ function parseDias(value) {
     .filter((d) => ["seg", "ter", "qua", "qui", "sex", "sab", "dom"].includes(d));
 }
 
-function findOrCreateTurma(nome, turmaMap, turmasNovas) {
+// Normaliza cabeçalho de CSV: sem acento, sem ponto, espaços colapsados.
+function normHeader(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[._]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Apelidos de coluna — aceita o modelo novo (Data Nasc./Gênero) e o antigo.
+const CSV_COLUNAS = {
+  turma: ["turma"],
+  dias: ["dias"],
+  horario: ["horario"],
+  duracao: ["duracao"],
+  atleta: ["atleta"],
+  nascimento: ["nascimento", "nasc", "data nasc", "data nascimento", "data de nascimento"],
+  sexo: ["sexo", "genero", "gender"],
+};
+
+function findCol(header, coluna) {
+  const aliases = CSV_COLUNAS[coluna] || [];
+  return header.findIndex((h) => aliases.includes(normHeader(h)));
+}
+
+// "" se vazio, ISO "YYYY-MM-DD" se válido, null se inválida.
+function normalizeDateToIso(value) {
+  const v = (value || "").trim();
+  if (!v) return "";
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v);
+  let y, mo, d;
+  if (m) {
+    y = Number(m[1]);
+    mo = Number(m[2]);
+    d = Number(m[3]);
+  } else {
+    m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v);
+    if (!m) return null;
+    d = Number(m[1]);
+    mo = Number(m[2]);
+    y = Number(m[3]);
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const check = new Date(y, mo - 1, d);
+  if (check.getFullYear() !== y || check.getMonth() !== mo - 1 || check.getDate() !== d) {
+    return null;
+  }
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function parseSexo(value) {
+  const v = normalizeText(value);
+  if (["m", "masc", "masculino", "male"].includes(v)) return "M";
+  if (["f", "fem", "feminino", "female"].includes(v)) return "F";
+  return "";
+}
+
+function parseHorario(value) {
+  const v = (value || "").trim();
+  if (!v || !/^\d{2}:\d{2}$/.test(v)) return "";
+  const [hh, mm] = v.split(":").map(Number);
+  return hh <= 23 && mm <= 59 ? v : "";
+}
+
+// Turma identificada por nome + horário (v0.43.0): "Sub-10 · 16:00" e
+// "Sub-10 · 18:00" são turmas distintas.
+function findOrCreateTurma(nome, horario, turmaMap, turmasNovas) {
   const norm = normalizeText(nome);
-  if (turmaMap.has(norm)) return turmaMap.get(norm);
-  const existing = sw.turmas.find((t) => normalizeText(t.nome) === norm);
+  const key = `${norm}|${horario}`;
+  if (turmaMap.has(key)) return turmaMap.get(key);
+  const existing = sw.turmas.find(
+    (t) => normalizeText(t.nome) === norm && (t.horario || "") === horario
+  );
   if (existing) {
-    turmaMap.set(norm, existing);
+    turmaMap.set(key, existing);
     return existing;
   }
   const now = new Date().toISOString();
@@ -612,15 +800,23 @@ function findOrCreateTurma(nome, turmaMap, turmasNovas) {
     id: uid("turma"),
     nome,
     dias: [],
-    horario: "",
+    horario,
     duracao: null,
     professorId: api.state.activeProfile?.id || null,
     createdAt: now,
     updatedAt: now,
   };
-  turmaMap.set(norm, turma);
+  turmaMap.set(key, turma);
   turmasNovas.push(turma);
   return turma;
+}
+
+// Preenchimento de turma existente via CSV precisa ser persistido (antes
+// só as turmas novas eram put() — o preenchimento se perdia no reload).
+function marcarTurmaAlterada(turma, turmasNovas, turmasAlteradas) {
+  if (turmasNovas.includes(turma)) return;
+  turma.updatedAt = new Date().toISOString();
+  turmasAlteradas.set(turma.id, turma);
 }
 
 async function importTurmasFromCsv(text) {
@@ -634,13 +830,13 @@ async function importTurmasFromCsv(text) {
     return;
   }
   const header = parseCsvLine(lines[0]);
-  const colTurma = header.findIndex((h) => /^turma$/i.test(h));
-  const colDias = header.findIndex((h) => /^dias$/i.test(h));
-  const colHorario = header.findIndex((h) => /^horario$/i.test(h));
-  const colDuracao = header.findIndex((h) => /^duracao$/i.test(h));
-  const colAtleta = header.findIndex((h) => /^atleta$/i.test(h));
-  const colNasc = header.findIndex((h) => /^nascimento$/i.test(h));
-  const colSexo = header.findIndex((h) => /^sexo$/i.test(h));
+  const colTurma = findCol(header, "turma");
+  const colDias = findCol(header, "dias");
+  const colHorario = findCol(header, "horario");
+  const colDuracao = findCol(header, "duracao");
+  const colAtleta = findCol(header, "atleta");
+  const colNasc = findCol(header, "nascimento");
+  const colSexo = findCol(header, "sexo");
   if (colTurma === -1) {
     alert("Cabeçalho inválido. É necessária a coluna 'Turma'.");
     return;
@@ -648,9 +844,10 @@ async function importTurmasFromCsv(text) {
 
   const turmaMap = new Map();
   const turmasNovas = [];
+  const turmasAlteradas = new Map();
   const atletasNovos = [];
-  let turmasCount = 0;
   let atletasCount = 0;
+  let datasInvalidas = 0;
   let currentTurma = null;
 
   for (let i = 1; i < lines.length; i++) {
@@ -659,30 +856,25 @@ async function importTurmasFromCsv(text) {
     const atletaNome = colAtleta !== -1 ? (cells[colAtleta] || "").trim() : "";
 
     if (turmaNome) {
-      currentTurma = findOrCreateTurma(turmaNome, turmaMap, turmasNovas);
-      turmasCount++;
+      const horario = colHorario !== -1 ? parseHorario(cells[colHorario]) : "";
+      currentTurma = findOrCreateTurma(turmaNome, horario, turmaMap, turmasNovas);
       if (colDias !== -1) {
         const dias = parseDias(cells[colDias]);
-        if (dias.length && !currentTurma.dias.length) currentTurma.dias = dias;
-      }
-      if (colHorario !== -1) {
-        const hor = (cells[colHorario] || "").trim();
-        if (hor && /^\d{2}:\d{2}$/.test(hor) && !currentTurma.horario) {
-          const [hh, mm] = hor.split(":").map(Number);
-          if (hh <= 23 && mm <= 59) currentTurma.horario = hor;
+        if (dias.length && !currentTurma.dias.length) {
+          currentTurma.dias = dias;
+          marcarTurmaAlterada(currentTurma, turmasNovas, turmasAlteradas);
         }
       }
       if (colDuracao !== -1) {
         const dur = (cells[colDuracao] || "").trim();
         if (dur && Number(dur) >= 1 && currentTurma.duracao == null) {
           currentTurma.duracao = Number(dur);
+          marcarTurmaAlterada(currentTurma, turmasNovas, turmasAlteradas);
         }
       }
     }
 
     if (!atletaNome || !currentTurma) continue;
-    const nasc = colNasc !== -1 ? (cells[colNasc] || "").trim() : "";
-    const sexo = colSexo !== -1 ? (cells[colSexo] || "").trim().toUpperCase() : "";
     const dup = sw.atletas.find(
       (a) => normalizeText(a.nome) === normalizeText(atletaNome) && a.turmaId === currentTurma.id
     );
@@ -690,14 +882,22 @@ async function importTurmasFromCsv(text) {
       (a) => normalizeText(a.nome) === normalizeText(atletaNome) && a.turmaId === currentTurma.id
     );
     if (dup || dupNovo) continue;
+    const nascBruto = colNasc !== -1 ? (cells[colNasc] || "").trim() : "";
+    let nasc = "";
+    if (nascBruto) {
+      const iso = normalizeDateToIso(nascBruto);
+      if (iso === null) datasInvalidas++;
+      else nasc = iso;
+    }
+    const sexo = colSexo !== -1 ? parseSexo(cells[colSexo]) : "";
     const now = new Date().toISOString();
     atletasNovos.push({
       id: uid("atleta"),
       nome: atletaNome,
       nomeNormalized: normalizeText(atletaNome),
-      dataNascimento: nasc || "",
-      categoria: calcularCategoria(nasc || ""),
-      sexo: ["M", "F"].includes(sexo) ? sexo : "",
+      dataNascimento: nasc,
+      categoria: calcularCategoria(nasc),
+      sexo,
       turmaId: currentTurma.id,
       observacoes: "",
       status: "ativo",
@@ -708,12 +908,16 @@ async function importTurmasFromCsv(text) {
     atletasCount++;
   }
 
-  if (!turmasNovas.length && !atletasNovos.length) {
+  const alteradas = [...turmasAlteradas.values()].filter(
+    (t) => !turmasNovas.includes(t)
+  );
+  if (!turmasNovas.length && !atletasNovos.length && !alteradas.length) {
     alert("Nenhum dado novo para importar.");
     return;
   }
 
   if (turmasNovas.length) await putAll(STORES.GROUPS, turmasNovas);
+  if (alteradas.length) await putAll(STORES.GROUPS, alteradas);
   if (atletasNovos.length) await putAll(STORES.ATHLETES, atletasNovos);
   sw.turmas = (await getAll(STORES.GROUPS)).filter(inActiveProfile);
   sw.atletas = (await getAll(STORES.ATHLETES)).filter(inActiveProfile);
@@ -721,9 +925,15 @@ async function importTurmasFromCsv(text) {
   renderAtletasList();
   const parts = [];
   if (turmasNovas.length) parts.push(`${turmasNovas.length} turma${turmasNovas.length > 1 ? "s" : ""}`);
+  if (alteradas.length) parts.push(`${alteradas.length} turma${alteradas.length > 1 ? "s" : ""} atualizada${alteradas.length > 1 ? "s" : ""}`);
   if (atletasCount) parts.push(`${atletasCount} atleta${atletasCount > 1 ? "s" : ""}`);
-  alert(`Importado com sucesso: ${parts.join(" e ")}.`);
-  api.logAction(`CSV importado: ${parts.join(", ")}.`);
+  const avisos = datasInvalidas
+    ? ` ${datasInvalidas} data(s) de nascimento inválida(s) ficaram em branco.`
+    : "";
+  alert(`Importado com sucesso: ${parts.join(" e ")}.${avisos}`);
+  api.logAction(
+    `CSV importado: ${parts.join(", ")}.${avisos ? ` Datas inválidas: ${datasInvalidas}.` : ""}`
+  );
 }
 
 /* ---- Placeholders (B3/B5 preenchem) ---- */
@@ -838,23 +1048,49 @@ function stepModo() {
   `;
 }
 
+function horarioOptionsHtml(turmas, selectedId) {
+  return turmas
+    .map(
+      (t) =>
+        `<option value="${escapeHtml(t.id)}" ${
+          t.id === selectedId ? "selected" : ""
+        }>${escapeHtml(t.horario || "Sem horário")}</option>`
+    )
+    .join("");
+}
+
 function stepTurma() {
   if (!sw.turmas.length) {
     return '<p class="muted">Cadastre uma turma primeiro (aba Atletas).</p>';
   }
-  const options = sw.turmas
+  const atual = sw.turmas.find((t) => t.id === tr.turmaId) || null;
+  const nomeSel = atual ? normalizeText(atual.nome) : "";
+  const nomeOptions = [...turmaNomeOptions().entries()]
     .map(
-      (t) =>
-        `<option value="${escapeHtml(t.id)}" ${
-          t.id === tr.turmaId ? "selected" : ""
-        }>${escapeHtml(t.nome)}</option>`
+      ([norm, nome]) =>
+        `<option value="${escapeHtml(norm)}" ${
+          norm === nomeSel ? "selected" : ""
+        }>${escapeHtml(nome)}</option>`
     )
     .join("");
+  const horarioOptions = horarioOptionsHtml(nomeSel ? turmasDoNome(nomeSel) : [], tr.turmaId);
   return `
-    <label>
-      Passo 1 — Selecionar turma
-      <select id="sbTreinoTurma" aria-label="Turma do treino">${options}</select>
-    </label>
+    <div class="sb-grid-2">
+      <label>
+        Passo 1 — Turma
+        <select id="sbTreinoTurma" aria-label="Turma do treino">
+          <option value="">Selecione a turma…</option>${nomeOptions}
+        </select>
+      </label>
+      <label>
+        Passo 1 — Horário
+        <select id="sbTreinoHorario" aria-label="Horário da turma" ${
+          nomeSel ? "" : "disabled"
+        }>
+          <option value="">Selecione o horário…</option>${horarioOptions}
+        </select>
+      </label>
+    </div>
     <p class="muted">Professor já vem do perfil ativo.</p>
   `;
 }
@@ -1049,12 +1285,17 @@ function bindTreinoStep() {
 
   document.getElementById("sbStepNextBtn")?.addEventListener("click", () => {
     if (tr.step === 1) {
-      const sel = document.getElementById("sbTreinoTurma");
-      if (!sel || !sel.value) {
+      const selNome = document.getElementById("sbTreinoTurma");
+      const selHorario = document.getElementById("sbTreinoHorario");
+      if (!selNome || !selNome.value) {
         alert("Selecione uma turma.");
         return;
       }
-      tr.turmaId = sel.value;
+      if (!selHorario || !selHorario.value) {
+        alert("Selecione o horário da turma.");
+        return;
+      }
+      tr.turmaId = selHorario.value;
       tr.atletas = [];
     }
     if (tr.step === 2) {
@@ -1083,6 +1324,23 @@ function bindTreinoStep() {
   });
 
   document.getElementById("sbTreinoTurma")?.addEventListener("change", (e) => {
+    const nomeNorm = e.target.value;
+    const selHorario = document.getElementById("sbTreinoHorario");
+    if (!selHorario) return;
+    const candidatas = nomeNorm ? turmasDoNome(nomeNorm) : [];
+    selHorario.innerHTML = `<option value="">Selecione o horário…</option>${horarioOptionsHtml(
+      candidatas,
+      ""
+    )}`;
+    selHorario.disabled = !nomeNorm;
+    const anterior = candidatas.find((t) => t.id === tr.turmaId);
+    if (anterior) selHorario.value = anterior.id;
+    else if (candidatas.length === 1) selHorario.value = candidatas[0].id;
+    else selHorario.value = "";
+    tr.turmaId = selHorario.value;
+  });
+
+  document.getElementById("sbTreinoHorario")?.addEventListener("change", (e) => {
     tr.turmaId = e.target.value;
   });
 
@@ -1146,7 +1404,7 @@ function readTreinoConfig() {
 
 function turmaNome() {
   const turma = sw.turmas.find((t) => t.id === tr.turmaId);
-  return turma ? turma.nome : "";
+  return turma ? turmaLabel(turma) : "";
 }
 
 const HUD_KEY = "pbtracker_chrono_hud";
@@ -2934,7 +3192,7 @@ function populateAnaliseAtletas() {
   select.innerHTML = sw.atletas
     .map((a) => {
       const turma = sw.turmas.find((t) => t.id === a.turmaId);
-      return `<option value="${a.id}" ${a.id === an.atletaId ? "selected" : ""}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turma.nome)}` : ""}</option>`;
+      return `<option value="${a.id}" ${a.id === an.atletaId ? "selected" : ""}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turmaLabel(turma))}` : ""}</option>`;
     })
     .join("");
   populateAnaliseEstilos();
@@ -3205,7 +3463,7 @@ function renderCmpSelectors() {
         ${sw.atletas.map((a) => {
           const turma = sw.turmas.find((t) => t.id === a.turmaId);
           const sel = a.id === id ? "selected" : "";
-          return `<option value="${a.id}" ${sel}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turma.nome)}` : ""}</option>`;
+          return `<option value="${a.id}" ${sel}>${escapeHtml(a.nome)}${turma ? ` · ${escapeHtml(turmaLabel(turma))}` : ""}</option>`;
         }).join("")}
       </select>
       ${atleta ? `<div class="cmp-athlete-info">

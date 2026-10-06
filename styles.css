@@ -1526,10 +1526,13 @@ body.dark .mode-card-accent {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 0.6rem;
 }
 
-.sb-turma-row select { flex: 1; min-width: 0; }
+.sb-turma-row select { flex: 1 1 140px; min-width: 0; }
+.sb-turma-row select:disabled { opacity: 0.6; cursor: not-allowed; }
+.sb-turma-row button { flex: 0 0 auto; }
 
 .sb-list {
   display: flex;
@@ -1748,6 +1751,13 @@ body.dark .sb-step.active {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
+}
+
+/* Passo 1 do wizard (Turma + Horário): empilha no celular. */
+.sb-step-body .sb-grid-2 { grid-template-columns: 1fr; }
+
+@media (min-width: 480px) {
+  .sb-step-body .sb-grid-2 { grid-template-columns: 1fr 1fr; }
 }
 
 /* ============================================================
