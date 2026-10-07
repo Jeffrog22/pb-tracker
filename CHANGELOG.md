@@ -7,6 +7,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Added
+- **Dedup automático de PRs no load (v0.45.0)**: PR = 1 por
+  atleta+estilo+distância, mas nada garantia isso — abas/PWA concorrentes,
+  falha parcial no flush do Salvar, overlay de perfil legado (`professorId`
+  null visível em todos) e chave estrita `"50"` vs `50` geravam 2+ linhas de
+  PR para a **mesma prova**. `ensureLoaded` agora agrupa `sw.prs` por
+  `prKey()` (`String(distancia)`), mantém o de MENOR `melhorTempo` (empate →
+  `data` mais recente) e apaga os demais: na 1ª vez pergunta (`confirm`) e
+  guarda a decisão (`allow`/`deny`) em `STORES.SETTINGS`
+  (`pr_dedup_v1` — nunca insiste após recusa; `allow` limpa silenciosamente
+  duplicatas futuras), com `logAction`. `checkPrAndFlag` passou a comparar
+  contra o **MELHOR** de todos os same-key (não o 1º do `find`) e a usar
+  `String(distancia)` na chave — reaproveita o id do melhor em vez de criar
+  linha nova. `cmpPrIndex` (Comparador) mantém o menor `melhorTempo` por
+  chave (antes era last-wins arbitrário).
 - **Hard Reset nas Configurações (card 🔄 Atualizações)**: novo botão
   destrutivo `#hardResetBtn` ao lado do "Hard Refresh" que apaga **só os dados
   do SwimBase** — turmas, atletas, registros e PRs (via `clear()` dos 4 stores
@@ -49,6 +63,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   mutação se perdia no reload).
 
 ### Changed
+- **Tabela/export de PRs da Análise virou all-time**: `analisePrs()` não
+  filtra mais por período — PR = melhor tempo de **todos os tempos** e, com o
+  recálculo reescrevendo `p.data` para a data real do registro que agora detém
+  o tempo, o PR "sumia" da view de 7d/30d após uma exclusão (parecia apagado).
+  Selects de estilo/distância agora incluem as provas com PR mesmo sem
+  registro no período (union `registros ∪ prs`), senão o PR ficava
+  inalcançável no dropdown. Gráfico, registros e export de registros seguem
+  filtrando por período; o export "PRs" do card de Configurações tem filtro
+  próprio e não muda.
+- **Exclusão de registro recalcula TODOS os PRs da chave** (antes só o 1º do
+  `find`): `recalcPrsForDeletion(reg, targets)` itera todos os `sw.prs` da
+  chave (reassocia/promove/remove cada um conforme os registros restantes),
+  colapsa duplicatas remanescentes para o melhor tempo e marca
+  `flagPr = true` no registro promovido/reassociado (o badge ✕/PR da tabela de
+  registros passa a bater com a tabela de PRs). Selects repopulados via
+  `populateAnaliseEstilos()` (chama as distâncias internamente).
 - **SwimBase — Cancelar/Fechar NUNCA salvam; só o Salvar grava**: o
   `persistRegistro` deixou de escrever no IndexedDB a cada tempo — registros
   e PRs da sessão ficam em staging em memória (`tr.stagedRegistros` /

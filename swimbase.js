@@ -1,6 +1,6 @@
 // swimbase.js — SwimBase (Tier 2): treino, atletas, turmas, PRs e análise.
 // MVP = Fase 1 do PDR-SwimBase.md. Cresce por slices (B1 → B5).
-import { STORES, clear, getAll, get, put, putAll, remove } from "./db.js";
+import { STORES, clear, getAll, get, getSetting, put, putAll, remove, setSetting } from "./db.js";
 import {
   attachClockMask,
   escapeHtml,
@@ -283,6 +283,56 @@ function inActiveProfile(item) {
   return item?.professorId == null || item.professorId === profileId;
 }
 
+// Chave canônica de PR (1 por atleta+estilo+distância). String() tolera
+// distancia "50" vs 50 em dados legados — sem isso a criação não casa e
+// gera uma 2ª linha idêntica na tabela.
+function prKey(p) {
+  return `${p.atletaId}|${p.estilo}|${String(p.distancia)}`;
+}
+
+const PR_DEDUP_SETTING = "pr_dedup_v1"; // "allow" | "deny" | ausente
+
+// Duplicatas de PR (aba concorrente, falha parcial no flush, overlay de
+// perfil legado) são colapsadas no load mantendo o MENOR melhorTempo (empate
+// → data mais recente). 1ª vez pergunta e guarda a decisão em STORES.SETTINGS;
+// "deny" nunca insiste, "allow" limpa silenciosamente duplicatas futuras.
+async function dedupePrs(list) {
+  const groups = new Map();
+  for (const p of list) {
+    const k = prKey(p);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(p);
+  }
+  const losers = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const keeper = group.reduce((best, p) => {
+      if (p.melhorTempo !== best.melhorTempo) return p.melhorTempo < best.melhorTempo ? p : best;
+      return new Date(p.data) > new Date(best.data) ? p : best;
+    });
+    for (const p of group) if (p !== keeper) losers.push(p);
+  }
+  if (!losers.length) return list;
+
+  const decision = await getSetting(PR_DEDUP_SETTING, null);
+  let allow = decision === "allow";
+  if (decision !== "allow" && decision !== "deny") {
+    allow = window.confirm(
+      `Foram encontrados ${losers.length} PR(s) duplicado(s) no SwimBase. ` +
+        "Manter o melhor tempo de cada prova e apagar os demais? Esta ação não pode ser desfeita."
+    );
+    await setSetting(PR_DEDUP_SETTING, allow ? "allow" : "deny");
+  }
+  if (!allow) return list;
+
+  for (const p of losers) await remove(STORES.PRS, p.id);
+  const removedIds = new Set(losers.map((p) => p.id));
+  api?.logAction?.(
+    `Dedup de PRs: ${losers.length} duplicata(s) removida(s); mantido o melhor tempo por prova.`
+  );
+  return list.filter((p) => !removedIds.has(p.id));
+}
+
 async function ensureLoaded() {
   if (sw.loaded) return;
   const [turmas, atletas, registros, prs] = await Promise.all([
@@ -294,7 +344,7 @@ async function ensureLoaded() {
   sw.turmas = (turmas || []).filter(inActiveProfile);
   sw.atletas = (atletas || []).filter(inActiveProfile);
   sw.registros = (registros || []).filter(inActiveProfile);
-  sw.prs = (prs || []).filter(inActiveProfile);
+  sw.prs = await dedupePrs((prs || []).filter(inActiveProfile));
   sw.loaded = true;
 }
 
@@ -2797,9 +2847,15 @@ async function checkPrAndFlag(raia, splitMs, registroId = raia.registroId) {
   const mesmaChave = (p) =>
     p.atletaId === raia.atletaId &&
     p.estilo === tr.config.estilo &&
-    p.distancia === tr.config.distancia;
-  const committed = sw.prs.find(mesmaChave);
-  const staged = tr.stagedPrs.find(mesmaChave);
+    String(p.distancia) === String(tr.config.distancia);
+  // Usa o MELHOR de todos os mesmos (não o 1º do find): se ainda existir
+  // duplicata, compara contra o tempo mais forte e reaproveita o id dele —
+  // converge em vez de acumular linha nova. String() na distância fecha o
+  // gap de "50" vs 50 em dados legados.
+  const melhorDe = (lista) =>
+    lista.reduce((best, p) => (!best || p.melhorTempo < best.melhorTempo ? p : best), null);
+  const committed = melhorDe(sw.prs.filter(mesmaChave));
+  const staged = melhorDe(tr.stagedPrs.filter(mesmaChave));
   const existing = staged || committed;
   const isPr = !existing || splitMs < existing.melhorTempo;
   if (!isPr) return false;
@@ -3079,7 +3135,13 @@ function filterCmpRegistros(regs) {
 
 function cmpPrIndex() {
   const idx = new Map();
-  sw.prs.forEach((p) => idx.set(`${p.atletaId}|${p.estilo}|${p.distancia}`, p));
+  // Mantém o MENOR melhorTempo por chave: com duplicatas, o antigo last-wins
+  // do forEach escolhia arbitrariamente (o pior) para o Comparador.
+  sw.prs.forEach((p) => {
+    const k = prKey(p);
+    const cur = idx.get(k);
+    if (!cur || p.melhorTempo < cur.melhorTempo) idx.set(k, p);
+  });
   return idx;
 }
 
@@ -3208,10 +3270,21 @@ function populateAnaliseAtletas() {
   populateAnaliseEstilos();
 }
 
+// PRs do atleta SEM filtros de estilo/distância/período — usados para as
+// opções dos selects (a tabela de PRs é all-time; sem incluir as provas com
+// PR mas sem registro no período, o PR ficaria inalcançável no dropdown).
+function prsDoAtleta() {
+  return sw.prs.filter((p) => p.atletaId === an.atletaId);
+}
+
 function populateAnaliseEstilos() {
   const select = document.getElementById("sbAnaliseEstilo");
   if (!select) return;
-  const estilos = [...new Set(analiseRegistros(false, false).map((r) => r.estilo).filter(Boolean))].sort();
+  const estilos = [
+    ...new Set(
+      [...analiseRegistros(false, false).map((r) => r.estilo), ...prsDoAtleta().map((p) => p.estilo)].filter(Boolean)
+    ),
+  ].sort();
   if (!an.estilo || !estilos.includes(an.estilo)) an.estilo = estilos[0] || "";
   select.innerHTML =
     estilos.map((e) => `<option value="${e}" ${e === an.estilo ? "selected" : ""}>${e}</option>`).join("") ||
@@ -3222,7 +3295,16 @@ function populateAnaliseEstilos() {
 function populateAnaliseDistancias() {
   const select = document.getElementById("sbAnaliseDistancia");
   if (!select) return;
-  const dists = [...new Set(analiseRegistros(true, false).map((r) => r.distancia).filter((d) => d != null))].sort((a, b) => a - b);
+  const dists = [
+    ...new Set(
+      [
+        ...analiseRegistros(true, false).map((r) => r.distancia),
+        ...prsDoAtleta()
+          .filter((p) => (an.estilo ? p.estilo === an.estilo : true))
+          .map((p) => p.distancia),
+      ].filter((d) => d != null)
+    ),
+  ].sort((a, b) => a - b);
   if (an.distancia === "" || !dists.includes(an.distancia)) an.distancia = dists[0] ?? "";
   select.innerHTML =
     dists.map((d) => `<option value="${d}" ${String(d) === String(an.distancia) ? "selected" : ""}>${d} m</option>`).join("") ||
@@ -3244,13 +3326,15 @@ function analiseRegistros(useEstilo = true, useDistancia = true) {
     .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
 }
 
+// PR = melhor tempo de TODOS os tempos: a tabela/export da Análise ignoram o
+// período (senão, após o recálculo reescrever p.data para a data real do
+// registro que agora detém o tempo, o PR "some" da view de 30d e parece
+// apagado). Gráfico, registros e export de registros seguem com período.
 function analisePrs() {
-  const cutoff = periodoCutoff(an.periodo);
   return sw.prs
     .filter((p) => p.atletaId === an.atletaId)
     .filter((p) => (an.estilo ? p.estilo === an.estilo : true))
     .filter((p) => (an.distancia !== "" ? String(p.distancia) === String(an.distancia) : true))
-    .filter((p) => (cutoff ? new Date(p.data).getTime() >= cutoff : true))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
@@ -3329,27 +3413,28 @@ function isSamePrKey(item, pr) {
 }
 
 // Exclusão pontual de um registro (aba Análise). Apaga do IndexedDB e do
-// cache em memória e recalcula o PR da chave atleta+estilo+distância quando
-// o tempo apagado era a origem dele (removendo o PR se não restar ninguém).
+// cache em memória e recalcula TODOS os PRs da chave atleta+estilo+distância
+// (havia casos com 2+ duplicatas; tratar só o 1º deixava os demais velhos).
 async function deleteRegistro(id) {
   const reg = sw.registros.find((r) => r.id === id);
   if (!reg) return;
-  const pr = sw.prs.find((p) => isSamePrKey(reg, p));
+  const targets = sw.prs.filter((p) => isSamePrKey(reg, p));
   const confirmed = window.confirm(
     `Excluir o registro de ${getAtletaName(reg.atletaId)} — ` +
       `${new Date(reg.dataHora).toLocaleString("pt-BR")} · ${reg.estilo} ${reg.distancia}m · ` +
       `tempos ${(reg.tempos || []).join(" / ") || "—"}. ` +
-      (pr ? "Se este registro originar o PR, o PR será recalculado (ou removido sem tempos restantes). " : "") +
+      (targets.length
+        ? "Se este registro originar o PR, o PR será recalculado (ou removido sem tempos restantes). "
+        : "") +
       "Esta ação não pode ser desfeita."
   );
   if (!confirmed) return;
 
   await remove(STORES.RECORDS, id);
   sw.registros = sw.registros.filter((r) => r.id !== id);
-  const prNote = pr ? await recalcPrForDeletion(reg, pr) : "";
+  const prNote = targets.length ? await recalcPrsForDeletion(reg, targets) : "";
 
-  populateAnaliseEstilos();
-  populateAnaliseDistancias();
+  populateAnaliseEstilos(); // já chama populateAnaliseDistancias internamente
   updateAnaliseChart();
   api.logAction(
     `Registro excluído do SwimBase (${reg.estilo} ${reg.distancia}m em ` +
@@ -3357,39 +3442,70 @@ async function deleteRegistro(id) {
   );
 }
 
-// Mantém sw.prs consistente depois de apagar um registro: se o melhor tempo
-// do PR ainda é atingido por outro registro, só reatribui registroId/data;
-// senão promove o melhor restante (melhorTempo/melhoria) ou apaga o PR.
-async function recalcPrForDeletion(reg, pr) {
+// Badge ✕/PR da tabela de registros acompanha a origem atual do PR.
+async function flagRegistroPr(r) {
+  if (r.flagPr) return;
+  r.flagPr = true;
+  await put(STORES.RECORDS, r);
+}
+
+// Mantém TODOS os PRs da chave consistentes depois da exclusão: cada um é
+// reassociado (tempo ainda atingido por outro registro), promovido (melhor
+// restante) ou removido (sem tempos); duplicatas remanescentes colapsam
+// para o de menor melhorTempo.
+async function recalcPrsForDeletion(reg, targets) {
+  const notes = [];
+  const addNote = (n) => { if (!notes.includes(n)) notes.push(n); };
   const remaining = sw.registros
-    .filter((r) => isSamePrKey(r, pr))
+    .filter((r) => isSamePrKey(r, targets[0]))
     .map((r) => ({ r, best: registroBestMs(r) }))
     .filter((x) => x.best != null);
+  const removedIds = new Set();
 
-  const backed = remaining.find((x) => x.best <= pr.melhorTempo);
-  if (backed) {
-    if (pr.registroId === reg.id) {
-      pr.registroId = backed.r.id;
-      pr.data = backed.r.dataHora;
-      await put(STORES.PRS, pr);
-      return " PR reassociado ao registro restante";
+  for (const pr of targets) {
+    const backed = remaining.find((x) => x.best <= pr.melhorTempo);
+    if (backed) {
+      if (pr.registroId === reg.id) {
+        pr.registroId = backed.r.id;
+        pr.data = backed.r.dataHora;
+        await flagRegistroPr(backed.r);
+        await put(STORES.PRS, pr);
+        addNote("PR reassociado ao registro restante");
+      }
+      continue;
     }
-    return "";
+    if (!remaining.length) {
+      await remove(STORES.PRS, pr.id);
+      removedIds.add(pr.id);
+      addNote("PR removido (sem registros restantes)");
+      continue;
+    }
+    const src = remaining.reduce((a, b) => (b.best < a.best ? b : a));
+    pr.melhorTempo = src.best;
+    pr.data = src.r.dataHora;
+    pr.registroId = src.r.id;
+    pr.melhoria = pr.tempoAnterior != null ? ((pr.tempoAnterior - src.best) / pr.tempoAnterior) * 100 : 0;
+    await flagRegistroPr(src.r);
+    await put(STORES.PRS, pr);
+    addNote("PR recalculado");
   }
 
-  if (!remaining.length) {
-    await remove(STORES.PRS, pr.id);
-    sw.prs = sw.prs.filter((p) => p.id !== pr.id);
-    return " PR removido (sem registros restantes)";
+  const survivors = targets.filter((p) => !removedIds.has(p.id));
+  if (survivors.length > 1) {
+    const keeper = survivors.reduce((best, p) => {
+      if (p.melhorTempo !== best.melhorTempo) return p.melhorTempo < best.melhorTempo ? p : best;
+      return new Date(p.data) > new Date(best.data) ? p : best;
+    });
+    for (const p of survivors) {
+      if (p === keeper) continue;
+      await remove(STORES.PRS, p.id);
+      removedIds.add(p.id);
+    }
+    addNote(`${survivors.length - 1} PR(s) duplicado(s) removido(s)`);
   }
 
-  const src = remaining.reduce((a, b) => (b.best < a.best ? b : a));
-  pr.melhorTempo = src.best;
-  pr.data = src.r.dataHora;
-  pr.registroId = src.r.id;
-  pr.melhoria = pr.tempoAnterior != null ? ((pr.tempoAnterior - src.best) / pr.tempoAnterior) * 100 : 0;
-  await put(STORES.PRS, pr);
-  return " PR recalculado";
+  if (removedIds.size) sw.prs = sw.prs.filter((p) => !removedIds.has(p.id));
+  return notes.length ? ` — ${notes.join("; ")}` : "";
 }
 
 function bindAnaliseEvents() {
