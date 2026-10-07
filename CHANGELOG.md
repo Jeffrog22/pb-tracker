@@ -7,6 +7,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Added
+- **Hard Reset nas Configurações (card 🔄 Atualizações)**: novo botão
+  destrutivo `#hardResetBtn` ao lado do "Hard Refresh" que apaga **só os dados
+  do SwimBase** — turmas, atletas, registros e PRs (via `clear()` dos 4 stores
+  em `hardResetSwimBase()`) — com `confirm` e `logAction`. Perfil, preferências
+  (tema/zoom/notificações), caches SW e log de atividade **não** são tocados;
+  a página recarrega no fim para a UI nascer zerada. `body.dark button.danger`
+  cobre o novo estilo (senão `body.dark button` deixaria o botão cinza no dark).
+- **Exclusão pontual de registro na aba Análise**: cada linha da tabela
+  "Registros recentes" ganhou um botão `.sb-reg-del` (✕ vermelho) com
+  `confirm`, `remove(STORES.RECORDS)` e remoção do cache `sw.registros`.
+  Listener **delegado** em `#sbRegistrosTable` (nó só nasce em
+  `renderAnaliseIndividual`, então não duplica a cada repintura da tabela).
+  **PR é recalculado**: se o tempo apagado ainda é atingido por outro registro
+  da mesma chave atleta+estilo+distância, o PR segue (só reatribui
+  `registroId`/`data` se apontava para o registro apagado); senão promove o
+  melhor restante (`melhorTempo`/`melhoria` recalculados, `put` no store) ou
+  **apaga o PR** se não restarem tempos. Selects de estilo/distância são
+  repopulados antes de repintar gráfico e tabelas.
 - **Filtros interligados Turma → Horário (SwimBase)**: a turma passa a ser
   identificada por **nome + horário** — "Sub-10 · 16:00" e "Sub-10 · 18:00"
   são turmas distintas (antes o 2º horário era descartado em silêncio no

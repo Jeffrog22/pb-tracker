@@ -387,6 +387,18 @@ button.danger:hover {
   opacity: 0.9;
 }
 
+/* body.dark button (0,1,2) vence button.danger (0,1,1) — sem isto, no dark
+   o botão destrutivo vira cinza como qualquer outro. */
+body.dark button.danger {
+  background-color: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+}
+
+body.dark button.danger:hover {
+  opacity: 0.9;
+}
+
 button.ghost {
   background: transparent;
   border-color: transparent;
@@ -1579,6 +1591,34 @@ body.dark .mode-card-accent {
   color: var(--danger);
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+/* Clear button por registro (aba Análise). body.dark button (0,1,2) pinta de
+   cinza — as regras body.dark .sb-reg-del (0,2,1) existem para manter o vermelho. */
+.sb-reg-del {
+  min-width: 40px;
+  min-height: 40px;
+  background: transparent;
+  border: 0;
+  color: var(--danger);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.sb-reg-del:hover {
+  background: var(--error-bg);
+}
+
+body.dark .sb-reg-del {
+  background: transparent;
+  border: 0;
+  color: var(--danger);
+}
+
+body.dark .sb-reg-del:hover {
+  background: var(--error-bg);
 }
 
 .sb-dialog {

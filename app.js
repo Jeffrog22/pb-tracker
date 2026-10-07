@@ -11,9 +11,9 @@ import {
   slugify,
   escapeHtml,
 } from "./utils.js";
-import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino } from "./swimbase.js";
+import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino, hardResetSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.43.0";
+const APP_VERSION = "0.44.0";
 
 const state = {
   teamName: "",
@@ -143,6 +143,7 @@ const el = {
   checkUpdateBtn: document.getElementById("checkUpdateBtn"),
   updateNowBtn: document.getElementById("updateNowBtn"),
   hardRefreshBtn: document.getElementById("hardRefreshBtn"),
+  hardResetBtn: document.getElementById("hardResetBtn"),
   chronoDialog: document.getElementById("chronoDialog"),
   chronoHudLayer: document.getElementById("chronoHudLayer"),
   startLapBtn: document.getElementById("startLapBtn"),
@@ -966,6 +967,26 @@ async function hardRefresh() {
   }
 }
 
+// Apaga só os dados do SwimBase (turmas, atletas, registros e PRs) — perfil,
+// preferências (tema/zoom/notificações), caches e log de atividade ficam.
+// Recarrega a página no fim para a UI nascer zerada.
+async function hardReset() {
+  const confirmed = window.confirm(
+    "Hard Reset: apagar TODOS os dados do SwimBase (turmas, atletas, registros e PRs)? " +
+      "Esta ação não pode ser desfeita. Perfil e preferências serão mantidos."
+  );
+  if (!confirmed) return;
+  try {
+    await hardResetSwimBase();
+    logAction("Hard Reset: dados do SwimBase (turmas, atletas, registros, PRs) apagados.");
+  } catch (error) {
+    console.warn("Hard Reset falhou:", error);
+    window.alert("Não foi possível concluir o Hard Reset. Tente novamente.");
+    return;
+  }
+  window.location.reload();
+}
+
 function bindEvents() {
   el.processBtn.addEventListener("click", handleImport);
   el.profileForm.addEventListener("submit", (event) => {
@@ -1096,6 +1117,7 @@ function bindSettingsEvents() {
   if (el.checkUpdateBtn) el.checkUpdateBtn.addEventListener("click", checkForUpdate);
   if (el.updateNowBtn) el.updateNowBtn.addEventListener("click", applyUpdate);
   if (el.hardRefreshBtn) el.hardRefreshBtn.addEventListener("click", hardRefresh);
+  if (el.hardResetBtn) el.hardResetBtn.addEventListener("click", hardReset);
 }
 
 function bindDeviceGuard() {

@@ -1,6 +1,6 @@
 // swimbase.js — SwimBase (Tier 2): treino, atletas, turmas, PRs e análise.
 // MVP = Fase 1 do PDR-SwimBase.md. Cresce por slices (B1 → B5).
-import { STORES, getAll, get, put, putAll, remove } from "./db.js";
+import { STORES, clear, getAll, get, put, putAll, remove } from "./db.js";
 import {
   attachClockMask,
   escapeHtml,
@@ -301,6 +301,16 @@ async function ensureLoaded() {
 export async function reloadSwimBase() {
   sw.loaded = false;
   await ensureLoaded();
+}
+
+// Hard Reset (Configurações): apaga só os dados do SwimBase — turmas,
+// atletas, registros e PRs (PRs derivam de registros; manter deixaria
+// órfãos de atletas apagados). Não toca em localStorage, caches nem perfil;
+// o caller recarrega a página para garantir UI zerada.
+export async function hardResetSwimBase() {
+  for (const store of [STORES.ATHLETES, STORES.GROUPS, STORES.RECORDS, STORES.PRS]) {
+    await clear(store);
+  }
 }
 
 /* ---- Home ---- */
@@ -3294,13 +3304,92 @@ function renderRegistrosTable() {
     <td>${r.serie || ""}</td>
     <td class="mono">${(r.tempos || []).map((t) => maskTimeHTML(t)).join(" / ") || "—"}</td>
     <td>${r.flagPr ? '<span class="pr-badge">PR</span>' : ""}</td>
+    <td><button type="button" class="sb-reg-del" data-id="${escapeHtml(r.id)}" title="Excluir registro" aria-label="Excluir registro">✕</button></td>
   </tr>`).join("");
   const note = all.length > recent.length
     ? `<p class="muted">Mostrando os ${recent.length} mais recentes de ${all.length}.</p>`
     : "";
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
-    <th>Data</th><th>Estilo</th><th>Dist.</th><th>Série</th><th>Tempos</th><th></th>
+    <th>Data</th><th>Estilo</th><th>Dist.</th><th>Série</th><th>Tempos</th><th></th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>${note}`;
+}
+
+// PR = min(parseTimeToMs(tempos)) do registro; null quando não há tempo válido.
+function registroBestMs(r) {
+  const ms = (r.tempos || []).map((t) => parseTimeToMs(t)).filter((v) => v != null);
+  return ms.length ? Math.min(...ms) : null;
+}
+
+function isSamePrKey(item, pr) {
+  return (
+    item.atletaId === pr.atletaId &&
+    item.estilo === pr.estilo &&
+    String(item.distancia) === String(pr.distancia)
+  );
+}
+
+// Exclusão pontual de um registro (aba Análise). Apaga do IndexedDB e do
+// cache em memória e recalcula o PR da chave atleta+estilo+distância quando
+// o tempo apagado era a origem dele (removendo o PR se não restar ninguém).
+async function deleteRegistro(id) {
+  const reg = sw.registros.find((r) => r.id === id);
+  if (!reg) return;
+  const pr = sw.prs.find((p) => isSamePrKey(reg, p));
+  const confirmed = window.confirm(
+    `Excluir o registro de ${getAtletaName(reg.atletaId)} — ` +
+      `${new Date(reg.dataHora).toLocaleString("pt-BR")} · ${reg.estilo} ${reg.distancia}m · ` +
+      `tempos ${(reg.tempos || []).join(" / ") || "—"}. ` +
+      (pr ? "Se este registro originar o PR, o PR será recalculado (ou removido sem tempos restantes). " : "") +
+      "Esta ação não pode ser desfeita."
+  );
+  if (!confirmed) return;
+
+  await remove(STORES.RECORDS, id);
+  sw.registros = sw.registros.filter((r) => r.id !== id);
+  const prNote = pr ? await recalcPrForDeletion(reg, pr) : "";
+
+  populateAnaliseEstilos();
+  populateAnaliseDistancias();
+  updateAnaliseChart();
+  api.logAction(
+    `Registro excluído do SwimBase (${reg.estilo} ${reg.distancia}m em ` +
+      `${new Date(reg.dataHora).toLocaleDateString("pt-BR")})${prNote}.`
+  );
+}
+
+// Mantém sw.prs consistente depois de apagar um registro: se o melhor tempo
+// do PR ainda é atingido por outro registro, só reatribui registroId/data;
+// senão promove o melhor restante (melhorTempo/melhoria) ou apaga o PR.
+async function recalcPrForDeletion(reg, pr) {
+  const remaining = sw.registros
+    .filter((r) => isSamePrKey(r, pr))
+    .map((r) => ({ r, best: registroBestMs(r) }))
+    .filter((x) => x.best != null);
+
+  const backed = remaining.find((x) => x.best <= pr.melhorTempo);
+  if (backed) {
+    if (pr.registroId === reg.id) {
+      pr.registroId = backed.r.id;
+      pr.data = backed.r.dataHora;
+      await put(STORES.PRS, pr);
+      return " PR reassociado ao registro restante";
+    }
+    return "";
+  }
+
+  if (!remaining.length) {
+    await remove(STORES.PRS, pr.id);
+    sw.prs = sw.prs.filter((p) => p.id !== pr.id);
+    return " PR removido (sem registros restantes)";
+  }
+
+  const src = remaining.reduce((a, b) => (b.best < a.best ? b : a));
+  pr.melhorTempo = src.best;
+  pr.data = src.r.dataHora;
+  pr.registroId = src.r.id;
+  pr.melhoria = pr.tempoAnterior != null ? ((pr.tempoAnterior - src.best) / pr.tempoAnterior) * 100 : 0;
+  await put(STORES.PRS, pr);
+  return " PR recalculado";
 }
 
 function bindAnaliseEvents() {
@@ -3325,6 +3414,13 @@ function bindAnaliseEvents() {
   });
   document.getElementById("sbExportRegistrosBtn")?.addEventListener("click", handleExportRegistros);
   document.getElementById("sbExportPrsBtn")?.addEventListener("click", handleExportPrs);
+  // Delegado em #sbRegistrosTable: o nó só nasce em renderAnaliseIndividual,
+  // então não duplica listener quando só o innerHTML da tabela é repintado.
+  document.getElementById("sbRegistrosTable")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".sb-reg-del");
+    if (!btn) return;
+    deleteRegistro(btn.dataset.id);
+  });
 }
 
 function getAtletaName(atletaId) {
