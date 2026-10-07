@@ -290,6 +290,26 @@ function prKey(p) {
   return `${p.atletaId}|${p.estilo}|${String(p.distancia)}`;
 }
 
+// "Anterior" derivado dos registros VIVOS: menor tempo estritamente pior que
+// o melhor atual (o velho PR anterior é, por definição, o menor pior). Sem
+// candidato → null (exibição "—"). Com dado saudável coincide com o valor
+// congelado da criação; com registro excluído, recalcula para o próximo pior.
+function menorPiorVivo(bests, melhor) {
+  let novo = null;
+  for (const b of bests) {
+    if (b > melhor && (novo == null || b < novo)) novo = b;
+  }
+  return novo;
+}
+
+function aplicarAnterior(pr, bests) {
+  const novo = menorPiorVivo(bests, pr.melhorTempo);
+  if (novo === pr.tempoAnterior) return false;
+  pr.tempoAnterior = novo;
+  pr.melhoria = novo != null ? ((novo - pr.melhorTempo) / novo) * 100 : null;
+  return true;
+}
+
 const PR_DEDUP_SETTING = "pr_dedup_v1"; // "allow" | "deny" | ausente
 
 // Duplicatas de PR (aba concorrente, falha parcial no flush, overlay de
@@ -333,6 +353,41 @@ async function dedupePrs(list) {
   return list.filter((p) => !removedIds.has(p.id));
 }
 
+// Badges e "Anterior" derivados — roda a cada carga, após o dedupe. flagPr =
+// só o registro que É a origem atual do PR (superados perdem o badge; chave
+// sem PR também). tempoAnterior/melhoria seguem a regra de menorPiorVivo.
+// Idempotente: só grava o que difere (2ª carga não toca o banco).
+async function normalizePrs() {
+  const prByKey = new Map(sw.prs.map((p) => [prKey(p), p]));
+  const bestsByKey = new Map();
+  const changedRegs = [];
+  for (const r of sw.registros) {
+    const k = prKey(r);
+    const b = registroBestMs(r);
+    if (b != null) {
+      if (!bestsByKey.has(k)) bestsByKey.set(k, []);
+      bestsByKey.get(k).push(b);
+    }
+    const desired = prByKey.get(k)?.registroId === r.id;
+    if (!!r.flagPr !== desired) {
+      r.flagPr = desired;
+      changedRegs.push(r);
+    }
+  }
+  const changedPrs = [];
+  for (const p of sw.prs) {
+    if (aplicarAnterior(p, bestsByKey.get(prKey(p)) || [])) changedPrs.push(p);
+  }
+  if (changedRegs.length) await putAll(STORES.RECORDS, changedRegs);
+  if (changedPrs.length) await putAll(STORES.PRS, changedPrs);
+  if (changedRegs.length || changedPrs.length) {
+    api?.logAction?.(
+      `Normalização de PRs: ${changedRegs.length} badge(s) flagPr e ` +
+        `${changedPrs.length} "Anterior" recalculado(s).`
+    );
+  }
+}
+
 async function ensureLoaded() {
   if (sw.loaded) return;
   const [turmas, atletas, registros, prs] = await Promise.all([
@@ -345,6 +400,7 @@ async function ensureLoaded() {
   sw.atletas = (atletas || []).filter(inActiveProfile);
   sw.registros = (registros || []).filter(inActiveProfile);
   sw.prs = await dedupePrs((prs || []).filter(inActiveProfile));
+  await normalizePrs();
   sw.loaded = true;
 }
 
@@ -2867,6 +2923,20 @@ async function checkPrAndFlag(raia, splitMs, registroId = raia.registroId) {
   );
   if (registro) registro.flagPr = true;
 
+  // Badge = origem atual: quem era a origem do PR anterior perde o flag na
+  // hora (staged → o flush regrava; committed → put imediato). Sem isso
+  // ficam 2 badges na tabela até o próximo carregamento.
+  const newRegId = registroId || raia.registroId;
+  if (existing?.registroId && existing.registroId !== newRegId) {
+    const oldReg =
+      tr.stagedRegistros.find((r) => r.id === existing.registroId) ||
+      sw.registros.find((r) => r.id === existing.registroId);
+    if (oldReg?.flagPr) {
+      oldReg.flagPr = false;
+      if (!tr.stagedRegistros.includes(oldReg)) await put(STORES.RECORDS, oldReg);
+    }
+  }
+
   const pr = {
     id: existing?.id || uid("pr"),
     atletaId: raia.atletaId,
@@ -3367,7 +3437,7 @@ function renderPrsTable() {
     <td>${p.distancia != null ? `${p.distancia}m` : ""}</td>
     <td class="mono">${maskTimeHTML(msToDisplay(p.melhorTempo))}</td>
     <td class="mono">${p.tempoAnterior != null ? maskTimeHTML(msToDisplay(p.tempoAnterior)) : "—"}</td>
-    <td>${p.tempoAnterior != null ? `${p.melhoria.toFixed(1)}%` : "novo"}</td>
+    <td>${p.melhoria == null ? "—" : (p.tempoAnterior != null ? `${p.melhoria.toFixed(1)}%` : "novo")}</td>
     <td>${new Date(p.data).toLocaleDateString("pt-BR")}</td>
   </tr>`).join("");
   wrap.innerHTML = `<table class="sb-table"><thead><tr>
@@ -3460,18 +3530,24 @@ async function recalcPrsForDeletion(reg, targets) {
     .filter((r) => isSamePrKey(r, targets[0]))
     .map((r) => ({ r, best: registroBestMs(r) }))
     .filter((x) => x.best != null);
+  const remainingBests = remaining.map((x) => x.best);
   const removedIds = new Set();
 
   for (const pr of targets) {
     const backed = remaining.find((x) => x.best <= pr.melhorTempo);
     if (backed) {
+      let touched = false;
       if (pr.registroId === reg.id) {
         pr.registroId = backed.r.id;
         pr.data = backed.r.dataHora;
         await flagRegistroPr(backed.r);
-        await put(STORES.PRS, pr);
         addNote("PR reassociado ao registro restante");
+        touched = true;
       }
+      // "Anterior" também recalcula: o tempo excluído pode ser justamente o
+      // que aparecia na coluna (regra menorPiorVivo sobre os vivos).
+      if (aplicarAnterior(pr, remainingBests)) touched = true;
+      if (touched) await put(STORES.PRS, pr);
       continue;
     }
     if (!remaining.length) {
@@ -3484,7 +3560,7 @@ async function recalcPrsForDeletion(reg, targets) {
     pr.melhorTempo = src.best;
     pr.data = src.r.dataHora;
     pr.registroId = src.r.id;
-    pr.melhoria = pr.tempoAnterior != null ? ((pr.tempoAnterior - src.best) / pr.tempoAnterior) * 100 : 0;
+    aplicarAnterior(pr, remainingBests);
     await flagRegistroPr(src.r);
     await put(STORES.PRS, pr);
     addNote("PR recalculado");

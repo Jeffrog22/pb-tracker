@@ -7,6 +7,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Added
+- **Badge PR = origem atual (v0.46.0)**: `flagPr` deixou de ser histórico —
+  antes, todo registro que já bateram PR mantinha o badge para sempre (2
+  badges na mesma prova apareciam como "2 PRs anotados"). `normalizePrs()`
+  roda em `ensureLoaded` (após o dedupe) e marca **só** o registro que é
+  `pr.registroId` da chave atleta+estilo+distância; superados e chaves sem
+  PR são desmarcados, com `putAll` apenas no que muda (**idempotente** —
+  2ª carga não toca o banco) e `logAction` de contagem. `checkPrAndFlag`
+  limpa o badge do origin anterior na hora do novo PR (staged → o flush
+  regrava; committed → `put`), então a tabela não fica com 2 badges durante
+  a sessão. O export "Registros" (coluna PR) lê `flagPr` e acompanha.
+- **"Anterior" derivado dos registros vivos**: `tempoAnterior` deixou de ser
+  o ms congelado gravado na criação do PR e passa a ser o **menor tempo vivo
+  estritamente pior que o melhor atual** — com dado saudável o valor não
+  muda; se o registro daquele tempo for excluído, a coluna recalcula para o
+  próximo pior vivo (sem segundo tempo → Anterior **"—"** e Melhoria **"—"**;
+  PR novo continua "novo"). Aplicado em `normalizePrs()` (corrige dados
+  antigos na 1ª carga) e em `recalcPrsForDeletion` (ramos backed e promote,
+  via `aplicarAnterior`).
 - **Dedup automático de PRs no load (v0.45.0)**: PR = 1 por
   atleta+estilo+distância, mas nada garantia isso — abas/PWA concorrentes,
   falha parcial no flush do Salvar, overlay de perfil legado (`professorId`
