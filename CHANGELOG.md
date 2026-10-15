@@ -7,6 +7,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Added
+- **Balizamento: pós-registro volta às séries + legenda de balizas (v0.47.0)**:
+  - **Registrar → tela de séries**: `registerPendingTimes` fecha o cronômetro
+    (`closeChrono`) e navega para o Controle (`goToControl`) em vez de ficar no
+    modal com `alert` de sucesso (os `alert`s de validação — sem pendências /
+    baliza faltando — permanecem).
+  - **Header do cronômetro**: o "Tempo total" (`chrono-continuous-bar`) saiu da
+    linha flex `.timer-meta` e passou a ser linha própria **centralizada**
+    (`width:100%; justify-content:center`), ganhando mais uma linha abaixo com a
+    **legenda de balizas** `#laneLegend`: pills `1-Camila`, `2-Glaucia`,
+    `3-Ana Clara` (número da baliza + 1º e 2º nome do atleta), cor via
+    `getBalizaColor` (mesma da paleta/tabela), `escapeHtml` no conteúdo e
+    `:empty{display:none}`. Renderizada por `renderLaneLegend(ac)` em
+    `openChrono` (série ordenada por baliza; sem baliza → fora).
+  - **Auto-fill com 1 atleta**: nova `autoFillSingleAthlete(ac)` chamada em
+    `captureLap` — séries de 1 atleta recebem a única baliza automaticamente
+    (sem drag) e drafts extrapolados viram atribuídos (`laneAssigned`); a
+    célula continua limpável manualmente até a próxima captura.
 - **Badge PR = origem atual (v0.46.0)**: `flagPr` deixou de ser histórico —
   antes, todo registro que já bateram PR mantinha o badge para sempre (2
   badges na mesma prova apareciam como "2 PRs anotados"). `normalizePrs()`

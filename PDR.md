@@ -70,8 +70,10 @@ navegador, inclusive **offline**, sem necessidade de backend ou instalação nat
 1. Abre o cronômetro de uma série com o plano de parciais conforme a distância.
 2. **Iniciar/Voltas**: inicia o cronômetro; cada clique registra uma captura de parcial.
 3. **Parar/Reiniciar**: registra o último clique e para, ou reinicia quando parado.
-4. Cada captura pendente é associada a uma **baliza** (lane) pelo usuário.
-5. Ao **Registrar**, os tempos são gravados nos cartões dos atletas.
+4. Cada captura pendente é associada a uma **baliza** (lane) pelo usuário —
+   com **apenas 1 atleta** na série a baliza é atribuída automaticamente.
+5. Ao **Registrar**, os tempos são gravados nos cartões dos atletas e o app
+   **volta para a tela de séries** (Controle).
 
 ### 5.5 Log de Atividades
 1. Todas as ações relevantes são registradas com data/hora em `localStorage`.

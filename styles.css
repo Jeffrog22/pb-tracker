@@ -1038,7 +1038,9 @@ body.dark .chrono-dialog::backdrop {
 .chrono-continuous-bar {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  width: 100%;
 }
 .chrono-continuous-label {
   font-size: 13px;
@@ -1050,6 +1052,27 @@ body.dark .chrono-dialog::backdrop {
   font-weight: 700;
   font-family: "Courier New", Courier, monospace;
   letter-spacing: 1px;
+}
+
+/* --- Legenda de balizas (pills nomeadas) no header do cronômetro --- */
+.lane-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.lane-legend:empty { display: none; }
+
+.lane-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--lane-color, var(--border-light));
+  color: #1f2937;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .timer-display.blink {
   animation: timerBlink 2s ease-in-out;

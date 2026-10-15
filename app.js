@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino, hardResetSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.46.0";
+const APP_VERSION = "0.47.0";
 
 const state = {
   teamName: "",
@@ -155,6 +155,7 @@ const el = {
   nextCapture: document.getElementById("nextCapture"),
   pendingList: document.getElementById("pendingList"),
   lanePalette: document.getElementById("lanePalette"),
+  laneLegend: document.getElementById("laneLegend"),
   navItems: document.querySelectorAll(".nav-item"),
 };
 
@@ -2114,6 +2115,7 @@ function openChrono(eventKey, seriesKey, athletes) {
   el.chronoDisplay.innerHTML = maskTimeHTML("00:00:00");
   const contEl = document.getElementById("chronoContinuousDisplay");
   if (contEl) contEl.innerHTML = maskTimeHTML(msToDisplay(0));
+  renderLaneLegend(state.activeChrono);
   syncChronoStateBadge(false);
   renderPending();
   refreshNextCapture();
@@ -2242,6 +2244,7 @@ function captureLap(isStop = false) {
     ac.clickInSplit = 0;
   }
 
+  autoFillSingleAthlete(ac);
   renderPending();
   refreshNextCapture();
 }
@@ -2334,6 +2337,28 @@ function getBalizaColor(baliza) {
   return ac.laneColors[key];
 }
 
+function shortAthleteName(nome) {
+  const parts = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).join(" ");
+}
+
+function renderLaneLegend(ac) {
+  const box = el.laneLegend;
+  if (!box) return;
+  box.innerHTML = "";
+  if (!ac || !Array.isArray(ac.athletes)) return;
+  [...ac.athletes]
+    .filter((a) => a.baliza)
+    .sort((a, b) => Number(a.baliza) - Number(b.baliza))
+    .forEach((athlete) => {
+      const pill = document.createElement("span");
+      pill.className = "lane-legend-pill";
+      pill.style.setProperty("--lane-color", getBalizaColor(athlete.baliza));
+      pill.textContent = `${athlete.baliza}-${shortAthleteName(athlete.nome)}`;
+      box.appendChild(pill);
+    });
+}
+
 function buildBalizaToggle(baliza, used) {
   const btn = document.createElement("button");
   btn.type = "button";
@@ -2356,6 +2381,23 @@ function autoFillTwoAthletes(ac, split) {
   );
   if (missing.length !== 1) return;
   assignLaneToRow(split, missing[0].order, available[0]);
+}
+
+// Série com 1 atleta: a única baliza é atribuída sozinha (sem drag).
+// Também promove draft (baliza extrapolada da parcial anterior) a atribuída.
+function autoFillSingleAthlete(ac) {
+  const balizas = getSeriesBalizas(ac);
+  if (balizas.length !== 1) return;
+  const baliza = balizas[0];
+  ac.pendingCaptures.forEach((capture) => {
+    if (!capture.lane) {
+      assignLaneToRow(capture.split, capture.order, baliza);
+      return;
+    }
+    if (!capture.laneAssigned && String(capture.lane) === String(baliza)) {
+      assignLaneToRow(capture.split, capture.order, baliza);
+    }
+  });
 }
 
 function buildPendingTable(ac) {
@@ -2669,9 +2711,9 @@ function registerPendingTimes() {
 
   ac.pendingCaptures = [];
   renderPending();
-  renderControl();
   logAction(`Tempos registrados: ${savedCount} registros salvos na série ${ac.seriesKey}.`);
-  alert("Tempos registrados na tela de controle.");
+  closeChrono();
+  goToControl(); // volta para a tela de séries (Controle)
 }
 
 function isSameTeam(value, teamName) {
