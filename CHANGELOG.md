@@ -7,6 +7,15 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 ### Changed
+- **Balizamento: cronômetro secundário centrado no eixo do principal (v0.47.2)**:
+  removido o label "Tempo total" (`.chrono-continuous-label`) da
+  `.chrono-continuous-bar` — com só `#chronoContinuousDisplay` no flex
+  centralizado, os dígitos do tempo total ficam **exatamente alinhados/
+  centrados sob o `#chronoDisplay`** (antes, o grupo label+dígitos era
+  centralizado junto e deslocava os dígitos para a esquerda). Se o label
+  voltar, entrar em `position:absolute` fora do fluxo para não quebrar o
+  alinhamento.
+  `cache do SW` → `pbtracker-v86`.
 - **Balizamento: abreviação de nomes na legenda de balizas (v0.47.1)**:
   pills `#laneLegend` passaram a mostrar só o **1º nome** por padrão
   (antes: 2 primeiras palavras sempre). O 2º nome (fórmula Brasil)
