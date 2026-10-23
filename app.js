@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino, hardResetSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.47.0";
+const APP_VERSION = "0.47.1";
 
 const state = {
   teamName: "",
@@ -2337,9 +2337,22 @@ function getBalizaColor(baliza) {
   return ac.laneColors[key];
 }
 
-function shortAthleteName(nome) {
+// Prefixos comuns de nome composto pt-BR (já normalizados via normalizeText:
+// sem acento, lowercase). Só geram 2º nome quando o nome tem ≥3 palavras.
+const COMPOUND_PREFIXES = new Set([
+  "ana", "maria", "joao", "luiz", "luis", "d'", "de", "da", "do",
+  "santa", "sao", "francisco", "antonio", "carlos", "jose",
+]);
+
+function shortAthleteName(nome, firstClash) {
   const parts = String(nome || "").trim().split(/\s+/).filter(Boolean);
-  return parts.slice(0, 2).join(" ");
+  if (!parts.length) return "";
+  if (parts.length === 1) return parts[0];
+  if (firstClash) return parts.slice(0, 2).join(" ");
+  if (parts.length >= 3 && COMPOUND_PREFIXES.has(normalizeText(parts[0]))) {
+    return parts.slice(0, 2).join(" ");
+  }
+  return parts[0];
 }
 
 function renderLaneLegend(ac) {
@@ -2347,16 +2360,23 @@ function renderLaneLegend(ac) {
   if (!box) return;
   box.innerHTML = "";
   if (!ac || !Array.isArray(ac.athletes)) return;
-  [...ac.athletes]
+  const athletes = [...ac.athletes]
     .filter((a) => a.baliza)
-    .sort((a, b) => Number(a.baliza) - Number(b.baliza))
-    .forEach((athlete) => {
-      const pill = document.createElement("span");
-      pill.className = "lane-legend-pill";
-      pill.style.setProperty("--lane-color", getBalizaColor(athlete.baliza));
-      pill.textContent = `${athlete.baliza}-${shortAthleteName(athlete.nome)}`;
-      box.appendChild(pill);
-    });
+    .sort((a, b) => Number(a.baliza) - Number(b.baliza));
+  const firstNameCount = new Map();
+  athletes.forEach((a) => {
+    const first = normalizeText(String(a.nome || "").trim().split(/\s+/)[0] || "");
+    if (first) firstNameCount.set(first, (firstNameCount.get(first) || 0) + 1);
+  });
+  athletes.forEach((athlete) => {
+    const first = normalizeText(String(athlete.nome || "").trim().split(/\s+/)[0] || "");
+    const firstClash = Boolean(first && firstNameCount.get(first) > 1);
+    const pill = document.createElement("span");
+    pill.className = "lane-legend-pill";
+    pill.style.setProperty("--lane-color", getBalizaColor(athlete.baliza));
+    pill.textContent = `${athlete.baliza}-${shortAthleteName(athlete.nome, firstClash)}`;
+    box.appendChild(pill);
+  });
 }
 
 function buildBalizaToggle(baliza, used) {

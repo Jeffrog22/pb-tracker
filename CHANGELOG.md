@@ -6,6 +6,19 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
+### Changed
+- **Balizamento: abreviação de nomes na legenda de balizas (v0.47.1)**:
+  pills `#laneLegend` passaram a mostrar só o **1º nome** por padrão
+  (antes: 2 primeiras palavras sempre). O 2º nome (fórmula Brasil)
+  aparece quando o nome tem ≥3 palavras e a 1ª é prefixo de nome composto
+  pt-BR (`COMPOUND_PREFIXES`: ana/maria/joao/luiz/luis/d'/de/da/do/
+  santa/sao/francisco/antonio/carlos/jose, comparado via `normalizeText`)
+  ou quando outro atleta da mesma série tem o mesmo 1º nome (colisão
+  contada em `renderLaneLegend`). Nome de 2 palavras com prefixo sem
+  colisão (`"Maria Silva"`) → só `"Maria"` (não vaza sobrenome);
+  colisão com 2 palavras desambigua (`"Maria Silva"` x `"Maria Clara"`).
+  Lógica em `shortAthleteName(nome, firstClash)` via `textContent`.
+  `cache do SW` → `pbtracker-v85`.
 ### Added
 - **Balizamento: pós-registro volta às séries + legenda de balizas (v0.47.0)**:
   - **Registrar → tela de séries**: `registerPendingTimes` fecha o cronômetro
