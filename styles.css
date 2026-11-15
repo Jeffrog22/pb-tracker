@@ -863,7 +863,7 @@ body.dark .current-value {
   max-width: 760px;
   margin: auto auto 0;
   border: none;
-  border-radius: 16px 16px 0 0;
+  border-radius: 0 0 16px 16px;
   padding: 0;
   background: var(--bg-card);
 }
@@ -879,7 +879,7 @@ body.dark .current-value {
 }
 
 @keyframes chronoSheetUp {
-  from { transform: translateY(100%); }
+  from { transform: translateY(-100%); }
   to { transform: translateY(0); }
 }
 
@@ -2228,7 +2228,7 @@ body.dark .sb-table tbody tr:hover td {
   --sb-rest-border: rgba(59, 130, 246, 0.45);
   background: var(--sb-bg);
   color: var(--sb-text);
-  border-radius: 16px 16px 0 0;
+  border-radius: 0 0 16px 16px;
   border: none;
 }
 
