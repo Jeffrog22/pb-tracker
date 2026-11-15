@@ -13,7 +13,7 @@ import {
 } from "./utils.js";
 import { initSwimBase, renderSwimBaseScreen, reloadSwimBase, listAtletasForExport, exportSwimBaseFiltered, voltarPassoTreino, hardResetSwimBase } from "./swimbase.js";
 
-const APP_VERSION = "0.47.4";
+const APP_VERSION = "0.47.5";
 
 const state = {
   teamName: "",
